@@ -1,17 +1,20 @@
 @import "tailwindcss";
 
+/* -------------------- Variables globales -------------------- */
 :root {
   --background: #ffffff;
   --foreground: #171717;
 }
 
-@theme inline {
+/* Variables liées aux fonts (injectées via layout.tsx) */
+:root {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+/* Dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -19,15 +22,98 @@
   }
 }
 
+/* -------------------- Base -------------------- */
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
-:root {
-  color-scheme: light dark;
+
+html {
+  scroll-behavior: smooth;
 }
-html, body { height: 100%; }
-.body-grid {
-  @apply min-h-screen bg-white text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100;
+* {
+  scroll-margin-top: 84px; /* évite que les ancres passent sous la navbar */
+}
+
+/* -------------------- Animations reveal -------------------- */
+@keyframes fadeUpSoft {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    filter: blur(0);
+  }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  filter: blur(6px);
+  transition: opacity 0.6s, transform 0.6s, filter 0.6s;
+  will-change: transform, opacity, filter;
+}
+.reveal.show {
+  animation: fadeUpSoft 0.7s both;
+}
+
+/* Variantes de délai */
+.reveal.d1.show {
+  animation-delay: 0.08s;
+}
+.reveal.d2.show {
+  animation-delay: 0.16s;
+}
+.reveal.d3.show {
+  animation-delay: 0.24s;
+}
+
+/* -------------------- Helpers -------------------- */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+.table-wrap {
+  overflow-x: auto;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* -------------------- Hero backdrop -------------------- */
+.hero-backdrop {
+  background: radial-gradient(
+      1200px 600px at 50% -10%,
+      rgba(124, 58, 237, 0.2),
+      transparent 70%
+    ),
+    radial-gradient(
+      900px 400px at 80% 10%,
+      rgba(99, 91, 255, 0.15),
+      transparent 70%
+    );
+  transform: translate3d(0, var(--hero-parallax, 0px), 0);
+  will-change: transform;
+}
+
+/* -------------------- Parallax ellipses décoratives -------------------- */
+.parallax-ellipse {
+  opacity: 0.35;
+}
+.parallax-ellipse-1 {
+  background: radial-gradient(circle at center, #7c3aed55, transparent 70%);
+}
+.parallax-ellipse-2 {
+  background: radial-gradient(circle at center, #635bff55, transparent 70%);
 }
