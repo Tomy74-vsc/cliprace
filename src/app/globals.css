@@ -1,119 +1,244 @@
 @import "tailwindcss";
 
-/* -------------------- Variables globales -------------------- */
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+/* =========================
+   Variables & thèmes
+   ========================= */
+:root{
+  --background:#ffffff;
+  --foreground:#171717;
 
-/* Variables liées aux fonts (injectées via layout.tsx) */
-:root {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  /* Surfaces */
+  --surface-muted:#f6f7fb; /* gris très clair */
+  --surface-elev-1:rgba(255,255,255,0.7);
+  --surface-elev-1-dark:rgba(9,9,11,0.6);
+
+  /* Accents */
+  --accent-violet:#7C3AED;     /* rgb(124,58,237) */
+  --accent-indigo:#635BFF;     /* rgb(99,91,255) */
+
+  /* Parallax (pilotée en JS) */
+  --hero-parallax: 0px;
+
+  /* Fonts (injectées via layout.tsx) */
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
-/* Dark mode */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+@media (prefers-color-scheme: dark){
+  :root{
+    --background:#0a0a0a;
+    --foreground:#ededed;
+    --surface-muted:#0d0f13;
   }
 }
 
-/* -------------------- Base -------------------- */
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+/* =========================
+   Base
+   ========================= */
+html{ scroll-behavior:smooth; }
+*{ scroll-margin-top:84px; } /* évite que les ancres passent sous la navbar */
+
+body{
+  background:var(--background);
+  color:var(--foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, Segoe UI, Roboto, Arial, Helvetica, sans-serif;
+  text-rendering: optimizeLegibility;
 }
 
-html {
-  scroll-behavior: smooth;
-}
-* {
-  scroll-margin-top: 84px; /* évite que les ancres passent sous la navbar */
-}
-
-/* -------------------- Animations reveal -------------------- */
-@keyframes fadeUpSoft {
-  from {
-    opacity: 0;
-    transform: translateY(16px);
-    filter: blur(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-    filter: blur(0);
-  }
+/* Focus visible (sans color-mix) */
+:focus-visible{
+  outline: 2px solid rgba(99,91,255,0.7); /* --accent-indigo 70% */
+  outline-offset: 2px;
+  border-radius: .5rem;
 }
 
-.reveal {
-  opacity: 0;
-  transform: translateY(16px);
-  filter: blur(6px);
-  transition: opacity 0.6s, transform 0.6s, filter 0.6s;
+/* Scrollbar WebKit only (pas de scrollbar-width/scrollbar-color) */
+*::-webkit-scrollbar{ height:10px; width:10px; }
+*::-webkit-scrollbar-thumb{ background:#B4B5C0; border-radius:9999px; }
+*::-webkit-scrollbar-track{ background:transparent; }
+
+/* =========================
+   Animations reveal
+   ========================= */
+@keyframes fadeUpSoft{
+  from{ opacity:0; transform:translateY(16px); filter:blur(6px); }
+  to{   opacity:1; transform:translateY(0);     filter:blur(0); }
+}
+.reveal{
+  opacity:0; transform:translateY(16px); filter:blur(6px);
+  transition:opacity .6s, transform .6s, filter .6s;
   will-change: transform, opacity, filter;
 }
-.reveal.show {
-  animation: fadeUpSoft 0.7s both;
-}
+.reveal.show{ animation:fadeUpSoft .7s both; }
+.reveal.d1.show{ animation-delay:.08s; }
+.reveal.d2.show{ animation-delay:.16s; }
+.reveal.d3.show{ animation-delay:.24s; }
 
-/* Variantes de délai */
-.reveal.d1.show {
-  animation-delay: 0.08s;
-}
-.reveal.d2.show {
-  animation-delay: 0.16s;
-}
-.reveal.d3.show {
-  animation-delay: 0.24s;
-}
-
-/* -------------------- Helpers -------------------- */
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum";
-}
-
-.table-wrap {
-  overflow-x: auto;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
+/* Réduction des animations */
+@media (prefers-reduced-motion: reduce){
+  .reveal, .reveal.show{
+    animation:none !important; transform:none !important; filter:none !important; opacity:1 !important;
   }
 }
 
-/* -------------------- Hero backdrop -------------------- */
-.hero-backdrop {
-  background: radial-gradient(
-      1200px 600px at 50% -10%,
-      rgba(124, 58, 237, 0.2),
-      transparent 70%
-    ),
-    radial-gradient(
-      900px 400px at 80% 10%,
-      rgba(99, 91, 255, 0.15),
-      transparent 70%
-    );
-  transform: translate3d(0, var(--hero-parallax, 0px), 0);
+/* =========================
+   Helpers & tables
+   ========================= */
+.tabular-nums{ font-variant-numeric: tabular-nums; font-feature-settings: "tnum"; }
+.table-wrap{ overflow-x:auto; }
+@keyframes fadeIn{ from{opacity:0} to{opacity:1} }
+
+/* =========================
+   HERO — fond & ombre du titre
+   ========================= */
+/* Fond Hero gris très clair */
+.hero-surface{ background: var(--surface-muted); }
+
+/* Backdrop gradients avec parallax (sans color-mix) */
+.hero-backdrop{
+  background:
+    radial-gradient(1200px 600px at 50% -10%, rgba(124,58,237,0.20), transparent 70%),
+    radial-gradient(900px 400px at 80% 10%, rgba(99,91,255,0.15), transparent 70%);
+  transform: translate3d(0, var(--hero-parallax), 0);
   will-change: transform;
 }
 
-/* -------------------- Parallax ellipses décoratives -------------------- */
-.parallax-ellipse {
-  opacity: 0.35;
+/* Ombre elliptique sous le H1 (poids du titre) */
+.title-weight-shadow, .title-shadow{ position:relative; }
+.title-weight-shadow::after, .title-shadow::after{
+  content:"";
+  position:absolute; left:50%; transform:translateX(-50%);
+  bottom:-18px; height:18px; width:min(78%, 48rem);
+  background: rgba(0,0,0,.10);
+  border-radius:9999px;
+  filter: blur(12px);
 }
-.parallax-ellipse-1 {
-  background: radial-gradient(circle at center, #7c3aed55, transparent 70%);
+.dark .title-weight-shadow::after,
+.dark .title-shadow::after{ background: rgba(255,255,255,.08); }
+
+/* =========================
+   Bulles KPI
+   ========================= */
+.stat-bubble{
+  background: linear-gradient(180deg, rgba(99,91,255,0.18), rgba(99,91,255,0) 65%);
+  border: 1px solid rgba(229,231,235,0.9); /* zinc-200-ish */
+  box-shadow:
+    0 18px 40px -20px rgba(99,91,255,0.45),
+    inset 0 1px 0 rgba(255,255,255,.6);
+  -webkit-backdrop-filter: blur(6px);
+          backdrop-filter: blur(6px);
+  border-radius: 1.25rem;
+  transition: transform .25s ease, box-shadow .25s ease;
 }
-.parallax-ellipse-2 {
-  background: radial-gradient(circle at center, #635bff55, transparent 70%);
+.stat-bubble:hover{
+  transform: translateY(-2px);
+  box-shadow:
+    0 24px 60px -24px rgba(99,91,255,0.55),
+    inset 0 1px 0 rgba(255,255,255,.7);
+}
+
+/* =========================
+   Marquee logos — “Ils nous font confiance”
+   ========================= */
+.marquee{
+  /* Mettre -webkit-mask-image AVANT mask-image (ordre des prefixes) */
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
+  overflow: hidden;
+  position: relative;
+}
+.marquee__track{
+  display:flex; gap:2.5rem; width:max-content;
+  animation: marquee-left 28s linear infinite;
+}
+.marquee:hover .marquee__track{ animation-play-state: paused; }
+
+@keyframes marquee-left{
+  from{ transform: translateX(0); }
+  to{   transform: translateX(-50%); }
+}
+
+/* Cartouche logo */
+.brand-logo{
+  display:grid; place-items:center;
+  width:96px; height:96px; border-radius:1rem;
+  background: rgba(255,255,255,0.7);
+  border: 1px solid rgba(229,231,235,0.9);
+  box-shadow: 0 10px 30px -20px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.7);
+}
+
+/* =========================
+   Cartes “Produit”
+   ========================= */
+.feature-card{
+  border-radius: 1.25rem;
+  background: var(--surface-elev-1);
+  border: 1px solid rgba(229,231,235,0.9);
+  box-shadow:
+    0 10px 30px -20px rgba(0,0,0,.25),
+    0 30px 80px -40px rgba(99,91,255,0.22);
+  -webkit-backdrop-filter: blur(8px);
+          backdrop-filter: blur(8px);
+  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+}
+.dark .feature-card{
+  background: var(--surface-elev-1-dark);
+  border-color: rgba(255,255,255,.08);
+}
+.feature-card:hover{
+  transform: translateY(-3px);
+  box-shadow:
+    0 16px 40px -24px rgba(0,0,0,.35),
+    0 36px 90px -46px rgba(99,91,255,0.30);
+}
+
+/* Pastille icône */
+.feature-icon{
+  width:44px; height:44px; border-radius:12px;
+  display:grid; place-items:center;
+  background: rgba(99,91,255,0.18);
+  border: 1px solid rgba(229,231,235,0.9);
+}
+
+/* =========================
+   FAQ premium
+   ========================= */
+.faq-item{
+  border-radius: 1rem;
+  background: var(--surface-elev-1);
+  border: 1px solid rgba(229,231,235,0.9);
+  box-shadow: 0 10px 30px -20px rgba(0,0,0,.25);
+  transition: box-shadow .2s ease, background .2s ease, border-color .2s ease;
+}
+.dark .faq-item{
+  background: var(--surface-elev-1-dark);
+  border-color: rgba(255,255,255,.08);
+}
+.faq-item[open]{
+  box-shadow: 0 18px 60px -28px rgba(99,91,255,0.28);
+}
+
+/* =========================
+   Petites utilités
+   ========================= */
+.surface-muted{ background: var(--surface-muted); }
+
+/* Masque dégradé haut (ordre des prefixes respecté) */
+.top-fade{
+  -webkit-mask-image: linear-gradient(to bottom, rgba(0,0,0,0), #000 24%);
+          mask-image: linear-gradient(to bottom, rgba(0,0,0,0), #000 24%);
+}
+
+/* Footer centré visuellement avec le reste */
+.footer-center{ margin-left:auto; margin-right:auto; max-width: 80rem; }
+
+/* =========================
+   Décors elliptiques
+   ========================= */
+.parallax-ellipse{ opacity:.35; }
+.parallax-ellipse-1{
+  background: radial-gradient(circle at center, rgba(124,58,237,0.33), transparent 70%);
+}
+.parallax-ellipse-2{
+  background: radial-gradient(circle at center, rgba(99,91,255,0.33), transparent 70%);
 }
