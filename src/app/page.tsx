@@ -123,7 +123,7 @@ export default function Home() {
               </Link>
               <a
                 href="#cta"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#635BFF] hover:bg-[#534BFF] text-white font-semibold shadow-[0_10px_25px_-10px_rgba(99,91,255,0.6)] transition"
+                className={ctaPrimary}
               >
                 Commencer
               </a>
@@ -188,21 +188,16 @@ export default function Home() {
       >
         {/* Backdrop parallax */}
         <div aria-hidden className="pointer-events-none absolute inset-0 -z-10 hero-backdrop" />
-
         {/* Particules douces */}
         <div aria-hidden className="particles absolute inset-0 -z-10" />
 
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 pt-16 pb-12 text-center">
           <h1 className="reveal text-shadow-hero text-4xl sm:text-6xl font-black tracking-tight leading-[1.1]">
-            Lancez des concours <span className="text-[#7C3AED]">viraux</span>.
-            Des vues. Des <span className="text-[#635BFF]">récompenses</span>
+            Lancez des concours <span className="text-[#7C3AED]">viraux</span>. Des vues. Des <span className="text-[#635BFF]">récompenses</span>
           </h1>
 
           {/* CTA */}
-          <div
-            id="cta"
-            className="reveal mt-8 flex flex-col sm:flex-row gap-3 justify-center"
-          >
+          <div id="cta" className="reveal mt-8 flex flex-col sm:flex-row gap-3 justify-center">
             <Link href="/signup?role=brand" className={ctaPrimary}>
               Commencer maintenant
             </Link>
@@ -212,8 +207,7 @@ export default function Home() {
           </div>
 
           <div className="mt-4 text-xs text-zinc-500">
-            0% côté marque au lancement • 15% commission sur cashout créateurs
-            (Stripe Connect)
+            0% côté marque au lancement • 15% commission sur cashout créateurs (Stripe Connect)
           </div>
 
           {/* Pills stats */}
@@ -230,14 +224,7 @@ export default function Home() {
           <div className="reveal d2 mt-12">
             <TrustMarquee
               title="Ils nous font confiance"
-              logos={[
-                "/vercel.svg",
-                "/next.svg",
-                "/globe.svg",
-                "/window.svg",
-                "/file.svg",
-                "/vercel.svg",
-              ]}
+              logos={["/vercel.svg", "/next.svg", "/globe.svg", "/window.svg", "/file.svg", "/vercel.svg"]}
             />
           </div>
         </div>
@@ -246,35 +233,27 @@ export default function Home() {
       {/* -------------------- PRODUIT (noir) -------------------- */}
       <section id="product" className="bg-black text-white py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <h2 className="reveal text-5xl sm:text-6xl font-extrabold">
-            Le Produit.
-          </h2>
+          <h2 className="reveal text-4xl sm:text-6xl font-extrabold">Le Produit.</h2>
           <p className="reveal mt-2 text-lg sm:text-xl text-zinc-300">
-            Un système simple, pensé pour la performance. Créez. Publiez.{" "}
-            <span className="text-[#7C3AED]">Gagnez</span>. Créez des concours
-            UGC viraux, récompensez automatiquement vos créateurs et générez du
-            contenu authentique à grande échelle.
+            Un système simple, pensé pour la performance. Créez. Publiez. <span className="text-[#7C3AED]">Gagnez</span>. Créez des concours UGC viraux, récompensez automatiquement vos créateurs et générez du contenu authentique à grande échelle.
           </p>
 
           {/* Leaderboard déplacé ici */}
           <LeaderboardPreview className="reveal d1 mt-8 bg-white/5 rounded-2xl" />
 
-          {/* Feature grid (bulles impactantes) */}
+          {/* Feature grid (bulles impactantes violet) */}
           <FeatureGrid className="reveal d2 mt-12" />
         </div>
       </section>
 
-      {/* -------------------- CRÉATEUR (violet → gris clair) -------------------- */}
+      {/* -------------------- CRÉATEUR -------------------- */}
       <section id="creator" className="relative">
         {/* bloc violet */}
         <div className="bg-[#7C3AED] text-white py-16 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8 text-center">
-            <h2 className="reveal text-5xl sm:text-6xl font-extrabold">
-              Créateur.
-            </h2>
+            <h2 className="reveal text-4xl sm:text-6xl font-extrabold">Créateur.</h2>
             <p className="reveal d1 mt-2 text-lg sm:text-xl">
-              Tu crées du contenu ? Chaque vue peut te faire gagner de
-              l’argent.
+              Tu crées du contenu ? Chaque vue peut te faire gagner de l’argent.
             </p>
             <div className="reveal d2 mt-6">
               <Link
@@ -287,15 +266,8 @@ export default function Home() {
 
             {/* mini benefits */}
             <div className="reveal d3 mt-8 flex flex-wrap justify-center gap-3">
-              {[
-                "0€ pour participer",
-                "Paye au résultat",
-                "Top 30 récompensés",
-              ].map((t) => (
-                <span
-                  key={t}
-                  className="px-4 py-2 rounded-full bg-white/10 border border-white/20 text-sm"
-                >
+              {["0€ pour participer", "Paye au résultat", "Top 30 récompensés"].map((t) => (
+                <span key={t} className="px-4 py-2 rounded-full bg-white/10 border border-white/20 text-sm">
                   {t}
                 </span>
               ))}
@@ -306,12 +278,10 @@ export default function Home() {
         {/* bloc gris clair (version “impact”) */}
         <div className="bg-zinc-50 dark:bg-zinc-950 py-16 sm:py-24">
           <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-            <h3 className="reveal text-3xl sm:text-4xl font-bold text-center">
-              Comment ça marche ?
-            </h3>
+            <h3 className="reveal text-3xl sm:text-4xl font-bold text-center">Comment ça marche ?</h3>
 
             <div className="mt-10 grid lg:grid-cols-2 gap-10 items-start">
-              {/* Vidéo interactive (remplace l’ID YouTube par le tien / Canva export) */}
+              {/* Vidéo (exemple YouTube / remplace par ton export Canva) */}
               <div className="reveal rounded-2xl overflow-hidden border border-zinc-200 dark:border-zinc-800 shadow-[0_18px_60px_-25px_rgba(0,0,0,.25)] bg-white">
                 <div className="aspect-video">
                   <iframe
@@ -348,10 +318,7 @@ export default function Home() {
                   text="Top 30 récompensé, cashout sécurisé via Stripe Connect."
                 />
                 <li className="pt-2 list-none">
-                  <Link
-                    href="/signup?role=creator"
-                    className="inline-flex items-center gap-2 underline underline-offset-4 font-semibold"
-                  >
+                  <Link href="/signup?role=creator" className="inline-flex items-center gap-2 underline underline-offset-4 font-semibold">
                     Rejoins un concours <span aria-hidden>↗</span>
                   </Link>
                 </li>
@@ -362,11 +329,8 @@ export default function Home() {
       </section>
 
       {/* -------------------- ENTREPRISE / MARQUES -------------------- */}
-      <section
-        id="enterprise"
-        className="relative py-16 sm:py-24 text-white bg-[#0c1330]"
-      >
-        {/* Orbes flottantes & grille douce */}
+      <section id="enterprise" className="relative py-16 sm:py-24 text-white bg-[#0c1330]">
+        {/* Orbes flottantes & fond radial doux */}
         <div aria-hidden className="enterprise-orbs pointer-events-none absolute inset-0 -z-10" />
         <div
           aria-hidden
@@ -374,12 +338,9 @@ export default function Home() {
         />
 
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <h2 className="reveal text-5xl sm:text-6xl font-extrabold tracking-tight">
-            Entreprise.
-          </h2>
+          <h2 className="reveal text-4xl sm:text-6xl font-extrabold tracking-tight">Entreprise.</h2>
           <p className="reveal d1 mt-3 text-lg sm:text-xl text-white/90">
-            Lancez des campagnes <span className="underline">virales</span> et
-            alignez UGC & résultats business.
+            Lancez des campagnes <span className="underline">virales</span> et alignez UGC & résultats business.
           </p>
 
           {/* 3 bénéfices — cartes “tilt” */}
@@ -403,18 +364,13 @@ export default function Home() {
 
           {/* CTA */}
           <div className="reveal d3 mt-8">
-            <Link
-              href="/signup?role=brand"
-              className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90"
-            >
+            <Link href="/signup?role=brand" className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
               Créer un concours
             </Link>
           </div>
 
           {/* Process / mini dashboard */}
-          <h3 className="reveal d2 mt-12 text-3xl sm:text-4xl font-bold">
-            Comment ça marche ?
-          </h3>
+          <h3 className="reveal d2 mt-12 text-3xl sm:text-4xl font-bold">Comment ça marche ?</h3>
           <div className="mt-6 grid md:grid-cols-2 gap-8">
             <ol className="space-y-6">
               <BrandStep n="1." title="Créez votre concours" />
@@ -432,10 +388,7 @@ export default function Home() {
               <div className="rounded-xl bg-white/10 border border-white/20 p-6 shadow-[0_18px_60px_-25px_rgba(0,0,0,.5)] enterprise-float">
                 <div className="h-56 rounded-md bg-white/10" />
                 <div className="mt-3">
-                  <a
-                    href="#cta"
-                    className="inline-block px-5 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90"
-                  >
+                  <a href="#cta" className="inline-block px-5 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
                     Booster votre marque
                   </a>
                 </div>
@@ -448,9 +401,7 @@ export default function Home() {
       {/* -------------------- COMMENTAIRES (marquee) -------------------- */}
       <section id="comments" className="py-16 sm:py-24 bg-[#d96452] text-black">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <h3 className="reveal text-3xl sm:text-4xl font-bold text-center">
-            Ils témoignent
-          </h3>
+          <h3 className="reveal text-3xl sm:text-4xl font-bold text-center">Ils témoignent</h3>
           <p className="reveal d1 mt-2 text-center text-black/80">
             Créateurs et marques racontent leur expérience avec ClipRace.
           </p>
@@ -462,9 +413,7 @@ export default function Home() {
       {/* -------------------- FAQ -------------------- */}
       <section id="faq" className="py-16 sm:py-24">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <h2 className="reveal text-3xl sm:text-4xl font-bold text-center">
-            FAQs
-          </h2>
+          <h2 className="reveal text-3xl sm:text-4xl font-bold text-center">FAQs</h2>
           <div className="mt-8 grid gap-3 lg:grid-cols-2">
             <FAQ
               q="Qui peut participer à un concours ?"
@@ -474,10 +423,7 @@ export default function Home() {
               q="Comment mes vues sont-elles comptabilisées ?"
               a="Nous récupérons automatiquement les vues à partir du lien soumis. Un coefficient d’équité s’applique pour des chances justes (mock au MVP)."
             />
-            <FAQ
-              q="Puis-je participer à plusieurs concours ?"
-              a="Oui, en respectant les règles propres à chaque concours."
-            />
+            <FAQ q="Puis-je participer à plusieurs concours ?" a="Oui, en respectant les règles propres à chaque concours." />
             <FAQ
               q="Comment suis-je payé si je fais partie du top ?"
               a="Répartition automatique selon le classement (modèle top 30). Cashout sécurisé via Stripe Connect (–15%)."
@@ -497,14 +443,9 @@ export default function Home() {
       {/* -------------------- FINAL CTA -------------------- */}
       <section className="py-14 sm:py-20 bg-[#7C3AED] text-white">
         <div className="max-w-4xl mx-auto px-6 text-center">
-          <h3 className="reveal text-3xl sm:text-4xl font-bold">
-            Boostez votre succès dès aujourd’hui.
-          </h3>
+          <h3 className="reveal text-3xl sm:text-4xl font-bold">Boostez votre succès dès aujourd’hui.</h3>
           <div className="reveal d1 mt-6">
-            <a
-              href="#cta"
-              className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90"
-            >
+            <a href="#cta" className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
               Commencer
             </a>
           </div>
@@ -517,55 +458,30 @@ export default function Home() {
           <div>
             <div className="text-sm font-semibold">Légal & Conditions</div>
             <ul className="mt-3 space-y-2 text-sm text-zinc-300">
-              <li>
-                <Link href="/legal/terms">Conditions d’utilisation</Link>
-              </li>
-              <li>
-                <Link href="/legal/privacy">Politique de confidentialité</Link>
-              </li>
-              <li>
-                <Link href="/legal/rules">Règlement des concours</Link>
-              </li>
+              <li><Link href="/legal/terms">Conditions d’utilisation</Link></li>
+              <li><Link href="/legal/privacy">Politique de confidentialité</Link></li>
+              <li><Link href="/legal/rules">Règlement des concours</Link></li>
             </ul>
           </div>
           <div>
             <div className="text-sm font-semibold">À propos</div>
             <ul className="mt-3 space-y-2 text-sm text-zinc-300">
-              <li>
-                <Link href="/about">Qui sommes-nous</Link>
-              </li>
-              <li>
-                <Link href="/contact">Contact & support</Link>
-              </li>
-              <li>
-                <Link href="/partners">Partenariats marques</Link>
-              </li>
+              <li><Link href="/about">Qui sommes-nous</Link></li>
+              <li><Link href="/contact">Contact & support</Link></li>
+              <li><Link href="/partners">Partenariats marques</Link></li>
             </ul>
           </div>
           <div>
             <div className="text-sm font-semibold">Réseaux sociaux</div>
             <ul className="mt-3 space-y-2 text-sm text-zinc-300">
-              <li>
-                <a href="#" aria-disabled>
-                  Instagram
-                </a>
-              </li>
-              <li>
-                <a href="#" aria-disabled>
-                  TikTok
-                </a>
-              </li>
-              <li>
-                <a href="#" aria-disabled>
-                  LinkedIn
-                </a>
-              </li>
+              <li><a href="#" aria-disabled>Instagram</a></li>
+              <li><a href="#" aria-disabled>TikTok</a></li>
+              <li><a href="#" aria-disabled>LinkedIn</a></li>
             </ul>
           </div>
         </div>
         <div className="mt-10 text-center text-xs text-zinc-400">
-          © {new Date().getFullYear()} ClipRace — Données traitées en toute
-          sécurité — Participation encadrée par règlement.
+          © {new Date().getFullYear()} ClipRace — Données traitées en toute sécurité — Participation encadrée par règlement.
         </div>
       </footer>
 
@@ -580,51 +496,18 @@ export default function Home() {
         }
 
         /* Marquee logos & témoignages */
-        @keyframes marquee-x {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-50%);
-          }
-        }
+        @keyframes marquee-x { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
         .marquee {
-          -webkit-mask-image: linear-gradient(
-            to right,
-            transparent,
-            black 10%,
-            black 90%,
-            transparent
-          );
-          mask-image: linear-gradient(
-            to right,
-            transparent,
-            black 10%,
-            black 90%,
-            transparent
-          );
+          -webkit-mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
+          mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
           overflow: hidden;
         }
-        .marquee-track {
-          display: flex;
-          gap: 2rem;
-          width: max-content;
-          animation: marquee-x 28s linear infinite;
-        }
-        .marquee-track:hover {
-          animation-play-state: paused;
-        }
-        @media (prefers-reduced-motion: reduce) {
-          .marquee-track {
-            animation: none;
-          }
-        }
+        .marquee-track { display: flex; gap: 2rem; width: max-content; animation: marquee-x 28s linear infinite; }
+        .marquee-track:hover { animation-play-state: paused; }
+        @media (prefers-reduced-motion: reduce) { .marquee-track { animation: none; } }
 
-        /* Glow des bulles (neutre, pas rosé) */
-        .feature-card {
-          position: relative;
-          overflow: hidden;
-        }
+        /* Glow neutre des bulles (pas rosé) */
+        .feature-card { position: relative; overflow: hidden; }
         .feature-card::after {
           content: "";
           position: absolute;
@@ -633,29 +516,18 @@ export default function Home() {
           width: 160px;
           height: 160px;
           border-radius: 9999px;
-          background: radial-gradient(
-            circle at center,
-            rgba(255, 255, 255, 0.55),
-            transparent 60%
-          );
+          background:
+            radial-gradient(280px 180px at 96% 8%, rgba(255,255,255,.24), transparent 60%),
+            radial-gradient(320px 240px at -10% 120%, rgba(123,67,255,.18), transparent 60%);
           filter: blur(14px);
           pointer-events: none;
         }
 
         /* Particules du hero (subtiles, performantes) */
         @keyframes floaty {
-          0% {
-            transform: translateY(0) translateX(0);
-            opacity: 0.35;
-          }
-          50% {
-            transform: translateY(-12px) translateX(6px);
-            opacity: 0.55;
-          }
-          100% {
-            transform: translateY(0) translateX(0);
-            opacity: 0.35;
-          }
+          0% { transform: translateY(0) translateX(0); opacity: .35; }
+          50% { transform: translateY(-12px) translateX(6px); opacity: .55; }
+          100% { transform: translateY(0) translateX(0); opacity: .35; }
         }
         .particles::before,
         .particles::after {
@@ -663,30 +535,20 @@ export default function Home() {
           position: absolute;
           inset: 0;
           background:
-            radial-gradient(6px 6px at 10% 30%, rgba(124, 58, 237, 0.25) 60%, transparent),
-            radial-gradient(6px 6px at 80% 20%, rgba(99, 91, 255, 0.25) 60%, transparent),
-            radial-gradient(6px 6px at 60% 70%, rgba(124, 58, 237, 0.25) 60%, transparent),
-            radial-gradient(6px 6px at 30% 80%, rgba(99, 91, 255, 0.25) 60%, transparent);
+            radial-gradient(6px 6px at 10% 30%, rgba(124,58,237,.25) 60%, transparent),
+            radial-gradient(6px 6px at 80% 20%, rgba(99,91,255,.25) 60%, transparent),
+            radial-gradient(6px 6px at 60% 70%, rgba(124,58,237,.25) 60%, transparent),
+            radial-gradient(6px 6px at 30% 80%, rgba(99,91,255,.25) 60%, transparent);
           animation: floaty 9s ease-in-out infinite;
           will-change: transform, opacity;
         }
-        .particles::after {
-          animation-delay: 1.2s;
-          filter: blur(1px);
-          opacity: 0.25;
-        }
+        .particles::after { animation-delay: 1.2s; filter: blur(1px); opacity: .25; }
 
         /* Orbes & flottement — section entreprise */
         @keyframes orbFloat {
-          0% {
-            transform: translate3d(0, -12px, 0) scale(1);
-          }
-          50% {
-            transform: translate3d(10px, 12px, 0) scale(1.03);
-          }
-          100% {
-            transform: translate3d(0, -12px, 0) scale(1);
-          }
+          0% { transform: translate3d(0,-12px,0) scale(1); }
+          50% { transform: translate3d(10px,12px,0) scale(1.03); }
+          100% { transform: translate3d(0,-12px,0) scale(1); }
         }
         .enterprise-orbs::before,
         .enterprise-orbs::after {
@@ -694,40 +556,22 @@ export default function Home() {
           position: absolute;
           border-radius: 9999px;
           filter: blur(30px);
-          opacity: 0.45;
+          opacity: .45;
           animation: orbFloat 18s ease-in-out infinite;
         }
         .enterprise-orbs::before {
-          width: 420px;
-          height: 420px;
-          left: -120px;
-          top: -80px;
+          width: 420px; height: 420px; left: -120px; top: -80px;
           background: radial-gradient(circle at 30% 30%, #7c3aed, transparent 70%);
         }
         .enterprise-orbs::after {
-          width: 520px;
-          height: 520px;
-          right: -160px;
-          bottom: -120px;
+          width: 520px; height: 520px; right: -160px; bottom: -120px;
           background: radial-gradient(circle at 70% 70%, #635bff, transparent 70%);
-          animation-delay: 0.8s;
+          animation-delay: .8s;
         }
 
         /* Légère translation sur les cartes entreprise */
-        @keyframes floatCard {
-          0% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-4px);
-          }
-          100% {
-            transform: translateY(0);
-          }
-        }
-        .enterprise-float {
-          animation: floatCard 6s ease-in-out infinite;
-        }
+        @keyframes floatCard { 0% { transform: translateY(0); } 50% { transform: translateY(-4px); } 100% { transform: translateY(0); } }
+        .enterprise-float { animation: floatCard 6s ease-in-out infinite; }
       `}</style>
     </main>
   );
@@ -744,10 +588,7 @@ function StatPills({
   className?: string;
 }) {
   return (
-    <div
-      className={`grid grid-cols-1 sm:grid-cols-3 gap-4 ${className}`}
-      role="list"
-    >
+    <div className={`grid grid-cols-1 sm:grid-cols-3 gap-4 ${className}`} role="list">
       {items.map((it) => (
         <div
           key={it.label}
@@ -755,9 +596,7 @@ function StatPills({
           role="listitem"
         >
           <div className="text-4xl font-black text-[#7C3AED]">{it.kpi}</div>
-          <div className="mt-2 text-lg text-zinc-600 dark:text-zinc-300">
-            {it.label}
-          </div>
+          <div className="mt-2 text-lg text-zinc-600 dark:text-zinc-300">{it.label}</div>
         </div>
       ))}
     </div>
@@ -765,21 +604,11 @@ function StatPills({
 }
 
 /* Logos clients défilants */
-function TrustMarquee({
-  logos,
-  title,
-}: {
-  logos: string[];
-  title?: string;
-}) {
+function TrustMarquee({ logos, title }: { logos: string[]; title?: string }) {
   const list = [...logos, ...logos]; // duplication pour boucle parfaite
   return (
     <div className="space-y-4">
-      {title && (
-        <div className="text-zinc-600 dark:text-zinc-300 text-center font-medium">
-          {title}
-        </div>
-      )}
+      {title && <div className="text-zinc-600 dark:text-zinc-300 text-center font-medium">{title}</div>}
       <div className="marquee">
         <div className="marquee-track items-center">
           {list.map((src, i) => (
@@ -787,13 +616,7 @@ function TrustMarquee({
               key={`${src}-${i}`}
               className="h-20 w-28 sm:h-24 sm:w-32 rounded-2xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white/70 dark:bg-zinc-900/60 backdrop-blur flex items-center justify-center"
             >
-              <Image
-                src={src}
-                alt="Logo partenaire"
-                width={96}
-                height={32}
-                className="opacity-70"
-              />
+              <Image src={src} alt="Logo partenaire" width={96} height={32} className="opacity-70" />
             </div>
           ))}
         </div>
@@ -805,35 +628,12 @@ function TrustMarquee({
 /* Tableau d’exemple, colonnes fixes + chiffres tabulaires */
 function LeaderboardPreview({ className = "" }: { className?: string }) {
   const rows = [
-    {
-      rank: 1,
-      creator: "@maya",
-      network: "TikTok",
-      views: 320_451,
-      likes: 18_420,
-      engagement: "7.4%",
-    },
-    {
-      rank: 2,
-      creator: "@leo",
-      network: "Reels",
-      views: 291_104,
-      likes: 15_100,
-      engagement: "6.7%",
-    },
-    {
-      rank: 3,
-      creator: "@nina",
-      network: "Shorts",
-      views: 250_988,
-      likes: 12_460,
-      engagement: "6.1%",
-    },
+    { rank: 1, creator: "@maya", network: "TikTok", views: 320_451, likes: 18_420, engagement: "7.4%" },
+    { rank: 2, creator: "@leo", network: "Reels", views: 291_104, likes: 15_100, engagement: "6.7%" },
+    { rank: 3, creator: "@nina", network: "Shorts", views: 250_988, likes: 12_460, engagement: "6.1%" },
   ];
   return (
-    <div
-      className={`table-wrap rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 ${className}`}
-    >
+    <div className={`table-wrap rounded-2xl border border-zinc-200 dark:border-zinc-800 p-4 ${className}`}>
       <div className="text-sm text-zinc-400 mb-2">Classement (exemple)</div>
       <table className="w-full table-fixed border-separate border-spacing-0 text-sm">
         <colgroup>
@@ -856,22 +656,13 @@ function LeaderboardPreview({ className = "" }: { className?: string }) {
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr
-              key={r.rank}
-              className="border-t border-zinc-200 dark:border-zinc-800"
-            >
+            <tr key={r.rank} className="border-t border-zinc-200 dark:border-zinc-800">
               <td className="px-3 py-2 align-middle">#{r.rank}</td>
               <td className="px-3 py-2 align-middle">{r.creator}</td>
               <td className="px-3 py-2 align-middle">{r.network}</td>
-              <td className="px-3 py-2 align-middle tabular-nums text-right">
-                {r.views.toLocaleString("fr-FR")}
-              </td>
-              <td className="px-3 py-2 align-middle tabular-nums text-right">
-                {r.likes.toLocaleString("fr-FR")}
-              </td>
-              <td className="px-3 py-2 align-middle tabular-nums text-right">
-                {r.engagement}
-              </td>
+              <td className="px-3 py-2 align-middle tabular-nums text-right">{r.views.toLocaleString("fr-FR")}</td>
+              <td className="px-3 py-2 align-middle tabular-nums text-right">{r.likes.toLocaleString("fr-FR")}</td>
+              <td className="px-3 py-2 align-middle tabular-nums text-right">{r.engagement}</td>
             </tr>
           ))}
         </tbody>
@@ -885,42 +676,50 @@ function FeatureGrid({ className = "" }: { className?: string }) {
   const items = [
     {
       icon: "/window.svg",
-      title: "Concours automatisés",
-      desc: "Créez et gérez vos concours UGC en quelques clics. Distribution automatique des récompenses selon votre modèle.",
+      title: "Connectez Marques & Créateurs",
+      desc: "Une plateforme qui unit les marques aux créateurs de contenu les plus talentueux.",
     },
     {
       icon: "/globe.svg",
-      title: "Tracking des performances",
-      desc: "Suivez en temps réel les vues, likes et engagement de vos créateurs sur toutes les plateformes.",
-    },
-    {
-      icon: "/next.svg",
-      title: "Réseau de créateurs",
-      desc: "Accédez à une communauté de 10K+ créateurs vérifiés et sélectionnez les meilleurs profils.",
+      title: "Concours Simplifiés",
+      desc: "Créez et lancez des concours UGC en quelques clics avec notre interface intuitive.",
     },
     {
       icon: "/file.svg",
-      title: "Paiements sécurisés",
-      desc: "Paiements intégrés via Stripe Connect. Transactions sécurisées et automatisées.",
+      title: "Paiements Sécurisés",
+      desc: "Transactions protégées par Stripe et distribution automatique des récompenses.",
+    },
+    {
+      icon: "/next.svg",
+      title: "Analytics Avancées",
+      desc: "Suivez les performances en temps réel et calculez votre ROI automatiquement.",
     },
   ];
+
   return (
-    <div className={`grid gap-6 md:grid-cols-2 ${className}`}>
+    <div className={`grid gap-8 md:grid-cols-2 ${className}`}>
       {items.map((it) => (
-        <div
+        <article
           key={it.title}
-          className="feature-card rounded-3xl bg-white/5 border border-white/15 p-6 shadow-[0_18px_50px_-25px_rgba(255,255,255,.25)] hover:shadow-[0_25px_65px_-25px_rgba(255,255,255,.35)] transition will-change-transform hover:-translate-y-0.5"
+          className="group relative overflow-hidden rounded-[28px] border border-violet-600/40 bg-[#15131d] text-white/95 shadow-[0_30px_80px_-25px_rgba(124,58,237,0.35)] transition-transform hover:-translate-y-1 hover:shadow-[0_40px_100px_-25px_rgba(124,58,237,0.55)]"
         >
-          <div className="flex items-start gap-4">
-            <div className="h-12 w-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center shrink-0">
-              <Image src={it.icon} alt="" width={28} height={28} />
+          <div className="relative p-7 sm:p-9">
+            {/* Icône + titre côte à côte */}
+            <div className="flex items-center gap-4 mb-4">
+              <div className="h-14 w-14 shrink-0 rounded-2xl border border-violet-500/50 bg-violet-500/10 grid place-items-center">
+                <Image src={it.icon} alt="" width={28} height={28} className="opacity-90" />
+              </div>
+              <h3 className="text-[22px] sm:text-[26px] font-bold tracking-tight leading-snug">
+                {it.title}
+              </h3>
             </div>
-            <div>
-              <div className="text-xl font-semibold">{it.title}</div>
-              <p className="mt-2 text-zinc-300">{it.desc}</p>
-            </div>
+
+            {/* Texte */}
+            <p className="text-base sm:text-lg leading-relaxed text-zinc-300/90">
+              {it.desc}
+            </p>
           </div>
-        </div>
+        </article>
       ))}
     </div>
   );
@@ -972,10 +771,7 @@ function EnterpriseCard({
       </div>
       <div className="mt-4 h-px bg-white/15" />
       <div className="mt-4 flex items-center gap-2 text-sm text-white/80">
-        En savoir plus
-        <span className="transition-transform group-hover:translate-x-0.5">
-          ↗
-        </span>
+        En savoir plus <span className="transition-transform group-hover:translate-x-0.5">↗</span>
       </div>
     </div>
   );
@@ -988,13 +784,11 @@ function BrandStep({ n, title }: { n: string; title: string }) {
         {n} <span className="font-semibold">{title}</span>
       </div>
       <p className="mt-2 text-zinc-100/90">
-        Définissez le brief, mobilisez des créateurs, suivez le ROI et
-        récompensez automatiquement les meilleurs.
+        Définissez le brief, mobilisez des créateurs, suivez le ROI et récompensez automatiquement les meilleurs.
       </p>
     </div>
   );
 }
-
 
 /* FAQ premium (verre + chevron animé) */
 function FAQ({ q, a }: { q: string; a: string }) {
@@ -1002,9 +796,7 @@ function FAQ({ q, a }: { q: string; a: string }) {
     <details className="reveal group rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 bg-white/60 dark:bg-zinc-950/60">
       <summary className="cursor-pointer select-none font-medium marker:hidden flex items-center justify-between">
         {q}
-        <span className="text-zinc-400 group-open:rotate-180 transition-transform">
-          ⌄
-        </span>
+        <span className="text-zinc-400 group-open:rotate-180 transition-transform">⌄</span>
       </summary>
       <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{a}</p>
     </details>
@@ -1027,7 +819,7 @@ function TestimonialMarquee({ className = "" }: { className?: string }) {
         {loop.map((t, i) => (
           <figure
             key={`${t.n}-${i}`}
-            className="mx-2 w-[320px] sm:w-[380px] rounded-2xl bg-white/95 text-zinc-900 border border-zinc-200 p-4 shadow-[0_18px_50px_-25px_rgba(0,0,0,.25)]"
+            className="mx-2 w-[300px] sm:w-[360px] md:w-[380px] rounded-2xl bg-white/95 text-zinc-900 border border-zinc-200 p-4 shadow-[0_18px_50px_-25px_rgba(0,0,0,.25)]"
           >
             <div className="text-[15px]">“{t.q}”</div>
             <figcaption className="mt-3 text-sm text-zinc-500">
