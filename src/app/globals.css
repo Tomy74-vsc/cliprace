@@ -45,7 +45,7 @@ body{
   text-rendering: optimizeLegibility;
 }
 
-/* Focus visible (sans color-mix) */
+/* Focus visible (compat large, sans color-mix) */
 :focus-visible{
   outline: 2px solid rgba(99,91,255,0.7); /* --accent-indigo 70% */
   outline-offset: 2px;
@@ -94,7 +94,7 @@ body{
 /* Fond Hero gris très clair */
 .hero-surface{ background: var(--surface-muted); }
 
-/* Backdrop gradients avec parallax (sans color-mix) */
+/* Backdrop gradients avec parallax */
 .hero-backdrop{
   background:
     radial-gradient(1200px 600px at 50% -10%, rgba(124,58,237,0.20), transparent 70%),
@@ -115,6 +115,34 @@ body{
 }
 .dark .title-weight-shadow::after,
 .dark .title-shadow::after{ background: rgba(255,255,255,.08); }
+
+/* Effet “hero” sur le H1 (ombre douce multi-couches) */
+.text-shadow-hero{
+  text-shadow:
+    0 1px 0 rgba(0,0,0,0.03),
+    0 8px 32px rgba(99,91,255,0.12),
+    0 18px 48px rgba(124,58,237,0.18);
+}
+
+/* Particules subtiles en arrière-plan */
+@keyframes floaty {
+  0%   { transform: translateY(0) translateX(0);   opacity:.35; }
+  50%  { transform: translateY(-12px) translateX(6px); opacity:.55; }
+  100% { transform: translateY(0) translateX(0);   opacity:.35; }
+}
+.particles::before,
+.particles::after{
+  content:"";
+  position:absolute; inset:0;
+  background:
+    radial-gradient(6px 6px at 10% 30%, rgba(124,58,237,.25) 60%, transparent),
+    radial-gradient(6px 6px at 80% 20%, rgba(99,91,255,.25) 60%, transparent),
+    radial-gradient(6px 6px at 60% 70%, rgba(124,58,237,.25) 60%, transparent),
+    radial-gradient(6px 6px at 30% 80%, rgba(99,91,255,.25) 60%, transparent);
+  animation: floaty 9s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+.particles::after{ animation-delay:1.2s; filter:blur(1px); opacity:.25; }
 
 /* =========================
    Bulles KPI
@@ -141,7 +169,7 @@ body{
    Marquee logos — “Ils nous font confiance”
    ========================= */
 .marquee{
-  /* Mettre -webkit-mask-image AVANT mask-image (ordre des prefixes) */
+  /* Préfixe d’abord */
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
           mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent);
   overflow: hidden;
@@ -200,6 +228,54 @@ body{
   border: 1px solid rgba(229,231,235,0.9);
 }
 
+/* Variante “bulle pro sur fond noir” (page Produit) */
+.product-card{
+  background:#15131d; /* noir bleuté pro */
+  border:1px solid rgba(124,58,237,0.45); /* liseré violet */
+  box-shadow:0 30px 80px -25px rgba(124,58,237,0.35);
+}
+.product-card:hover{
+  box-shadow:0 40px 100px -25px rgba(124,58,237,0.55);
+}
+.product-title{
+  font-weight:700; letter-spacing:-0.01em;
+}
+
+/* =========================
+   Section Entreprise — orbes & flottement
+   ========================= */
+@keyframes orbFloat {
+  0%   { transform: translate3d(0, -12px, 0) scale(1); }
+  50%  { transform: translate3d(10px, 12px, 0) scale(1.03); }
+  100% { transform: translate3d(0, -12px, 0) scale(1); }
+}
+.enterprise-orbs::before,
+.enterprise-orbs::after{
+  content:"";
+  position:absolute;
+  border-radius:9999px;
+  filter: blur(30px);
+  opacity:.45;
+  animation: orbFloat 18s ease-in-out infinite;
+}
+.enterprise-orbs::before{
+  width:420px; height:420px; left:-120px; top:-80px;
+  background: radial-gradient(circle at 30% 30%, #7c3aed, transparent 70%);
+}
+.enterprise-orbs::after{
+  width:520px; height:520px; right:-160px; bottom:-120px;
+  background: radial-gradient(circle at 70% 70%, #635bff, transparent 70%);
+  animation-delay:.8s;
+}
+
+/* Légère translation sur les cartes (entreprise) */
+@keyframes floatCard {
+  0%   { transform: translateY(0); }
+  50%  { transform: translateY(-4px); }
+  100% { transform: translateY(0); }
+}
+.enterprise-float{ animation: floatCard 6s ease-in-out infinite; }
+
 /* =========================
    FAQ premium
    ========================= */
@@ -214,9 +290,7 @@ body{
   background: var(--surface-elev-1-dark);
   border-color: rgba(255,255,255,.08);
 }
-.faq-item[open]{
-  box-shadow: 0 18px 60px -28px rgba(99,91,255,0.28);
-}
+.faq-item[open]{ box-shadow: 0 18px 60px -28px rgba(99,91,255,0.28); }
 
 /* =========================
    Petites utilités
@@ -233,7 +307,7 @@ body{
 .footer-center{ margin-left:auto; margin-right:auto; max-width: 80rem; }
 
 /* =========================
-   Décors elliptiques
+   Décors elliptiques (optionnels)
    ========================= */
 .parallax-ellipse{ opacity:.35; }
 .parallax-ellipse-1{
