@@ -46,3 +46,10 @@ next-env.d.ts
 # Supabase local
 .supabase/
 
+# existing .gitignore content should be preserved; append the following
+
+# Environment files
+.env
+.env.local
+.env.*.local
+.env.* 
