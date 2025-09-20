@@ -122,7 +122,7 @@ export default function Home() {
                 Se connecter
               </Link>
               <a
-                href="#cta"
+                href="/signup"
                 className={ctaPrimary}
               >
                 Commencer
@@ -170,7 +170,7 @@ export default function Home() {
                   Se connecter
                 </Link>
                 <a
-                  href="#cta"
+                  href="/signup"
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#635BFF] hover:bg-[#534BFF] text-white font-semibold"
                 >
                   Commencer
@@ -198,7 +198,7 @@ export default function Home() {
 
           {/* CTA */}
           <div id="cta" className="reveal mt-8 flex flex-col sm:flex-row gap-3 justify-center">
-            <Link href="/signup?role=brand" className={ctaPrimary}>
+            <Link href="/signup" className={ctaPrimary}>
               Commencer maintenant
             </Link>
             <a href="#product" className={ctaGhost}>
@@ -206,7 +206,7 @@ export default function Home() {
             </a>
           </div>
 
-          <div className="mt-4 text-xs text-zinc-500">
+          <div className="reveal d2 mt-4 text-xs text-zinc-500">
             0% côté marque au lancement • 15% commission sur cashout créateurs (Stripe Connect)
           </div>
 
@@ -257,7 +257,7 @@ export default function Home() {
             </p>
             <div className="reveal d2 mt-6">
               <Link
-                href="/signup?role=creator"
+                href="/signup"
                 className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90"
               >
                 Participer aux concours
@@ -318,7 +318,7 @@ export default function Home() {
                   text="Top 30 récompensé, cashout sécurisé via Stripe Connect."
                 />
                 <li className="pt-2 list-none">
-                  <Link href="/signup?role=creator" className="inline-flex items-center gap-2 underline underline-offset-4 font-semibold">
+                  <Link href="/signup" className="inline-flex items-center gap-2 underline underline-offset-4 font-semibold">
                     Rejoins un concours <span aria-hidden>↗</span>
                   </Link>
                 </li>
@@ -364,14 +364,14 @@ export default function Home() {
 
           {/* CTA */}
           <div className="reveal d3 mt-8">
-            <Link href="/signup?role=brand" className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
+            <Link href="/signup" className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
               Créer un concours
             </Link>
           </div>
 
           {/* Process / mini dashboard */}
           <h3 className="reveal d2 mt-12 text-3xl sm:text-4xl font-bold">Comment ça marche ?</h3>
-          <div className="mt-6 grid md:grid-cols-2 gap-8">
+          <div className="reveal d2 mt-6 grid md:grid-cols-2 gap-8">
             <ol className="space-y-6">
               <BrandStep n="1." title="Créez votre concours" />
               <BrandStep n="2." title="Les influenceurs participent" />
@@ -379,16 +379,16 @@ export default function Home() {
               <BrandStep n="4." title="Payez les meilleurs" />
             </ol>
 
-            <div className="grid gap-6">
-              <div className="rounded-xl bg-white/10 border border-white/20 p-6 shadow-[0_18px_60px_-25px_rgba(0,0,0,.5)] enterprise-float">
-                <div className="text-white/80">Ventes</div>
-                <div className="text-3xl font-bold">212K €</div>
-                <div className="mt-3 h-24 rounded-md bg-white/10" />
+            <div className="reveal d2 grid gap-6">
+              <div className="reveal d2 rounded-xl bg-white/10 border border-white/20 p-6 shadow-[0_18px_60px_-25px_rgba(0,0,0,.5)] enterprise-float">
+                <div className="reveal d2 text-white/80">Ventes</div>
+                <div className="reveal d2 text-3xl font-bold">212K €</div>
+                <div className="reveal d2 mt-3 h-24 rounded-md bg-white/10" />
               </div>
-              <div className="rounded-xl bg-white/10 border border-white/20 p-6 shadow-[0_18px_60px_-25px_rgba(0,0,0,.5)] enterprise-float">
-                <div className="h-56 rounded-md bg-white/10" />
-                <div className="mt-3">
-                  <a href="#cta" className="inline-block px-5 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
+              <div className="reveal d2 rounded-xl bg-white/10 border border-white/20 p-6 shadow-[0_18px_60px_-25px_rgba(0,0,0,.5)] enterprise-float">
+                <div className="reveal d2 h-56 rounded-md bg-white/10" />
+                <div className="reveal d2 mt-3">
+                  <a href="/signup" className="reveal d2 inline-block px-5 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
                     Booster votre marque
                   </a>
                 </div>
@@ -445,7 +445,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h3 className="reveal text-3xl sm:text-4xl font-bold">Boostez votre succès dès aujourd’hui.</h3>
           <div className="reveal d1 mt-6">
-            <a href="#cta" className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
+            <a href="/signup" className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
               Commencer
             </a>
           </div>
