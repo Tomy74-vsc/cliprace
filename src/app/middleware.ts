@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 export const config = {
-  matcher: ["/admin/:path*"], // on n’intercepte que /admin/*
+  matcher: ["/admin/:path*", "/brand/:path*", "/creator/:path*"],
 };
 
 export function middleware(req: NextRequest) {
