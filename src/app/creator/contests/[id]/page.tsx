@@ -4,7 +4,7 @@ import { getBrowserSupabase } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { Calendar, Trophy, Users, Euro } from "lucide-react";
+import { Calendar, Trophy, Users, Euro, MessageSquare } from "lucide-react";
 
 type Contest = {
 	id: string;
@@ -25,14 +25,25 @@ type LeaderboardEntry = {
 	submission_id: string;
 };
 
-export default function ContestDetailPage({ params }: { params: { id: string } }) {
+export default function ContestDetailPage({ params }: { params: Promise<{ id: string }> }) {
 	const supabase = getBrowserSupabase();
 	const [contest, setContest] = useState<Contest | null>(null);
 	const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
 	const [userSubmission, setUserSubmission] = useState<{ id: string; status: string } | null>(null);
 	const [loading, setLoading] = useState(true);
+	const [contestId, setContestId] = useState<string>("");
 
 	useEffect(() => {
+		async function loadParams() {
+			const { id } = await params;
+			setContestId(id);
+		}
+		loadParams();
+	}, [params]);
+
+	useEffect(() => {
+		if (!contestId) return;
+		
 		async function loadData() {
 			const { data: { user } } = await supabase.auth.getUser();
 			if (!user) {
@@ -41,9 +52,9 @@ export default function ContestDetailPage({ params }: { params: { id: string } }
 			}
 
 			const [contestRes, leaderboardRes, userSubmissionRes] = await Promise.all([
-				supabase.from("contests").select("*").eq("id", params.id).single(),
-				supabase.from("leaderboards").select("rank,creator_id,views_weighted,prize_cents,submission_id").eq("contest_id", params.id).order("rank", { ascending: true }).limit(10),
-				supabase.from("submissions").select("id,status").eq("contest_id", params.id).eq("creator_id", user.id).single(),
+				supabase.from("contests").select("*").eq("id", contestId).single(),
+				supabase.from("leaderboards").select("rank,creator_id,views_weighted,prize_cents,submission_id").eq("contest_id", contestId).order("rank", { ascending: true }).limit(10),
+				supabase.from("submissions").select("id,status").eq("contest_id", contestId).eq("creator_id", user.id).single(),
 			]);
 
 			setContest(contestRes.data as Contest | null);
@@ -52,7 +63,7 @@ export default function ContestDetailPage({ params }: { params: { id: string } }
 			setLoading(false);
 		}
 		loadData();
-	}, [supabase, params.id]);
+	}, [supabase, contestId]);
 
 	if (loading) {
 		return (
@@ -131,6 +142,12 @@ export default function ContestDetailPage({ params }: { params: { id: string } }
 						</Button>
 					</div>
 				)}
+				<Link href={`/creator/messages?new_thread=true&brand_id=${contest.brand_id}&subject=${encodeURIComponent(`Concours: ${contest.title}`)}`}>
+					<Button variant="outline" className="flex items-center gap-2">
+						<MessageSquare className="h-4 w-4" />
+						Contacter la marque
+					</Button>
+				</Link>
 				<Link href="/creator/discover">
 					<Button variant="outline">Retour aux concours</Button>
 				</Link>

@@ -33,7 +33,7 @@ export async function mockRefreshMetricsForSubmission(submissionId: string) {
 			likes,
 			comments,
 			shares,
-		},
+		} as any,
 		{ onConflict: "submission_id,date" }
 	);
 }

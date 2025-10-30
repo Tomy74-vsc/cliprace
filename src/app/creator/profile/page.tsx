@@ -14,6 +14,7 @@ type Profile = {
 	full_name: string | null;
 	avatar_url: string | null;
 	bio: string | null;
+	handle?: string;
 	tiktok_handle: string | null;
 	instagram_handle: string | null;
 	youtube_handle: string | null;
@@ -43,21 +44,42 @@ export default function CreatorProfile() {
 			const { data: { user } } = await supabase.auth.getUser();
 			if (!user) return;
 
-			const { data } = await supabase
-				.from("profiles")
-				.select("*")
-				.eq("id", user.id)
-				.single();
+			// Rcuprer les donnes depuis les deux tables
+			const [mainProfile, creatorProfile] = await Promise.all([
+				supabase
+					.from("profiles")
+					.select("*")
+					.eq("id", user.id)
+					.single(),
+				supabase
+					.from("profiles_creator")
+					.select("*")
+					.eq("user_id", user.id)
+					.single()
+			]);
 
-			if (data) {
-				setProfile(data);
+			// Combiner les donnes des deux tables
+			const combinedData = {
+				...mainProfile.data,
+				...creatorProfile.data,
+				// Mapper les champs correctement
+				full_name: mainProfile.data?.name || creatorProfile.data?.handle || "",
+				bio: creatorProfile.data?.bio || mainProfile.data?.description || "",
+				handle: creatorProfile.data?.handle || "",
+				country: creatorProfile.data?.country || "FR",
+				primary_network: creatorProfile.data?.primary_network || "tiktok",
+				social_media: creatorProfile.data?.social_media || {},
+			};
+
+			if (combinedData) {
+				setProfile(combinedData);
 				setFormData({
-					full_name: data.full_name || "",
-					bio: data.bio || "",
-					tiktok_handle: data.tiktok_handle || "",
-					instagram_handle: data.instagram_handle || "",
-					youtube_handle: data.youtube_handle || "",
-					twitter_handle: data.twitter_handle || "",
+					full_name: combinedData.full_name || "",
+					bio: combinedData.bio || "",
+					tiktok_handle: combinedData.social_media?.tiktok || "",
+					instagram_handle: combinedData.social_media?.instagram || "",
+					youtube_handle: combinedData.social_media?.youtube || "",
+					twitter_handle: combinedData.social_media?.twitter || "",
 				});
 			}
 			setLoading(false);
@@ -74,52 +96,70 @@ export default function CreatorProfile() {
 		try {
 			const { data: { user } } = await supabase.auth.getUser();
 			if (!user) {
-				setError("Vous devez être connecté");
+				setError("Veuillez vous connecter pour continuer");
 				return;
-			}
+		}
 
 			// Upload avatar if provided
 			let avatarUrl = profile?.avatar_url;
 			if (avatar) {
-				const fileExt = avatar.name.split('.').pop();
-				const fileName = `${user.id}/avatar.${fileExt}`;
-				const { error: uploadError } = await supabase.storage
-					.from('avatars')
-					.upload(fileName, avatar, { upsert: true });
-				
-				if (uploadError) {
-					setError("Erreur lors de l&apos;upload de l&apos;avatar");
+				const formData = new FormData();
+				formData.append("file", avatar);
+				const uploadResponse = await fetch("/api/uploads/avatar", {
+					method: "POST",
+					credentials: "include",
+					body: formData,
+				});
+				const uploadResult = await uploadResponse.json();
+				if (!uploadResponse.ok || !uploadResult?.publicUrl) {
+					setError(uploadResult?.error ?? "Erreur lors du televersement de l avatar");
 					return;
 				}
-				
-				const { data: { publicUrl } } = supabase.storage
-					.from('avatars')
-					.getPublicUrl(fileName);
-				avatarUrl = publicUrl;
+				avatarUrl = uploadResult.publicUrl as string;
 			}
 
-			// Update profile
-			const { error: updateError } = await supabase
+		// Mettre a jour les deux tables
+			const socialMediaData = {
+				tiktok: formData.tiktok_handle || null,
+				instagram: formData.instagram_handle || null,
+				youtube: formData.youtube_handle || null,
+				twitter: formData.twitter_handle || null,
+			};
+
+			// Mettre a jour le profil principal
+			const { error: mainUpdateError } = await supabase
 				.from("profiles")
 				.upsert({
 					id: user.id,
 					email: user.email,
-					full_name: formData.full_name || null,
-					bio: formData.bio || null,
-					avatar_url: avatarUrl,
-					tiktok_handle: formData.tiktok_handle || null,
-					instagram_handle: formData.instagram_handle || null,
-					youtube_handle: formData.youtube_handle || null,
-					twitter_handle: formData.twitter_handle || null,
+					name: formData.full_name || null,
+					description: formData.bio || null,
+					profile_image_url: avatarUrl,
 					updated_at: new Date().toISOString(),
 				});
 
-			if (updateError) {
-				setError(updateError.message);
+			if (mainUpdateError) {
+				setError(`Erreur profil principal: ${mainUpdateError.message}`);
 				return;
 			}
 
-			setSuccess("Profil mis à jour avec succès");
+			// Mettre a jour le profil crateur
+			const { error: creatorUpdateError } = await supabase
+				.from("profiles_creator")
+				.upsert({
+					user_id: user.id,
+					handle: profile?.handle || `creator_${user.id.slice(0, 8)}`,
+					bio: formData.bio || null,
+					social_media: socialMediaData,
+					updated_at: new Date().toISOString(),
+				});
+
+			if (creatorUpdateError) {
+				setError(`Erreur profil crateur: ${creatorUpdateError.message}`);
+				return;
+			}
+
+			setSuccess("Profil mis  jour avec succs");
 			setAvatar(null);
 		} catch {
 			setError("Une erreur inattendue s&apos;est produite");
@@ -128,7 +168,7 @@ export default function CreatorProfile() {
 	}
 
 	async function handleDeleteAccount() {
-		if (!confirm("Êtes-vous sûr de vouloir supprimer votre compte ? Cette action est irréversible.")) {
+		if (!confirm("Etes-vous sur de vouloir supprimer votre compte ? Cette action est irreversible.")) {
 			return;
 		}
 		
@@ -202,7 +242,7 @@ export default function CreatorProfile() {
 						<h2 className="text-xl font-semibold">{profile?.full_name || "Utilisateur"}</h2>
 						<p className="text-zinc-600 dark:text-zinc-400">{profile?.email}</p>
 						{avatar && (
-							<p className="text-sm text-indigo-600">Nouvelle photo sélectionnée</p>
+							<p className="text-sm text-indigo-600">Nouvelle photo slectionne</p>
 						)}
 					</div>
 				</div>
@@ -255,7 +295,7 @@ export default function CreatorProfile() {
 				</div>
 
 				<div className="rounded-2xl border border-zinc-200 p-6 dark:border-zinc-800">
-					<h3 className="mb-4 text-lg font-semibold">Réseaux sociaux</h3>
+					<h3 className="mb-4 text-lg font-semibold">Rseaux sociaux</h3>
 					<div className="grid gap-4 md:grid-cols-2">
 						<div>
 							<label className="mb-2 block text-sm font-medium text-zinc-700 dark:text-zinc-200">
@@ -319,7 +359,7 @@ export default function CreatorProfile() {
 				<div className="flex flex-col gap-3 sm:flex-row">
 					<Button type="submit" disabled={saving} className="flex-1">
 						<Save className="mr-2 h-4 w-4" />
-						{saving ? "Sauvegarde..." : "Mettre à jour"}
+						{saving ? "Sauvegarde..." : "Mettre  jour"}
 					</Button>
 					<Link href="/auth/reset-password">
 						<Button type="button" variant="outline">
@@ -339,7 +379,7 @@ export default function CreatorProfile() {
 			>
 				<h3 className="mb-4 text-lg font-semibold text-red-600">Zone dangereuse</h3>
 				<p className="mb-4 text-sm text-zinc-600 dark:text-zinc-400">
-					Une fois votre compte supprimé, toutes vos données seront définitivement perdues.
+					Une fois votre compte supprim, toutes vos donnes seront dfinitivement perdues.
 				</p>
 				<Button
 					variant="outline"
@@ -354,3 +394,4 @@ export default function CreatorProfile() {
 		</div>
 	);
 }
+

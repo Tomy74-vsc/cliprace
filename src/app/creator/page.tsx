@@ -2,8 +2,9 @@
 import { useState, useEffect } from "react";
 import { getBrowserSupabase } from "@/lib/supabase/client";
 import { motion } from "framer-motion";
-import { Trophy, Target, Euro, TrendingUp, Calendar, ArrowRight } from "lucide-react";
+import { Trophy, Calendar, ArrowRight, MessageSquare } from "lucide-react";
 import Link from "next/link";
+import { QuickStats } from "@/components/creator/QuickStats";
 
 type Contest = {
 	id: string;
@@ -15,27 +16,39 @@ type Contest = {
 export default function CreatorDashboard() {
 	const supabase = getBrowserSupabase();
 	const [activeContests, setActiveContests] = useState<Contest[]>([]);
-	const [totalSubmissions, setTotalSubmissions] = useState(0);
-	const [totalEarningsCents, setTotalEarningsCents] = useState(0);
-	const [avgEngagement, setAvgEngagement] = useState(0);
 	const [loading, setLoading] = useState(true);
+	const [userProfile, setUserProfile] = useState<{
+		name?: string;
+		handle?: string;
+		bio?: string;
+		social_media?: Record<string, string>;
+	} | null>(null);
 
 	useEffect(() => {
 		async function loadData() {
 			const { data: { user } } = await supabase.auth.getUser();
 			if (!user) return;
 
-			const [contestsRes, submissionsRes, earningsRes, engagementRes] = await Promise.all([
-				supabase.from("contests").select("id,title,status,ends_at").eq("status", "active").order("ends_at", { ascending: true }).limit(6),
-				supabase.from("submissions").select("id").eq("creator_id", user.id),
-				supabase.rpc("creator_total_earnings_cents", { p_creator_id: user.id }).single(),
-				supabase.rpc("creator_avg_engagement", { p_creator_id: user.id }).single(),
+			// Charger le profil utilisateur
+			const [mainProfile, creatorProfile] = await Promise.all([
+				supabase.from("profiles").select("*").eq("id", user.id).single(),
+				supabase.from("profiles_creator").select("*").eq("user_id", user.id).single()
 			]);
 
+			const combinedProfile = {
+				...mainProfile.data,
+				...creatorProfile.data,
+				name: mainProfile.data?.name || creatorProfile.data?.handle || "Créateur",
+				handle: creatorProfile.data?.handle || "",
+				bio: creatorProfile.data?.bio || "",
+				social_media: creatorProfile.data?.social_media || {},
+			};
+			setUserProfile(combinedProfile);
+
+			// Charger les données du dashboard
+			const contestsRes = await supabase.from("contests").select("id,title,status,ends_at").eq("status", "active").order("ends_at", { ascending: true }).limit(6);
+
 			setActiveContests((contestsRes.data ?? []) as Contest[]);
-			setTotalSubmissions((submissionsRes.data ?? []).length);
-			setTotalEarningsCents(Number((earningsRes?.data as { creator_total_earnings_cents?: number })?.creator_total_earnings_cents ?? 0));
-			setAvgEngagement(Number((engagementRes?.data as { creator_avg_engagement?: number })?.creator_avg_engagement ?? 0));
 			setLoading(false);
 		}
 		loadData();
@@ -56,36 +69,6 @@ export default function CreatorDashboard() {
 		);
 	}
 
-	const kpiCards = [
-		{
-			title: "Concours en cours",
-			value: activeContests.length,
-			icon: Trophy,
-			gradient: "from-blue-500 to-cyan-500",
-			bgGradient: "from-blue-50 to-cyan-50 dark:from-blue-950 dark:to-cyan-950",
-		},
-		{
-			title: "Total participations",
-			value: totalSubmissions,
-			icon: Target,
-			gradient: "from-emerald-500 to-teal-500",
-			bgGradient: "from-emerald-50 to-teal-50 dark:from-emerald-950 dark:to-teal-950",
-		},
-		{
-			title: "Gains cumulés",
-			value: `€${(totalEarningsCents / 100).toFixed(2)}`,
-			icon: Euro,
-			gradient: "from-amber-500 to-orange-500",
-			bgGradient: "from-amber-50 to-orange-50 dark:from-amber-950 dark:to-orange-950",
-		},
-		{
-			title: "Engagement moyen",
-			value: `${avgEngagement.toFixed(1)}%`,
-			icon: TrendingUp,
-			gradient: "from-purple-500 to-pink-500",
-			bgGradient: "from-purple-50 to-pink-50 dark:from-purple-950 dark:to-pink-950",
-		},
-	];
 
 	return (
 		<div className="space-y-8">
@@ -97,37 +80,50 @@ export default function CreatorDashboard() {
 				className="text-center"
 			>
 				<h1 className="text-3xl font-bold bg-gradient-to-r from-indigo-600 to-violet-600 bg-clip-text text-transparent">
-					Bienvenue sur votre Dashboard
+					Bienvenue, {userProfile?.name || "Créateur"} !
 				</h1>
 				<p className="mt-2 text-zinc-600 dark:text-zinc-400">
-					Suivez vos performances et découvrez de nouveaux concours
+					{userProfile?.bio || "Suivez vos performances et découvrez de nouveaux concours"}
 				</p>
+				{userProfile?.handle && (
+					<div className="mt-3 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-indigo-50 to-violet-50 px-4 py-2 text-sm font-medium text-indigo-700 dark:from-indigo-950 dark:to-violet-950 dark:text-indigo-300">
+						<span className="h-2 w-2 rounded-full bg-green-500"></span>
+						@{userProfile.handle}
+					</div>
+				)}
 			</motion.div>
 
-			{/* KPI Cards */}
-			<div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-				{kpiCards.map((card, index) => (
-					<motion.div
-						key={card.title}
-						initial={{ opacity: 0, y: 20 }}
-						animate={{ opacity: 1, y: 0 }}
-						transition={{ duration: 0.5, delay: index * 0.1 }}
-						whileHover={{ scale: 1.02, y: -2 }}
-						className={`relative overflow-hidden rounded-2xl border border-zinc-200/50 bg-gradient-to-br ${card.bgGradient} p-6 shadow-sm transition-all duration-300 hover:shadow-lg dark:border-zinc-800/50`}
-					>
-						<div className="flex items-center justify-between">
-							<div>
-								<p className="text-sm font-medium text-zinc-600 dark:text-zinc-400">{card.title}</p>
-								<p className="mt-2 text-2xl font-bold text-zinc-900 dark:text-zinc-100">{card.value}</p>
-							</div>
-							<div className={`flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br ${card.gradient} shadow-lg`}>
-								<card.icon className="h-6 w-6 text-white" />
-							</div>
+			{/* Quick Stats Component */}
+			<QuickStats />
+
+			{/* Messaging Quick Access */}
+			<motion.div
+				initial={{ opacity: 0, y: 20 }}
+				animate={{ opacity: 1, y: 0 }}
+				transition={{ duration: 0.5, delay: 0.3 }}
+				className="rounded-2xl border border-zinc-200 bg-gradient-to-r from-indigo-50 to-violet-50 p-6 shadow-sm dark:border-zinc-800 dark:from-indigo-950 dark:to-violet-950"
+			>
+				<div className="flex items-center justify-between">
+					<div className="flex items-center gap-4">
+						<div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-violet-500 shadow-lg">
+							<MessageSquare className="h-6 w-6 text-white" />
 						</div>
-						<div className={`absolute -right-4 -top-4 h-24 w-24 rounded-full bg-gradient-to-br ${card.gradient} opacity-10`} />
-					</motion.div>
-				))}
-			</div>
+						<div>
+							<h3 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Messagerie</h3>
+							<p className="text-sm text-zinc-600 dark:text-zinc-400">
+								Communiquez directement avec les marques
+							</p>
+						</div>
+					</div>
+					<Link
+						href="/creator/messages"
+						className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:shadow-md hover:scale-105"
+					>
+						Ouvrir la messagerie
+						<ArrowRight className="h-4 w-4" />
+					</Link>
+				</div>
+			</motion.div>
 
 			{/* Active Contests Section */}
 			<motion.div

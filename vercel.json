@@ -1,0 +1,13 @@
+{
+  "crons": [
+    {
+      "path": "/api/metrics/poller",
+      "schedule": "*/5 * * * *"
+    }
+  ],
+  "functions": {
+    "src/functions/metrics-poller/index.ts": {
+      "maxDuration": 300
+    }
+  }
+}

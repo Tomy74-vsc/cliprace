@@ -1,0 +1,63 @@
+# Page snapshot
+
+```yaml
+- generic [ref=e1]:
+  - generic [ref=e2]:
+    - banner [ref=e3]:
+      - link "ClipRaceClipRace" [ref=e4]:
+        - /url: /
+        - img "ClipRace" [ref=e6]
+        - text: ClipRace
+      - navigation "Liens secondaires" [ref=e7]:
+        - link "FAQ" [ref=e8]:
+          - /url: /faq
+    - main [ref=e9]:
+      - generic [ref=e11]:
+        - generic [ref=e13]:
+          - heading "Connexion à ClipRace" [level=1] [ref=e14]
+          - paragraph [ref=e15]: Identifiez-vous pour accéder à vos campagnes, notifications et classements.
+        - form "Heureux de vous revoir." [ref=e17]:
+          - generic [ref=e18]:
+            - heading "Heureux de vous revoir." [level=2] [ref=e19]
+            - paragraph [ref=e20]: Connectez-vous pour accéder à votre espace et suivre vos performances UGC.
+          - generic [ref=e21]:
+            - generic [ref=e22]:
+              - generic [ref=e23]: Adresse email
+              - textbox "Adresse email" [ref=e24]: user@example.com
+            - generic [ref=e25]:
+              - generic [ref=e26]:
+                - generic [ref=e27]: Mot de passe
+                - link "Mot de passe oublié ?" [ref=e28]:
+                  - /url: /forgot
+              - textbox "Mot de passe" [active] [ref=e29]: wrong-password
+            - group [ref=e30]:
+              - generic [ref=e31]:
+                - checkbox "Se souvenir de moi" [ref=e32]
+                - generic [ref=e33]: Se souvenir de moi
+              - generic [ref=e34]: Auth sécurisé Supabase
+          - button "Securisation..." [disabled] [ref=e35]:
+            - img [ref=e36]
+            - text: Securisation...
+          - paragraph [ref=e39]: Securisation en cours... Chargement du token CSRF.
+          - paragraph [ref=e40]:
+            - text: Nouveau sur ClipRace ?
+            - link "Créer un compte" [ref=e41]:
+              - /url: /signup
+        - paragraph [ref=e43]:
+          - text: Besoin d’un compte ?
+          - link "Créer un compte" [ref=e44]:
+            - /url: /signup
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - generic [ref=e47]: Plateforme sécurisée
+          - heading "Gérez vos campagnes UGC en toute simplicité." [level=2] [ref=e48]
+          - paragraph [ref=e49]: ClipRace connecte marques et créateurs autour de concours performants. Inscrivez-vous ou connectez-vous pour suivre vos performances en temps réel.
+        - list [ref=e50]:
+          - listitem [ref=e51]:
+            - generic [ref=e52]: Auth multi-rôle
+            - paragraph [ref=e53]: Accès créateur, marque et admin sécurisés.
+          - listitem [ref=e54]:
+            - generic [ref=e55]: Sécurité renforcée
+            - paragraph [ref=e56]: CSRF, rate-limit et redirections protégées par défaut.
+  - alert
+```

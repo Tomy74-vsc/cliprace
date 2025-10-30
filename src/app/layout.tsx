@@ -1,25 +1,39 @@
-import type { Metadata } from "next";
-import { Poppins } from "next/font/google";
 import "./globals.css";
+import { Plus_Jakarta_Sans, Inter } from "next/font/google";
+import type { Metadata } from "next";
+import { ToastProvider } from "@/components/ui/toast";
+import { headers } from "next/headers";
 
-const poppins = Poppins({
+const plusJakarta = Plus_Jakarta_Sans({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  variable: "--font-poppins",
+  variable: "--font-sans", // remplace Poppins
+  display: "swap",
+});
+
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter", // optionnel : fallback harmonieux
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "ClipRace — Concours viraux, vues réelles, récompenses",
-  description:
-    "Lancez des concours UGC d'affluences. Les marques gagnent en visibilité et les créateurs sont récompensées. Pour marques et créateurs. Classement basé sur le nombre de vues réelles",
+  title: "ClipRace",
+  description: "Plateforme UGC — marques & créateurs",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  // Récupère le nonce transmis par le middleware (x-nonce)
+  const nonce = headers().get("x-nonce") || undefined;
   return (
-    <html lang="fr">
-      <body className={`${poppins.variable} font-sans antialiased bg-white text-zinc-900`}>
-        {children}
+    <html lang="fr" suppressHydrationWarning>
+      <body
+        className={`${plusJakarta.variable} ${inter.variable} font-sans antialiased bg-background text-foreground`}
+      >
+        <ToastProvider>
+          {children}
+        </ToastProvider>
+        {/** Exemple: si vous avez besoin d'un petit script inline contrôlé, appliquez le nonce */}
+        {/** <script nonce={nonce} dangerouslySetInnerHTML={{ __html: "/* noop *-/" }} /> */}
       </body>
     </html>
   );

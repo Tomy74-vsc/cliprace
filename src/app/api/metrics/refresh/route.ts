@@ -8,7 +8,7 @@ export async function POST(req: NextRequest) {
 	let query = supabase.from("submissions").select("id").eq("status", "approved");
 	if (contestId) query = query.eq("contest_id", contestId);
 	const { data } = await query.limit(2000);
-	const ids = (data ?? []).map((r) => r.id);
+	const ids = (data ?? []).map((r: any) => r.id);
 	for (const id of ids) {
 		await mockRefreshMetricsForSubmission(id);
 	}

@@ -1,7 +1,26 @@
 import { getServerSupabase } from "@/lib/supabase/server";
+import { redirect } from "next/navigation";
 
 export default async function AdminPage() {
-	const supabase = getServerSupabase();
+	const supabase = await getServerSupabase();
+	
+	// Vérifier que l'utilisateur est authentifié
+	const { data: { user }, error: userError } = await supabase.auth.getUser();
+	if (userError || !user) {
+		redirect("/login?redirect=/admin");
+	}
+	
+	// Vérifier que l'utilisateur est admin
+	const { data: profile, error: profileError } = await supabase
+		.from('profiles')
+		.select('role')
+		.eq('id', user.id)
+		.single();
+	
+	if (profileError || !profile || profile.role !== 'admin') {
+		redirect("/login?error=insufficient-permissions");
+	}
+	
 	const { data: users } = await supabase.from("users").select("id,email,role,created_at").order("created_at", { ascending: false }).limit(50);
 	const { data: contests } = await supabase.from("contests").select("id,title,status").order("created_at", { ascending: false }).limit(20);
 	return (

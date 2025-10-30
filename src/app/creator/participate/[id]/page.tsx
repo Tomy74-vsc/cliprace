@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { getBrowserSupabase } from "@/lib/supabase/client";
@@ -8,7 +8,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft, Upload, Link as LinkIcon } from "lucide-react";
 
-export default function ParticipatePage({ params }: { params: { id: string } }) {
+export default function ParticipatePage({ params }: { params: Promise<{ id: string }> }) {
 	const supabase = getBrowserSupabase();
 	const [videoUrl, setVideoUrl] = useState("");
 	const [title, setTitle] = useState("");
@@ -17,6 +17,15 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
 	const [success, setSuccess] = useState(false);
+	const [contestId, setContestId] = useState<string>("");
+
+	useEffect(() => {
+		async function loadParams() {
+			const { id } = await params;
+			setContestId(id);
+		}
+		loadParams();
+	}, [params]);
 
 	async function onSubmit(e: React.FormEvent) {
 		e.preventDefault();
@@ -43,7 +52,7 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
 			let thumbnailUrl = null;
 			if (thumbnail) {
 				const fileExt = thumbnail.name.split('.').pop();
-				const fileName = `${user.id}/${params.id}/${Date.now()}.${fileExt}`;
+				const fileName = `${user.id}/${contestId}/${Date.now()}.${fileExt}`;
 				const { error: uploadError } = await supabase.storage
 					.from('thumbnails')
 					.upload(fileName, thumbnail);
@@ -62,7 +71,7 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
 
 			// Submit participation
 			const { error: submitError } = await supabase.from("submissions").insert({
-				contest_id: params.id,
+				contest_id: contestId,
 				creator_id: user.id,
 				video_url: videoUrl,
 				title: title || null,
@@ -109,7 +118,7 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
 	return (
 		<div className="space-y-6">
 			<div className="flex items-center gap-3">
-				<Link href={`/creator/contests/${params.id}`}>
+				<Link href={`/creator/contests/${contestId}`}>
 					<Button variant="outline" size="sm">
 						<ArrowLeft className="h-4 w-4" />
 					</Button>
@@ -186,7 +195,7 @@ export default function ParticipatePage({ params }: { params: { id: string } }) 
 						<Button type="submit" disabled={loading} className="flex-1">
 							{loading ? "Soumission..." : "Soumettre ma participation"}
 						</Button>
-						<Link href={`/creator/contests/${params.id}`}>
+						<Link href={`/creator/contests/${contestId}`}>
 							<Button type="button" variant="outline">Annuler</Button>
 						</Link>
 					</div>

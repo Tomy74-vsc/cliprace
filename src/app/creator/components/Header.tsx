@@ -1,12 +1,42 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import Image from "next/image";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Bell, User, LogOut, Settings, ChevronDown } from "lucide-react";
+import { Search, User, LogOut, Settings, ChevronDown } from "lucide-react";
+import { getBrowserSupabase } from "@/lib/supabase/client";
+import { NotificationsDropdown } from "@/components/creator/NotificationsDropdown";
 
 export function CreatorHeader() {
 	const [showUserMenu, setShowUserMenu] = useState(false);
-	const [notifications] = useState(3); // Mock notifications count
+	const [userProfile, setUserProfile] = useState<{
+		name?: string;
+		handle?: string;
+		profile_image_url?: string | null;
+	} | null>(null);
+	const supabase = getBrowserSupabase();
+
+	useEffect(() => {
+		async function loadUserProfile() {
+			const { data: { user } } = await supabase.auth.getUser();
+			if (!user) return;
+
+			const [mainProfile, creatorProfile] = await Promise.all([
+				supabase.from("profiles").select("*").eq("id", user.id).single(),
+				supabase.from("profiles_creator").select("*").eq("user_id", user.id).single()
+			]);
+
+			const combinedProfile = {
+				...mainProfile.data,
+				...creatorProfile.data,
+				name: mainProfile.data?.name || creatorProfile.data?.handle || "Créateur",
+				handle: creatorProfile.data?.handle || "",
+				profile_image_url: mainProfile.data?.profile_image_url || null,
+			};
+			setUserProfile(combinedProfile);
+		}
+		loadUserProfile();
+	}, [supabase]);
 
 	return (
 		<header className="sticky top-0 z-30 border-b border-zinc-200/50 bg-white/95 backdrop-blur-sm dark:border-zinc-800/50 dark:bg-zinc-900/95">
@@ -28,7 +58,15 @@ export function CreatorHeader() {
 						<input
 							type="text"
 							placeholder="Rechercher des concours..."
-							className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-2 pl-10 pr-4 text-sm placeholder:text-zinc-400 focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-800/50 dark:focus:border-indigo-600 dark:focus:bg-zinc-800"
+							className="w-full rounded-xl border border-zinc-200 bg-zinc-50/50 py-2 pl-10 pr-4 text-sm placeholder:text-zinc-400 focus:border-indigo-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-zinc-700 dark:bg-zinc-800/50 dark:focus:border-indigo-600 dark:focus:bg-zinc-800 transition-all duration-200"
+							onKeyDown={(e) => {
+								if (e.key === 'Enter') {
+									const query = e.currentTarget.value;
+									if (query.trim()) {
+										window.location.href = `/creator/discover?search=${encodeURIComponent(query)}`;
+									}
+								}
+							}}
 						/>
 					</div>
 				</div>
@@ -36,17 +74,7 @@ export function CreatorHeader() {
 				{/* Right Actions */}
 				<div className="flex items-center gap-2">
 					{/* Notifications */}
-					<button 
-						aria-label="Notifications" 
-						className="relative rounded-lg p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-					>
-						<Bell className="h-5 w-5 text-zinc-600 dark:text-zinc-400" />
-						{notifications > 0 && (
-							<span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-xs font-medium text-white">
-								{notifications}
-							</span>
-						)}
-					</button>
+					<NotificationsDropdown />
 
 					{/* User Menu */}
 					<div className="relative">
@@ -55,8 +83,28 @@ export function CreatorHeader() {
 							aria-label="Menu utilisateur"
 							className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 hover:bg-zinc-50 dark:border-zinc-700 dark:hover:bg-zinc-800"
 						>
-							<div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
-								<User className="h-4 w-4 text-white" />
+							{userProfile?.profile_image_url ? (
+								<Image
+									src={userProfile.profile_image_url}
+									alt={userProfile.name || "Avatar"}
+									width={32}
+									height={32}
+									className="h-8 w-8 rounded-full object-cover"
+								/>
+							) : (
+								<div className="h-8 w-8 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center">
+									<User className="h-4 w-4 text-white" />
+								</div>
+							)}
+							<div className="hidden sm:block text-left">
+								<div className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
+									{userProfile?.name || "Créateur"}
+								</div>
+								{userProfile?.handle && (
+									<div className="text-xs text-zinc-500 dark:text-zinc-400">
+										@{userProfile.handle}
+									</div>
+								)}
 							</div>
 							<ChevronDown className="h-4 w-4 text-zinc-500" />
 						</button>
