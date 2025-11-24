@@ -22,7 +22,9 @@
     "incremental": true,
     "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": [
+        "src/*"
+      ]
     },
     "plugins": [
       {
@@ -40,6 +42,8 @@
   "exclude": [
     "node_modules",
     "tests/**/*",
-    "src/functions/**/*"
+    "src/functions/**/*",
+    "src/app/api/uploads/**/*",
+    "src/app/forgot/**/*"
   ]
 }

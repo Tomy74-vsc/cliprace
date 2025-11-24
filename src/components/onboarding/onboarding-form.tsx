@@ -1,0 +1,498 @@
+/*
+Source: Component OnboardingForm
+Purpose: Formulaire multi-étapes pour onboarding créateur/marque
+*/
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { profileCompleteSchema, type ProfileCompleteInput } from '@/lib/validators/auth';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, Controller } from 'react-hook-form';
+import { useToastContext } from '@/hooks/use-toast-context';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronRight, ChevronLeft, CheckCircle2, User, Building2, Globe, FileText } from 'lucide-react';
+import type { UserRole } from '@/lib/auth';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
+
+type CreatorPlatformKey = keyof NonNullable<ProfileCompleteInput['platform_links']>;
+
+const CREATOR_PLATFORM_FIELDS: Array<{
+  key: CreatorPlatformKey;
+  label: string;
+  placeholder: string;
+  helper: string;
+}> = [
+  {
+    key: 'tiktok',
+    label: 'TikTok',
+    placeholder: '@moncompte ou https://www.tiktok.com/@moncompte',
+    helper: 'Handle ou URL publique TikTok',
+  },
+  {
+    key: 'instagram',
+    label: 'Instagram',
+    placeholder: '@moncompte ou https://www.instagram.com/moncompte',
+    helper: 'Handle ou URL Instagram',
+  },
+  {
+    key: 'youtube',
+    label: 'YouTube',
+    placeholder: 'https://www.youtube.com/@MaChaine',
+    helper: 'URL de chaîne ou handle YouTube',
+  },
+];
+
+interface OnboardingFormProps {
+  role: UserRole;
+  initialData?: Partial<ProfileCompleteInput>;
+}
+
+export function OnboardingForm({ role, initialData }: OnboardingFormProps) {
+  const router = useRouter();
+  const { toast } = useToastContext();
+  const [loading, setLoading] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const csrfToken = useCsrfToken();
+
+  const totalSteps = role === 'creator' ? 3 : 4; // Creator: 3 étapes, Brand: 4 étapes
+
+  const {
+    register,
+    handleSubmit,
+    control,
+    formState: { errors, isSubmitting },
+    watch,
+    trigger,
+    setValue,
+  } = useForm<ProfileCompleteInput>({
+    resolver: zodResolver(profileCompleteSchema),
+    defaultValues: initialData,
+    mode: 'onBlur',
+  });
+
+  const watchedValues = watch();
+  const platformLinkErrors =
+    (errors.platform_links as Record<CreatorPlatformKey, { message?: string }> | undefined) ?? undefined;
+
+  // Validation des étapes (aligné avec le schéma Zod - champs optionnels)
+  const validateStep = async (step: number): Promise<boolean> => {
+    if (role === 'creator') {
+      if (step === 1) {
+        // Étape 1: username et primary_platform sont requis
+        return await trigger(['username', 'primary_platform']);
+      } else if (step === 2) {
+        // Étape 2: followers et avg_views sont optionnels selon le schéma
+        // On valide seulement si des valeurs sont présentes
+        return true; // Permet de passer même si vide
+      } else if (step === 3) {
+        // Étape 3: bio est maintenant requise
+        return await trigger(['bio']);
+      }
+    } else if (role === 'brand') {
+      if (step === 1) {
+        // Étape 1: company_name est requis
+        return await trigger(['company_name']);
+      } else if (step === 2) {
+        // Étape 2: vat_number est optionnel selon le schéma
+        return true; // Permet de passer même si vide
+      } else if (step === 3) {
+        // Étape 3: adresse - certains champs sont requis
+        return await trigger(['address_line1', 'address_city', 'address_postal_code', 'address_country']);
+      } else if (step === 4) {
+        // Étape 4: bio est optionnel selon le schéma
+        return true; // Permet de passer même si vide
+      }
+    }
+    return true;
+  };
+
+  const handleNext = async () => {
+    const isValid = await validateStep(currentStep);
+    if (isValid && currentStep < totalSteps) {
+      setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
+  };
+
+  const onSubmit = async (data: ProfileCompleteInput) => {
+    if (!csrfToken) {
+      toast({
+        type: 'error',
+        title: 'Erreur de sécurité',
+        message: 'Token CSRF manquant. Veuillez rafraîchir la page.',
+      });
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const platformLinksPayload = data.platform_links
+        ? Object.entries(data.platform_links).reduce((acc, [key, value]) => {
+            acc[key as CreatorPlatformKey] = typeof value === 'string' ? value.trim() : value;
+            return acc;
+          }, {} as NonNullable<ProfileCompleteInput['platform_links']>)
+        : undefined;
+
+      const payload: ProfileCompleteInput = {
+        ...data,
+        platform_links: platformLinksPayload,
+      };
+
+      const response = await fetch('/api/profile/complete', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf': csrfToken,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.ok) {
+        toast({
+          type: 'error',
+          title: 'Erreur',
+          message: result.message || 'Une erreur est survenue',
+          duration: 7000,
+        });
+        setLoading(false);
+        return;
+      }
+
+      toast({
+        type: 'success',
+        title: 'Onboarding complété !',
+        message: 'Votre profil a été complété avec succès.',
+        duration: 3000,
+      });
+
+      // Rediriger vers dashboard selon rôle
+      setTimeout(() => {
+        if (role === 'creator') {
+          router.push('/app/creator/dashboard');
+        } else if (role === 'brand') {
+          router.push('/app/brand/dashboard');
+        }
+      }, 1500);
+    } catch (err) {
+      toast({
+        type: 'error',
+        title: 'Erreur',
+        message: 'Une erreur est survenue. Veuillez réessayer.',
+        duration: 7000,
+      });
+      setLoading(false);
+    }
+  };
+
+  // Render step content
+  const renderStepContent = () => {
+    if (role === 'creator') {
+      switch (currentStep) {
+        case 1:
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <User className="w-5 h-5 text-[#635BFF]" />
+                <h3 className="text-lg font-semibold">Informations de base</h3>
+              </div>
+              <Input
+                label="Pseudo / Handle"
+                placeholder="votre_pseudo"
+                {...register('username')}
+                error={errors.username?.message}
+                helpText="Votre nom d'utilisateur sur vos plateformes"
+              />
+              <div>
+                <div className="block text-sm font-medium mb-1.5" id="primary-platform-label">
+                  Plateforme principale <span className="text-red-500">*</span>
+                </div>
+                <Controller
+                  name="primary_platform"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger className="w-full" aria-labelledby="primary-platform-label">
+                        <SelectValue placeholder="Sélectionnez une plateforme" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="tiktok">TikTok</SelectItem>
+                        <SelectItem value="instagram">Instagram</SelectItem>
+                        <SelectItem value="youtube">YouTube</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.primary_platform && (
+                  <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                    {errors.primary_platform.message}
+                  </p>
+                )}
+              </div>
+              <div className="space-y-3 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 p-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    Comptes plateformes
+                  </h4>
+                  <span className="text-xs text-muted-foreground">Optionnel</span>
+                </div>
+                {CREATOR_PLATFORM_FIELDS.map((platform) => (
+                  <Input
+                    key={platform.key}
+                    label={platform.label}
+                    placeholder={platform.placeholder}
+                    {...register(`platform_links.${platform.key}` as const)}
+                    error={platformLinkErrors?.[platform.key]?.message}
+                    helpText={platform.helper}
+                  />
+                ))}
+                <p className="text-xs text-muted-foreground">
+                  Vous pourrez bientôt connecter vos comptes automatiquement via OAuth. En attendant, nous utilisons ces
+                  liens publics pour aider les marques à vérifier vos profils.
+                </p>
+              </div>
+            </div>
+          );
+        case 2:
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Globe className="w-5 h-5 text-[#635BFF]" />
+                <h3 className="text-lg font-semibold">Statistiques</h3>
+              </div>
+              <Input
+                label="Nombre de followers"
+                type="number"
+                placeholder="0"
+                {...register('followers', { valueAsNumber: true })}
+                error={errors.followers?.message}
+                helpText="Nombre approximatif de followers"
+              />
+              <Input
+                label="Vues moyennes par vidéo"
+                type="number"
+                placeholder="0"
+                {...register('avg_views', { valueAsNumber: true })}
+                error={errors.avg_views?.message}
+                helpText="Vues moyennes par vidéo"
+              />
+            </div>
+          );
+        case 3:
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <FileText className="w-5 h-5 text-[#635BFF]" />
+                <h3 className="text-lg font-semibold">Bio</h3>
+              </div>
+              <div>
+                <div className="block text-sm font-medium mb-1.5" id="bio-label-creator">
+                  Bio <span className="text-zinc-500">(optionnel)</span>
+                </div>
+                <textarea
+                  {...register('bio')}
+                  aria-labelledby="bio-label-creator"
+                  rows={4}
+                  className="flex w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-background px-4 py-3 text-sm placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#635BFF] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Parlez-nous de vous..."
+                />
+                {errors.bio && (
+                  <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                    {errors.bio.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        default:
+          return null;
+      }
+    } else if (role === 'brand') {
+      switch (currentStep) {
+        case 1:
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Building2 className="w-5 h-5 text-[#635BFF]" />
+                <h3 className="text-lg font-semibold">Informations entreprise</h3>
+              </div>
+              <Input
+                label="Nom de l'entreprise"
+                placeholder="Ma Société"
+                {...register('company_name')}
+                error={errors.company_name?.message}
+                helpText="Le nom officiel de votre entreprise"
+              />
+            </div>
+          );
+        case 2:
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <FileText className="w-5 h-5 text-[#635BFF]" />
+                <h3 className="text-lg font-semibold">Informations fiscales</h3>
+              </div>
+              <Input
+                label="Numéro TVA / SIREN"
+                placeholder="FR12345678901"
+                {...register('vat_number')}
+                error={errors.vat_number?.message}
+                helpText="Numéro TVA ou SIREN (optionnel)"
+              />
+            </div>
+          );
+        case 3:
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <Globe className="w-5 h-5 text-[#635BFF]" />
+                <h3 className="text-lg font-semibold">Adresse</h3>
+              </div>
+              <Input
+                label="Adresse ligne 1"
+                placeholder="123 Rue Example"
+                {...register('address_line1')}
+                error={errors.address_line1?.message}
+              />
+              <Input
+                label="Adresse ligne 2"
+                placeholder="Complément d'adresse (optionnel)"
+                {...register('address_line2')}
+                error={errors.address_line2?.message}
+              />
+              <div className="grid grid-cols-2 gap-4">
+                <Input
+                  label="Ville"
+                  placeholder="Paris"
+                  {...register('address_city')}
+                  error={errors.address_city?.message}
+                />
+                <Input
+                  label="Code postal"
+                  placeholder="75001"
+                  {...register('address_postal_code')}
+                  error={errors.address_postal_code?.message}
+                />
+              </div>
+              <Input
+                label="Pays"
+                placeholder="FR"
+                {...register('address_country')}
+                error={errors.address_country?.message}
+                helpText="Code pays (ex: FR)"
+              />
+            </div>
+          );
+        case 4:
+          return (
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 mb-4">
+                <FileText className="w-5 h-5 text-[#635BFF]" />
+                <h3 className="text-lg font-semibold">Bio</h3>
+              </div>
+              <div>
+                <div className="block text-sm font-medium mb-1.5" id="bio-label-brand">
+                  Bio <span className="text-zinc-500">(optionnel)</span>
+                </div>
+                <textarea
+                  {...register('bio')}
+                  aria-labelledby="bio-label-brand"
+                  rows={4}
+                  className="flex w-full rounded-xl border border-zinc-300 dark:border-zinc-700 bg-background px-4 py-3 text-sm placeholder:text-zinc-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#635BFF] focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Parlez-nous de votre entreprise..."
+                />
+                {errors.bio && (
+                  <p className="mt-1.5 text-sm text-red-600 dark:text-red-400">
+                    {errors.bio.message}
+                  </p>
+                )}
+              </div>
+            </div>
+          );
+        default:
+          return null;
+      }
+    }
+    return null;
+  };
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} noValidate className="w-full">
+      <div className="p-6 space-y-6">
+        {/* Progress Bar */}
+        <div className="space-y-2">
+          <div className="flex items-center justify-between text-sm text-muted-foreground">
+            <span>Étape {currentStep} sur {totalSteps}</span>
+            <span>{Math.round((currentStep / totalSteps) * 100)}%</span>
+          </div>
+          <div className="h-2 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-[#635BFF] to-[#7C3AED]"
+              initial={{ width: 0 }}
+              animate={{ width: `${(currentStep / totalSteps) * 100}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+        </div>
+
+        {/* Step Content */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            {renderStepContent()}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <CardFooter className="p-6 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+        <Button
+          type="button"
+          variant="ghost"
+          onClick={handlePrevious}
+          disabled={currentStep === 1 || loading || isSubmitting}
+        >
+          <ChevronLeft className="w-4 h-4 mr-1" />
+          Précédent
+        </Button>
+
+        {currentStep < totalSteps ? (
+          <Button
+            type="button"
+            onClick={handleNext}
+            disabled={loading || isSubmitting}
+          >
+            Suivant
+            <ChevronRight className="w-4 h-4 ml-1" />
+          </Button>
+        ) : (
+          <Button
+            type="submit"
+            loading={loading || isSubmitting}
+            disabled={loading || isSubmitting}
+          >
+            <CheckCircle2 className="w-4 h-4 mr-1" />
+            Terminer
+          </Button>
+        )}
+      </CardFooter>
+    </form>
+  );
+}
+

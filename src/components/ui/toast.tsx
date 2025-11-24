@@ -1,129 +1,109 @@
-"use client";
+'use client';
 
-import * as React from "react";
-import { X } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { motion, AnimatePresence } from "framer-motion";
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { useToast, type Toast as ToastType } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+import { X } from 'lucide-react';
 
-export interface Toast {
-  id: string;
-  title?: string;
-  description?: string;
-  variant?: "default" | "success" | "error" | "warning";
-  duration?: number;
+interface ToastProps {
+  toast: ToastType;
+  onDismiss: (id: string) => void;
 }
 
-interface ToastContextType {
-  toasts: Toast[];
-  toast: (toast: Omit<Toast, "id">) => void;
-  dismiss: (id: string) => void;
-}
+function Toast({ toast, onDismiss }: ToastProps) {
+  const { type, title, message, id } = toast;
 
-const ToastContext = React.createContext<ToastContextType | undefined>(undefined);
+  const icons = {
+    success: (
+      <svg className="h-5 w-5 text-green-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+      </svg>
+    ),
+    error: (
+      <svg className="h-5 w-5 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+      </svg>
+    ),
+    info: (
+      <svg className="h-5 w-5 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    ),
+    warning: (
+      <svg className="h-5 w-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+      </svg>
+    ),
+  };
 
-export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [toasts, setToasts] = React.useState<Toast[]>([]);
+  const styles = {
+    success: 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-800 dark:text-green-200',
+    error: 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200',
+    info: 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800 text-blue-800 dark:text-blue-200',
+    warning: 'bg-yellow-50 dark:bg-yellow-900/20 border-yellow-200 dark:border-yellow-800 text-yellow-800 dark:text-yellow-200',
+  };
 
-  const toast = React.useCallback((toast: Omit<Toast, "id">) => {
-    const id = Math.random().toString(36).substring(2, 9);
-    const newToast = { ...toast, id };
-    setToasts((prev) => [...prev, newToast]);
-
-    // Auto dismiss after duration (default 5s)
-    const duration = toast.duration ?? 5000;
-    if (duration > 0) {
-      setTimeout(() => {
-        setToasts((prev) => prev.filter((t) => t.id !== id));
-      }, duration);
-    }
-  }, []);
-
-  const dismiss = React.useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
-
-  return (
-    <ToastContext.Provider value={{ toasts, toast, dismiss }}>
-      {children}
-      <ToastViewport toasts={toasts} dismiss={dismiss} />
-    </ToastContext.Provider>
-  );
-}
-
-export function useToast() {
-  const context = React.useContext(ToastContext);
-  if (!context) {
-    throw new Error("useToast must be used within a ToastProvider");
-  }
-  return context;
-}
-
-function ToastViewport({ toasts, dismiss }: { toasts: Toast[]; dismiss: (id: string) => void }) {
   return (
     <div
-      className="fixed top-0 z-[100] flex max-h-screen w-full flex-col-reverse p-4 sm:bottom-0 sm:right-0 sm:top-auto sm:flex-col md:max-w-[420px]"
-      aria-live="assertive"
-      aria-atomic="true"
       role="alert"
+      aria-live={type === 'error' ? 'assertive' : 'polite'}
+      aria-atomic="true"
+      className={cn(
+        'flex items-start gap-3 p-4 rounded-xl border backdrop-blur-sm shadow-lg',
+        'animate-in slide-in-from-top-5 fade-in-0 duration-300',
+        styles[type]
+      )}
     >
-      <AnimatePresence mode="popLayout">
-        {toasts.map((toast) => (
-          <ToastItem key={toast.id} toast={toast} dismiss={dismiss} />
-        ))}
-      </AnimatePresence>
+      <div className="flex-shrink-0 mt-0.5">{icons[type]}</div>
+      <div className="flex-1 min-w-0">
+        {title && <p className="font-semibold text-sm mb-1">{title}</p>}
+        <p className="text-sm">{message}</p>
+      </div>
+      <button
+        onClick={() => onDismiss(id)}
+        className="flex-shrink-0 p-1 rounded-lg hover:bg-black/5 dark:hover:bg-white/5 transition-colors"
+        aria-label="Fermer"
+      >
+        <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
     </div>
   );
 }
 
-function ToastItem({ toast, dismiss }: { toast: Toast; dismiss: (id: string) => void }) {
-  const variantStyles = {
-    default: "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800",
-    success: "bg-green-50 dark:bg-green-950 border-green-200 dark:border-green-800",
-    error: "bg-red-50 dark:bg-red-950 border-red-200 dark:border-red-800",
-    warning: "bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800",
-  };
+export function ToastContainer() {
+  const { toasts, dismiss } = useToast();
+  const [mounted, setMounted] = React.useState(false);
 
-  const variantTextStyles = {
-    default: "text-zinc-900 dark:text-zinc-100",
-    success: "text-green-900 dark:text-green-100",
-    error: "text-red-900 dark:text-red-100",
-    warning: "text-amber-900 dark:text-amber-100",
-  };
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 50, scale: 0.3 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.5, transition: { duration: 0.2 } }}
-      layout
-      className={cn(
-        "pointer-events-auto relative flex w-full items-center justify-between space-x-4 overflow-hidden rounded-lg border p-4 pr-8 shadow-lg transition-all",
-        variantStyles[toast.variant ?? "default"]
-      )}
+  if (!mounted) return null;
+
+  return createPortal(
+    <div
+      className="fixed top-4 right-4 z-50 flex flex-col gap-2 w-full max-w-sm pointer-events-none"
+      aria-live="polite"
+      aria-label="Notifications"
     >
-      <div className="grid gap-1">
-        {toast.title && (
-          <div className={cn("text-sm font-semibold", variantTextStyles[toast.variant ?? "default"])}>
-            {toast.title}
-          </div>
-        )}
-        {toast.description && (
-          <div className={cn("text-sm opacity-90", variantTextStyles[toast.variant ?? "default"])}>
-            {toast.description}
-          </div>
-        )}
-      </div>
-      <button
-        onClick={() => dismiss(toast.id)}
-        className={cn(
-          "absolute right-2 top-2 rounded-md p-1 opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-offset-2",
-          variantTextStyles[toast.variant ?? "default"]
-        )}
-        aria-label="Fermer"
-      >
-        <X className="h-4 w-4" />
-      </button>
-    </motion.div>
+      {toasts.map((toast) => (
+        <div key={toast.id} className="pointer-events-auto">
+          <Toast toast={toast} onDismiss={dismiss} />
+        </div>
+      ))}
+    </div>,
+    document.body
   );
 }
 
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      {children}
+      <ToastContainer />
+    </>
+  );
+}

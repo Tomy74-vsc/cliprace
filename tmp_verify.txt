@@ -1,0 +1,328 @@
+'use client';
+
+/*
+Page: /auth/verify
+Purpose: Callback de vérification d'email Supabase.
+- Si l'URL contient des paramètres d'auth (access_token / refresh_token / code),
+  on finalise la session (client + cookies SSR) puis on redirige.
+- Si l'URL ne contient pas ces paramètres, on affiche un état "vérifiez vos emails"
+  et on permet de renvoyer l'email de vérification.
+*/
+
+import { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+import { supabase } from '@/lib/supabase/client';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { CheckCircle2, Mail, AlertTriangle, Loader2 } from 'lucide-react';
+
+type SessionTokens = {
+  access_token: string;
+  refresh_token: string;
+};
+
+export default function VerifyPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const csrfToken = useCsrfToken();
+
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [resent, setResent] = useState(false);
+  const [hasAuthParams, setHasAuthParams] = useState(false);
+
+  const email = useMemo(() => searchParams.get('email') || '', [searchParams]);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const tryHydrateFromUrl = async () => {
+      setLoading(true);
+      setError(null);
+      setInfo('Vérification en cours...');
+
+      let foundAuthParams = false;
+
+      if (typeof window !== 'undefined') {
+        const url = new URL(window.location.href);
+        const hasHashTokens =
+          !!window.location.hash &&
+          /access_token|refresh_token/i.test(window.location.hash);
+        const hasQueryTokens =
+          url.searchParams.has('access_token') || url.searchParams.has('refresh_token');
+        const hasCode = url.searchParams.has('code');
+
+        foundAuthParams = hasHashTokens || hasQueryTokens || hasCode;
+        if (isMounted) {
+          setHasAuthParams(foundAuthParams);
+        }
+
+        // Arrivée après signup: pas encore cliqué sur le lien email.
+        if (!foundAuthParams) {
+          setLoading(false);
+          setInfo(
+            email
+              ? `Un email de vérification a été envoyé à ${email}. Cliquez sur le lien dans l'email pour continuer.`
+              : "Un email de vérification vous a été envoyé. Cliquez sur le lien dans l'email pour continuer."
+          );
+          return;
+        }
+      }
+
+      // Helper pour synchroniser la session SSR (cookies)
+      const syncServerSession = async (tokens: SessionTokens) => {
+        if (!csrfToken) return false;
+        try {
+          const resp = await fetch('/api/auth/session', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'x-csrf': csrfToken,
+            },
+            credentials: 'include',
+            body: JSON.stringify(tokens),
+          });
+          return resp.ok;
+        } catch {
+          return false;
+        }
+      };
+
+      // Helper pour rediriger après connexion
+      const routeAfterLogin = async () => {
+        try {
+          const resp = await fetch('/api/auth/me', { credentials: 'include' });
+          const data = await resp.json();
+          if (!resp.ok || !data?.ok) {
+            throw new Error('Impossible de récupérer le profil');
+          }
+          const role: string = data.user?.role || 'creator';
+          const onboardingComplete: boolean = !!data.onboarding_complete;
+
+          if (!onboardingComplete) {
+            router.replace('/app/onboarding');
+            return;
+          }
+          if (role === 'brand') router.replace('/app/brand/dashboard');
+          else if (role === 'admin') router.replace('/app/admin/dashboard');
+          else router.replace('/app/creator/dashboard');
+        } catch (e) {
+          if (isMounted) {
+            setError(e instanceof Error ? e.message : 'Erreur inconnue');
+          }
+        } finally {
+          if (isMounted) setLoading(false);
+        }
+      };
+
+      // 1) Preferred: laisser Supabase parser les tokens de l'URL
+      try {
+        const { data, error } = await supabase.auth.getSessionFromUrl({ storeSession: false });
+        if (!error && data?.session?.access_token && data?.session?.refresh_token) {
+          await supabase.auth
+            .setSession({
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token,
+            })
+            .catch(() => void 0);
+
+          await syncServerSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+
+          if (typeof window !== 'undefined') {
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname + window.location.search
+            );
+          }
+
+          await routeAfterLogin();
+          return;
+        }
+      } catch {
+        // ignore et passer au fallback
+      }
+
+      // 2) Fallback: PKCE / magic links (exchangeCodeForSession)
+      try {
+        const href = typeof window !== 'undefined' ? window.location.href : '';
+        const { data, error } = await supabase.auth.exchangeCodeForSession(href);
+        if (!error && data?.session?.access_token && data?.session?.refresh_token) {
+          await supabase.auth
+            .setSession({
+              access_token: data.session.access_token,
+              refresh_token: data.session.refresh_token,
+            })
+            .catch(() => void 0);
+
+          await syncServerSession({
+            access_token: data.session.access_token,
+            refresh_token: data.session.refresh_token,
+          });
+
+          if (typeof window !== 'undefined') {
+            window.history.replaceState(
+              {},
+              document.title,
+              window.location.pathname + window.location.search
+            );
+          }
+
+          await routeAfterLogin();
+          return;
+        }
+      } catch {
+        // on continue vers l'erreur
+      }
+
+      // 3) Si on arrive ici alors que des paramètres d'auth étaient présents,
+      // le lien est invalide ou expiré.
+      if (foundAuthParams && isMounted) {
+        setError(
+          "Lien de vérification invalide ou expiré. Vous pouvez demander un nouvel email ci-dessous."
+        );
+        setLoading(false);
+        setInfo(null);
+      }
+    };
+
+    if (csrfToken) {
+      void tryHydrateFromUrl();
+    }
+
+    return () => {
+      isMounted = false;
+    };
+  }, [router, csrfToken, email]);
+
+  const onResend = async () => {
+    if (!email) {
+      setError("Adresse email manquante. Retournez à l'inscription pour recommencer.");
+      return;
+    }
+    if (!csrfToken) {
+      setError('Token CSRF manquant. Rafraîchissez la page.');
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    setInfo("Renvoi de l'email de vérification...");
+    try {
+      const resp = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-csrf': csrfToken },
+        body: JSON.stringify({ email }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data?.ok) {
+        throw new Error(data?.message || "Impossible de renvoyer l'email");
+      }
+      setResent(true);
+      setInfo("Un nouvel email de vérification vient d'être envoyé.");
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Erreur inconnue');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const waitingForEmail = !hasAuthParams && !error;
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-50 via-indigo-50/30 to-purple-50/30 dark:from-zinc-950 dark:via-indigo-950/30 dark:to-purple-950/30 px-4 py-12">
+      <Card className="w-full max-w-md backdrop-blur-xl bg-white/80 dark:bg-zinc-900/80 border-zinc-200/50 dark:border-zinc-800/50 shadow-2xl">
+        <CardHeader className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-[#7C3AED] to-[#635BFF] shadow-lg flex items-center justify-center">
+              {loading ? (
+                <Loader2 className="h-6 w-6 text-white animate-spin" />
+              ) : error ? (
+                <AlertTriangle className="h-6 w-6 text-white" />
+              ) : waitingForEmail ? (
+                <Mail className="h-6 w-6 text-white" />
+              ) : (
+                <CheckCircle2 className="h-6 w-6 text-white" />
+              )}
+            </div>
+            <div>
+              <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#635BFF] to-[#7C3AED] bg-clip-text text-transparent">
+                Vérification de l'email
+              </CardTitle>
+              <CardDescription className="mt-1">
+                {loading
+                  ? hasAuthParams
+                    ? 'Traitement du lien de vérification...'
+                    : 'En attente de vérification de votre email...'
+                  : error
+                  ? "Nous n'avons pas pu valider votre lien"
+                  : waitingForEmail
+                  ? 'Vérifiez votre boîte mail pour confirmer votre compte.'
+                  : 'Email vérifié avec succès'}
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+
+        <CardContent className="space-y-4">
+          {info && (
+            <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 text-sm text-blue-700 dark:text-blue-300">
+              {info}
+            </div>
+          )}
+
+          {error && (
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-sm text-red-600 dark:text-red-400">
+              {error}
+            </div>
+          )}
+
+          {/* Etat d'attente (après signup) : permettre de renvoyer l'email */}
+          {!loading && waitingForEmail && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Si vous n'avez pas reçu l'email, vous pouvez le renvoyer.
+              </p>
+              <Button onClick={onResend} disabled={loading || resent} className="w-full">
+                <Mail className="w-4 h-4 mr-2" />
+                {resent ? 'Email renvoyé' : "Renvoyer l'email"}
+              </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                Adresse cible: <span className="font-medium">{email || 'inconnue'}</span>
+              </p>
+            </div>
+          )}
+
+          {/* Etat d'erreur avec possibilité de renvoyer l'email */}
+          {!loading && error && (
+            <div className="space-y-3">
+              <p className="text-sm text-muted-foreground">
+                Si le lien a expiré, vous pouvez demander un nouvel email de vérification.
+              </p>
+              <Button onClick={onResend} disabled={loading || resent} className="w-full">
+                <Mail className="w-4 h-4 mr-2" />
+                {resent ? 'Email renvoyé' : "Renvoyer l'email"}
+              </Button>
+              <p className="text-xs text-center text-muted-foreground">
+                Adresse cible: <span className="font-medium">{email || 'inconnue'}</span>
+              </p>
+            </div>
+          )}
+        </CardContent>
+
+        <CardFooter className="flex flex-col gap-2">
+          <Link href="/auth/login" className="text-sm text-center text-[#635BFF] hover:underline">
+            Revenir à la connexion
+          </Link>
+        </CardFooter>
+      </Card>
+    </div>
+  );
+}
+
+

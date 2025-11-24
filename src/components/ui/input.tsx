@@ -1,24 +1,53 @@
-import * as React from "react";
-import { cn } from "@/lib/utils";
+// Source: Design System — Inputs
+import * as React from 'react';
+import { cn } from '@/lib/utils';
 
 export interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
-  variant?: 'default' | 'error';
+  label?: string;
+  error?: string;
+  helpText?: string;
 }
 
-export const Input = React.forwardRef<HTMLInputElement, InputProps>(({ className, type = "text", variant = "default", ...props }, ref) => {
-	return (
-		<input
-			type={type}
-			className={cn(
-				"flex h-12 w-full rounded-xl border border-zinc-300 bg-white px-4 py-3 text-base ring-offset-background placeholder:text-zinc-400 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:border-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 transition-all duration-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:focus-visible:border-indigo-400",
-				variant === "error" && "border-red-500 focus-visible:ring-red-500 focus-visible:border-red-500 dark:border-red-500",
-				className
-			)}
-			ref={ref}
-			{...props}
-		/>
-	);
-});
-Input.displayName = "Input";
+const Input = React.forwardRef<HTMLInputElement, InputProps>(
+  ({ className, label, error, helpText, id, ...props }, ref) => {
+    const generatedId = React.useId();
+    const inputId = id || generatedId;
 
+    return (
+      <div className="w-full">
+        {label && (
+          <label htmlFor={inputId} className="block text-sm font-medium mb-1.5">
+            {label}
+          </label>
+        )}
+        <input
+          id={inputId}
+          className={cn(
+            'flex w-full rounded-xl border bg-background px-4 py-3 text-sm',
+            'ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium',
+            'placeholder:text-muted-foreground/80',
+            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+            'disabled:cursor-not-allowed disabled:opacity-50',
+            error ? 'border-destructive focus-visible:ring-destructive' : 'border-input',
+            className
+          )}
+          ref={ref}
+          {...props}
+        />
+        {error && (
+          <p className="mt-1.5 text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        )}
+        {helpText && !error && (
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            {helpText}
+          </p>
+        )}
+      </div>
+    );
+  }
+);
+Input.displayName = 'Input';
 
+export { Input };

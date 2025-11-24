@@ -9,12 +9,42 @@ module.exports = {
   theme: {
     extend: {
       colors: {
+        border: "var(--border)",
+        input: "var(--input)",
+        ring: "var(--ring)",
         background: "var(--background)",
         foreground: "var(--foreground)",
+        card: "var(--card)",
+        "card-foreground": "var(--card-foreground)",
+        popover: "var(--popover)",
+        "popover-foreground": "var(--popover-foreground)",
+        primary: "var(--primary)",
+        "primary-foreground": "var(--primary-foreground)",
+        secondary: "var(--secondary)",
+        "secondary-foreground": "var(--secondary-foreground)",
+        muted: "var(--muted)",
+        "muted-foreground": "var(--muted-foreground)",
+        accent: "var(--accent)",
+        "accent-foreground": "var(--accent-foreground)",
+        destructive: "var(--destructive)",
+        "destructive-foreground": "var(--destructive-foreground)",
+        success: "#10b981", // emerald-500
+        warning: "#f59e0b", // amber-500
+        danger: "#f43f5e", // rose-500
       },
       fontFamily: {
         sans: ["var(--font-sans)", "var(--font-inter)", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "monospace"],
+      },
+      boxShadow: {
+        card: "0 12px 35px -18px rgba(2, 6, 23, 0.25)",
+        "card-hover": "0 18px 50px -22px rgba(99, 102, 241, 0.35)",
+        "inset-soft": "inset 0 1px 0 rgba(255,255,255,0.03)",
+      },
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 4px)",
+        sm: "calc(var(--radius) - 6px)",
       },
     },
   },

@@ -1,7 +1,6 @@
 
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { motion, useScroll, useTransform, type Variants } from "framer-motion";
@@ -163,13 +162,13 @@ export default function Home() {
             {/* droite : actions */}
             <div className="hidden md:flex items-center gap-3">
               <Link
-                href="/login"
+                href="/auth/login"
                 className="px-6 py-3 rounded-full border border-zinc-300 dark:border-zinc-700 font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-900"
               >
                 Se connecter
               </Link>
               <Link 
-                href="/signup" className={ctaPrimary}>
+                href="/auth/signup" className={ctaPrimary}>
                 Commencer
               </Link>
             </div>
@@ -209,14 +208,14 @@ export default function Home() {
                   </a>
                 ))}
                 <Link
-                  href="/login"
+                  href="/auth/login"
                   className="px-3 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700"
                   onClick={() => setMobileOpen(false)}
                 >
                   Se connecter
                 </Link>
                 <Link
-                  href="/signup"
+                  href="/auth/signup"
                   className="inline-flex items-center justify-center gap-2 px-6 py-3 rounded-full bg-[#635BFF] hover:bg-[#534BFF] text-white font-semibold"
                   onClick={() => setMobileOpen(false)}
                 >
@@ -241,7 +240,7 @@ export default function Home() {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true }}
-            className="parallax-hero text-shadow-hero text-4xl sm:text-6xl font-black tracking-tight leading-[1.08]"
+            className="parallax-hero text-shadow-hero text-4xl sm:text-6xl font-black tracking-tight leading-[1.08] !opacity-100"
           >
             Lancez des concours{" "}
             <span className="text-gradient animate-gradient">viraux</span>. Des vues. Des{" "}
@@ -253,7 +252,7 @@ export default function Home() {
             initial="hidden"
             whileInView="show"
             viewport={{ once: true }}
-            className="mt-4 text-lg sm:text-xl text-zinc-600 dark:text-zinc-300"
+            className="mt-4 text-lg sm:text-xl text-zinc-600 dark:text-zinc-300 !opacity-100"
           >
             La plateforme qui propulse <strong>marques</strong> & <strong>créateurs</strong> vers le succès viral.
           </motion.p>
@@ -267,7 +266,7 @@ export default function Home() {
             className="mt-8 flex flex-col sm:flex-row gap-4 justify-center"
           >
             <motion.div variants={fadeUp}>
-              <Link href="/signup" className={ctaPrimary}>
+              <Link href="/auth/signup" className={ctaPrimary}>
                 Commencer maintenant
               </Link>
             </motion.div>
@@ -358,7 +357,7 @@ export default function Home() {
             </motion.p>
             <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="mt-6">
               <Link
-                href="/signup"
+                href="/auth/signup"
                 className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90"
               >
                 Participer aux concours
@@ -443,7 +442,7 @@ export default function Home() {
                   text="Top 30 récompensé, cashout sécurisé via Stripe Connect."
                 />
                 <li className="pt-2 list-none">
-                  <Link href="/signup" className="inline-flex items-center gap-2 underline underline-offset-4 font-semibold">
+                  <Link href="/auth/signup" className="inline-flex items-center gap-2 underline underline-offset-4 font-semibold">
                     Rejoins un concours <span aria-hidden>↗</span>
                   </Link>
                 </li>
@@ -515,7 +514,7 @@ export default function Home() {
 
           {/* CTA */}
           <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="mt-8">
-            <Link href="/signup" className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
+            <Link href="/auth/signup" className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
               Créer un concours
             </Link>
           </motion.div>
@@ -547,7 +546,7 @@ export default function Home() {
               <div className="rounded-xl bg-white/10 border border-white/20 p-6 shadow-[0_18px_60px_-25px_rgba(0,0,0,.5)] enterprise-float">
                 <div className="h-56 rounded-md bg-white/10" />
                 <div className="mt-3">
-                  <Link href="/signup" className="inline-block px-5 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
+                  <Link href="/auth/signup" className="inline-block px-5 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
                     Booster votre marque
                   </Link>
                 </div>
@@ -634,7 +633,7 @@ export default function Home() {
             Boostez votre succès dès aujourd’hui.
           </motion.h3>
           <motion.div variants={fadeUp} initial="hidden" whileInView="show" viewport={{ once: true }} className="mt-6">
-            <Link href="/signup" className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
+            <Link href="/auth/signup" className="inline-block px-6 py-3 rounded-full bg-white text-black font-semibold hover:opacity-90">
               Commencer
             </Link>
           </motion.div>
@@ -823,7 +822,7 @@ function TrustMarquee({ logos, title }: { logos: string[]; title?: string }) {
               key={`${src}-${i}`}
               className="h-20 w-28 sm:h-24 sm:w-32 rounded-2xl bg-white/70 dark:bg-zinc-900/60 backdrop-blur flex items-center justify-center ring-1 ring-inset ring-zinc-200/60 dark:ring-white/10"
             >
-              <Image
+              <img
                 src={src}
                 alt="Logo partenaire"
                 width={96}
@@ -923,7 +922,7 @@ function FeatureGrid({ className = "" }: { className?: string }) {
             {/* Icône + titre */}
             <div className="flex items-center gap-4 mb-4">
               <div className="h-14 w-14 shrink-0 rounded-2xl border border-violet-500/50 bg-violet-500/10 grid place-items-center">
-                <Image src={it.icon} alt="" width={28} height={28} className="opacity-90" />
+                <img src={it.icon} alt="" width={28} height={28} className="opacity-90" />
               </div>
               <h3 className="text-[22px] sm:text-[26px] font-bold tracking-tight leading-snug">
                 {it.title}
@@ -977,7 +976,7 @@ function EnterpriseCard({
     <div className="group rounded-2xl border border-white/15 bg-white/10 p-6 shadow-[0_25px_60px_-25px_rgba(0,0,0,.5)] transition will-change-transform hover:-translate-y-1 hover:shadow-[0_35px_80px_-25px_rgba(0,0,0,.6)]">
       <div className="flex items-start gap-4">
         <div className="h-12 w-12 rounded-2xl bg-white/15 border border-white/20 grid place-items-center">
-          <Image src={icon} alt="" width={26} height={26} />
+          <img src={icon} alt="" width={26} height={26} />
         </div>
         <div>
           <div className="text-xl font-semibold">{title}</div>

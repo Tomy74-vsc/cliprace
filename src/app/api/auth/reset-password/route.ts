@@ -1,97 +1,70 @@
+/*
+Source: POST /api/auth/reset-password
+Purpose: Demande de réinitialisation de mot de passe
+*/
 import { NextRequest, NextResponse } from 'next/server';
-import { withRateLimit } from '@/lib/rate-limit';
-import { getServerSupabase } from '@/lib/supabase/server';
-import { ResetPasswordSchema } from '@/lib/validation/auth';
-import { logAuditEvent } from '@/lib/audit-logger';
+import { z } from 'zod';
+import { getSupabaseSSR } from '@/lib/supabase/ssr';
+import { rateLimit } from '@/lib/rateLimit';
+import { formatErrorResponse, createError } from '@/lib/errors';
+import { assertCsrf } from '@/lib/csrf';
 
-/**
- * API Route pour la réinitialisation effective du mot de passe
- * POST /api/auth/reset-password
- * 
- * Sécurité:
- * - Rate limiting: 5 requêtes/minute
- * - Validation Zod
- * - Nécessite une session de récupération valide (vérifiée par Supabase)
- */
-export const POST = withRateLimit('/api/auth/reset-password')(async (request: Request) => {
-  const nextRequest = request as NextRequest;
+const resetPasswordSchema = z.object({
+  email: z.string().email('Email invalide'),
+});
 
-  // Parse et validation du payload
-  let payload: unknown;
+export async function POST(req: NextRequest) {
   try {
-    payload = await request.json();
-  } catch (error) {
-    console.error('Reset password payload parse error:', error);
-    return NextResponse.json({ error: 'Requête invalide' }, { status: 400 });
-  }
-
-  const parsed = ResetPasswordSchema.safeParse(payload);
-  if (!parsed.success) {
-    return NextResponse.json(
-      { error: 'Paramètres invalides', details: parsed.error.flatten() },
-      { status: 400 }
-    );
-  }
-
-  const { password } = parsed.data;
-
-  try {
-    const supabase = await getServerSupabase();
-
-    // Vérifier qu'il y a une session de récupération active
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError || !session) {
-      return NextResponse.json(
-        { error: 'Session de récupération invalide ou expirée. Veuillez demander un nouveau lien.' },
-        { status: 401 }
+    // Rate limiting: 5 req/15min par IP
+    const ip = req.headers.get('x-forwarded-for') || req.ip || 'unknown';
+    const rlKey = `auth:reset-password:${ip}`;
+    if (!(await rateLimit({ key: rlKey, route: 'auth:reset-password', windowMs: 15 * 60 * 1000, max: 5 }))) {
+      return formatErrorResponse(
+        createError('RATE_LIMIT', 'Trop de tentatives. Réessayez dans 15 minutes.', 429)
       );
     }
 
-    // Mettre à jour le mot de passe
-    const { data, error: updateError } = await supabase.auth.updateUser({
-      password,
-    });
-
-    if (updateError) {
-      console.error('Erreur lors de la mise à jour du mot de passe:', updateError);
-      
-      let message = 'Erreur lors de la réinitialisation du mot de passe';
-      if (updateError.message.includes('session')) {
-        message = 'Session expirée. Veuillez demander un nouveau lien de réinitialisation.';
-      }
-
-      return NextResponse.json({ error: message }, { status: 400 });
-    }
-
-    if (!data.user) {
-      return NextResponse.json(
-        { error: 'Utilisateur introuvable' },
-        { status: 404 }
+    // CSRF check
+    try {
+      assertCsrf(req.headers.get('x-csrf'));
+    } catch (csrfError) {
+      return formatErrorResponse(
+        createError('FORBIDDEN', 'Token CSRF invalide', 403, csrfError)
       );
     }
 
-    // Logger l'événement de réinitialisation réussie
-    await logAuditEvent('UPDATE', 'auth_password_reset_success', {
-      entityId: data.user.id,
-      data: {
-        email: data.user.email,
-        timestamp: new Date().toISOString(),
-      },
-      request: nextRequest,
+    const body = await req.json();
+    const parsed = resetPasswordSchema.safeParse(body);
+
+    if (!parsed.success) {
+      return formatErrorResponse(
+        createError('VALIDATION_ERROR', 'Données invalides', 400, parsed.error.flatten())
+      );
+    }
+
+    const { email } = parsed.data;
+    const supabase = getSupabaseSSR();
+
+    // Envoyer l'email de réinitialisation
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || process.env.APP_URL || 'http://localhost:3000'}/auth/reset-password/confirm`,
     });
+
+    if (resetError) {
+      // Ne pas révéler si l'email existe ou non (sécurité)
+      // On retourne toujours un succès pour éviter l'énumération d'emails
+      return NextResponse.json({
+        ok: true,
+        message: 'Si cet email existe, un lien de réinitialisation vous a été envoyé.',
+      });
+    }
 
     return NextResponse.json({
-      success: true,
-      message: 'Votre mot de passe a été réinitialisé avec succès.',
+      ok: true,
+      message: 'Si cet email existe, un lien de réinitialisation vous a été envoyé.',
     });
-
-  } catch (error) {
-    console.error('Erreur inattendue lors de la réinitialisation du mot de passe:', error);
-    return NextResponse.json(
-      { error: 'Erreur lors du traitement de votre demande' },
-      { status: 500 }
-    );
+  } catch (error: unknown) {
+    return formatErrorResponse(error);
   }
-});
+}
 
