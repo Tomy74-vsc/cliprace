@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
   try {
     // Rate limit: 1/min per creator
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
-    const supabaseSSR = getSupabaseSSR();
+    const supabaseSSR = await getSupabaseSSR();
     const { data: { user } } = await supabaseSSR.auth.getUser();
     if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
     const role = await getUserRole(user.id);
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
 
     // CSRF check
     try {
-      assertCsrf(req.headers.get('x-csrf') || undefined);
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf') || undefined);
     } catch {
       return NextResponse.json({ ok: false, message: 'Invalid CSRF token' }, { status: 403 });
     }

@@ -12,12 +12,12 @@ import { profileUpdateSchema } from '@/lib/validators/profile';
 export async function POST(req: NextRequest) {
   try {
     try {
-      assertCsrf(req.headers.get('x-csrf'));
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch {
       throw createError('FORBIDDEN', 'CSRF token invalide', 403);
     }
 
-    const supabaseSSR = getSupabaseSSR();
+    const supabaseSSR = await getSupabaseSSR();
     const {
       data: { user },
     } = await supabaseSSR.auth.getUser();

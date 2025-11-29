@@ -1,17 +1,14 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Optimisations de performance
+  // Performance optimizations
   experimental: {
     optimizePackageImports: ["framer-motion", "lucide-react"],
-    serverComponentsExternalPackages: ["@supabase/supabase-js"],
   },
 
-  // Désactiver ESLint pour le build
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
+  // Allow external server packages
+  serverExternalPackages: ["@supabase/supabase-js"],
 
-  // Optimisation des images
+  // Image optimization
   images: {
     formats: ["image/webp", "image/avif"],
     minimumCacheTTL: 60,
@@ -32,15 +29,18 @@ const nextConfig = {
     ],
   },
 
-  // Compression et optimisation
+  // Compression and security headers
   compress: true,
   poweredByHeader: false,
 
-  // Headers de sécurité
+  // Turbopack configuration (explicit project root)
+  turbopack: {
+    root: __dirname,
+  },
+
   async headers() {
-    const isDev = process.env.NODE_ENV === 'development';
-    
-    // CSP plus permissive en développement pour Framer Motion et React Refresh
+    const isDev = process.env.NODE_ENV === "development";
+
     const cspValue = isDev
       ? [
           "default-src 'self'",
@@ -87,10 +87,14 @@ const nextConfig = {
             key: "Content-Security-Policy",
             value: cspValue,
           },
-          ...(isDev ? [] : [{
-            key: "Strict-Transport-Security",
-            value: "max-age=31536000; includeSubDomains; preload",
-          }]),
+          ...(isDev
+            ? []
+            : [
+                {
+                  key: "Strict-Transport-Security",
+                  value: "max-age=31536000; includeSubDomains; preload",
+                },
+              ]),
         ],
       },
       {
@@ -103,36 +107,15 @@ const nextConfig = {
       {
         source: "/auth/(.*)",
         headers: [
-          { key: "Cache-Control", value: "no-store, max-age=0, must-revalidate" },
+          {
+            key: "Cache-Control",
+            value: "no-store, max-age=0, must-revalidate",
+          },
         ],
       },
     ];
   },
 
-  // Webpack optimisations
-  webpack: (config, { dev, isServer }) => {
-    // Optimisations pour la production
-    if (!dev && !isServer) {
-      config.optimization.splitChunks = {
-        chunks: "all",
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: "vendors",
-            chunks: "all",
-          },
-          common: {
-            name: "common",
-            minChunks: 2,
-            chunks: "all",
-            enforce: true,
-          },
-        },
-      };
-    }
-
-    return config;
-  },
   // Redirect legacy top-level auth paths to new /auth/* routes
   async redirects() {
     return [
@@ -143,3 +126,4 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
+

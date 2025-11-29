@@ -20,67 +20,116 @@ const BodySchema = z.object({
   caption: z.string().max(2200).optional(),
 });
 
-function validPlatformUrl(platform: 'tiktok'|'instagram'|'youtube', url: string) {
-  const patterns: Record<string, RegExp> = {
-    tiktok: /^https?:\/\/(www\.)?tiktok\.com\/@[A-Za-z0-9._-]+\/video\/\d+(?:\?.*)?$/i,
-    instagram: /^https?:\/\/(www\.)?instagram\.com\/reel\/[-A-Za-z0-9_]+\/?(?:\?.*)?$/i,
-    youtube: /^https?:\/\/(www\.)?youtube\.com\/shorts\/[-A-Za-z0-9_]+\/?(?:\?.*)?$/i,
-  };
-  return patterns[platform].test(url);
+function validPlatformUrl(platform: 'tiktok' | 'instagram' | 'youtube', url: string) {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    const patterns: Record<string, RegExp> = {
+      tiktok: /(.*\.)?tiktok\.com$/,
+      instagram: /(.*\.)?instagram\.com$/,
+      youtube: /(.*\.)?(youtube\.com|youtu\.be)$/,
+    };
+    if (!patterns[platform].test(host)) return false;
+    // path checks all still light, but ensures right domain
+    if (platform === 'tiktok' && !/\/video\/\d+/.test(parsed.pathname)) return false;
+    if (platform === 'instagram' && !/\/reel\/[A-Za-z0-9_-]+/.test(parsed.pathname)) return false;
+    if (platform === 'youtube' && !(/\/shorts\/[A-Za-z0-9_-]+/.test(parsed.pathname) || /^\/[-A-Za-z0-9_]{8,}$/.test(parsed.pathname))) {
+      return false;
+    }
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function POST(req: NextRequest) {
   try {
     // Rate limit: 1/min per user
     const ip = req.headers.get('x-forwarded-for') || 'unknown';
-    const supabaseSSR = getSupabaseSSR();
+    const supabaseSSR = await getSupabaseSSR();
     const {
       data: { user },
     } = await supabaseSSR.auth.getUser();
-    if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
+    if (!user) return NextResponse.json({ ok: false, message: 'Non autorisé' }, { status: 401 });
 
     const rlKey = `submissions:create:${user.id}:${ip}`;
     if (!(await rateLimit({ key: rlKey, route: 'submissions:create', windowMs: 60_000, max: 1 }))) {
-      return NextResponse.json({ ok: false, message: 'Rate limit exceeded' }, { status: 429 });
+      return NextResponse.json({ ok: false, message: 'Trop de tentatives, réessaie dans une minute.' }, { status: 429 });
     }
 
     // CSRF check (double-submit): require x-csrf header matching cookie
     try {
-      assertCsrf(req.headers.get('x-csrf') || undefined);
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf') || undefined);
     } catch {
-      return NextResponse.json({ ok: false, message: 'Invalid CSRF token' }, { status: 403 });
+      return NextResponse.json({ ok: false, message: 'Token CSRF invalide' }, { status: 403 });
     }
 
     const json = await req.json();
     const parsed = BodySchema.safeParse(json);
     if (!parsed.success) {
-      return NextResponse.json({ ok: false, message: 'Invalid body', errors: parsed.error.flatten() }, { status: 400 });
+      return NextResponse.json({ ok: false, message: 'Requête invalide', errors: parsed.error.flatten() }, { status: 400 });
     }
     const { contest_id, platform, video_url, caption } = parsed.data;
 
     if (!validPlatformUrl(platform, video_url)) {
-      return NextResponse.json({ ok: false, message: 'Invalid video URL for platform' }, { status: 400 });
+      return NextResponse.json({ ok: false, message: 'Lien invalide pour cette plateforme.' }, { status: 400 });
     }
 
     const admin = getSupabaseAdmin();
 
     // Check contest active
     const { data: activeRes, error: activeErr } = await admin.rpc('is_contest_active', { p_contest_id: contest_id });
-    if (activeErr) return NextResponse.json({ ok: false, message: 'Check active failed', error: activeErr.message }, { status: 500 });
-    if (!activeRes) return NextResponse.json({ ok: false, message: 'Contest not active' }, { status: 409 });
+    if (activeErr) {
+      return NextResponse.json({ ok: false, message: 'Impossible de vérifier le concours', error: activeErr.message }, { status: 500 });
+    }
+    if (!activeRes) {
+      return NextResponse.json({ ok: false, message: 'Ce concours n’est pas actif.' }, { status: 409 });
+    }
 
     // Eligibility limit (max_submissions_per_creator)
-    const { data: canRes, error: canErr } = await admin.rpc('can_creator_submit', { p_contest_id: contest_id, p_creator_id: user.id });
-    if (canErr) return NextResponse.json({ ok: false, message: 'Eligibility check failed', error: canErr.message }, { status: 500 });
-    if (!canRes) return NextResponse.json({ ok: false, message: 'Not eligible to submit (limit reached or rejected)' }, { status: 409 });
+    const { data: canSubmitRes, error: canSubmitErr } = await admin.rpc('can_submit_to_contest', {
+      p_contest_id: contest_id,
+      p_user_id: user.id,
+    });
 
-    // Ensure terms acceptance if contest has specific terms
+    let isEligible: boolean | null = null;
+    let eligibilityError: Error | null = null;
+
+    if (!canSubmitErr) {
+      isEligible = !!canSubmitRes;
+    } else if (canSubmitErr.message?.includes('can_submit_to_contest')) {
+      const { data: legacyRes, error: legacyErr } = await admin.rpc('can_creator_submit', {
+        p_contest_id: contest_id,
+        p_creator_id: user.id,
+      });
+      if (legacyErr) {
+        eligibilityError = legacyErr;
+      } else {
+        isEligible = !!legacyRes;
+      }
+    } else {
+      eligibilityError = canSubmitErr;
+    }
+
+    if (eligibilityError) {
+      return NextResponse.json(
+        { ok: false, message: 'Impossible de vérifier ton éligibilité.', error: eligibilityError.message },
+        { status: 500 }
+      );
+    }
+    if (!isEligible) {
+      return NextResponse.json({ ok: false, message: 'Tu ne peux plus participer à ce concours.' }, { status: 409 });
+    }
+
+    // Ensure terms acceptance + metadata
     const { data: contestRow, error: contestErr } = await admin
       .from('contests')
-      .select('contest_terms_id, brand_id')
+      .select('contest_terms_id, brand_id, networks')
       .eq('id', contest_id)
       .single();
-    if (contestErr || !contestRow) return NextResponse.json({ ok: false, message: 'Contest not found' }, { status: 404 });
+    if (contestErr || !contestRow) {
+      return NextResponse.json({ ok: false, message: 'Concours introuvable.' }, { status: 404 });
+    }
 
     if (contestRow.contest_terms_id) {
       const { data: acceptance } = await admin
@@ -91,7 +140,7 @@ export async function POST(req: NextRequest) {
         .eq('contest_terms_id', contestRow.contest_terms_id)
         .maybeSingle();
       if (!acceptance) {
-        const ip = req.headers.get('x-forwarded-for') ?? req.ip ?? undefined;
+        const ip = req.headers.get('x-forwarded-for') ?? undefined;
         const ua = req.headers.get('user-agent') ?? undefined;
         await admin.from('contest_terms_acceptances').insert({
           contest_id,
@@ -101,6 +150,24 @@ export async function POST(req: NextRequest) {
           user_agent: ua,
         });
       }
+    }
+
+    // Prevent duplicate URL for same contest/creator with clearer message
+    const { data: existing } = await admin
+      .from('submissions')
+      .select('id')
+      .eq('contest_id', contest_id)
+      .eq('creator_id', user.id)
+      .eq('external_url', video_url)
+      .maybeSingle();
+    if (existing) {
+      return NextResponse.json({ ok: false, message: 'Ce lien a déjà été soumis pour ce concours.' }, { status: 409 });
+    }
+
+    // Platform allowed for this contest
+    const networks = (contestRow.networks as string[]) || [];
+    if (networks.length > 0 && !networks.includes(platform)) {
+      return NextResponse.json({ ok: false, message: 'Plateforme non autorisée pour ce concours.' }, { status: 403 });
     }
 
     // Insert submission (status defaults to 'pending'); store caption into title if provided
@@ -126,7 +193,7 @@ export async function POST(req: NextRequest) {
     if (subErr) {
       const isDup = subErr.message?.toLowerCase().includes('duplicate') || subErr.code === '23505';
       const status = isDup ? 409 : 500;
-      return NextResponse.json({ ok: false, message: 'Insert failed', error: subErr.message }, { status });
+      return NextResponse.json({ ok: false, message: 'Impossible de créer la participation.', error: subErr.message }, { status });
     }
 
     // Notify brand
@@ -151,7 +218,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, submission_id: sub.id, status: sub.status });
   } catch (e: unknown) {
-    const message = e instanceof Error ? e.message : 'Server error';
+    const message = e instanceof Error ? e.message : 'Erreur interne';
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }

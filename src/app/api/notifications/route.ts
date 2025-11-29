@@ -10,7 +10,7 @@ const QuerySchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    const supabaseSSR = getSupabaseSSR();
+    const supabaseSSR = await getSupabaseSSR();
     const {
       data: { user },
     } = await supabaseSSR.auth.getUser();

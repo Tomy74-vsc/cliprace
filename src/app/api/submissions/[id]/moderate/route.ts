@@ -19,7 +19,7 @@ const BodySchema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const submissionId = params.id;
-    const supabaseSSR = getSupabaseSSR();
+    const supabaseSSR = await getSupabaseSSR();
     const {
       data: { user },
     } = await supabaseSSR.auth.getUser();
@@ -89,7 +89,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
 
     // Audit
-    const ip = req.headers.get('x-forwarded-for') ?? req.ip ?? undefined;
+    const ip = req.headers.get('x-forwarded-for') ?? undefined;
     const ua = req.headers.get('user-agent') ?? undefined;
     await admin.from('audit_logs').insert({
       actor_id: user.id,
@@ -108,4 +108,3 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }
-

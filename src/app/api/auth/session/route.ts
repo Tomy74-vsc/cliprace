@@ -11,7 +11,7 @@ interface SessionPayload {
 export async function POST(req: NextRequest) {
   try {
     try {
-      assertCsrf(req.headers.get('x-csrf'));
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
       return formatErrorResponse(
         createError('FORBIDDEN', 'Token CSRF invalide', 403, csrfError)

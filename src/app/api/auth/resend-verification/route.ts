@@ -16,7 +16,7 @@ const resendVerificationSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting: 3 req/min par IP
-    const ip = req.headers.get('x-forwarded-for') || req.ip || 'unknown';
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
     const rlKey = `auth:resend-verification:${ip}`;
     if (
       !(await rateLimit({ key: rlKey, route: 'auth:resend-verification', windowMs: 60 * 1000, max: 3 }))
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     // CSRF check
     try {
-      assertCsrf(req.headers.get('x-csrf'));
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
       return formatErrorResponse(
         createError('FORBIDDEN', 'Token CSRF invalide', 403, csrfError)
@@ -105,4 +105,3 @@ export async function POST(req: NextRequest) {
     return formatErrorResponse(error);
   }
 }
-

@@ -24,7 +24,7 @@ const BodySchema = z.object({
 
 export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
   const threadId = params.id;
-  const supabaseSSR = getSupabaseSSR();
+  const supabaseSSR = await getSupabaseSSR();
   const {
     data: { user },
   } = await supabaseSSR.auth.getUser();
@@ -83,12 +83,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
 
     // CSRF check (double submit)
     try {
-      assertCsrf(req.headers.get('x-csrf'));
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch {
       return NextResponse.json({ ok: false, message: 'CSRF invalide' }, { status: 403 });
     }
     const threadId = params.id;
-    const supabaseSSR = getSupabaseSSR();
+    const supabaseSSR = await getSupabaseSSR();
     const { data: { user } } = await supabaseSSR.auth.getUser();
     if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
 

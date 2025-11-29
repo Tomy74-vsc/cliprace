@@ -2,16 +2,16 @@ import { z } from 'zod';
 
 // Signup schema used both on client (form validation) and server (API payload).
 // - Client: includes passwordConfirm (string, default "") for confirmation.
-// - Server: the client ne renvoie pas passwordConfirm, donc le champ doit être optionnel.
+// - Server: le client ne renvoie pas passwordConfirm, donc le champ doit être optionnel.
 const signupSchemaBase = z.object({
   email: z.string().email(),
   password: z
     .string()
-    .min(8, 'Le mot de passe doit contenir au moins 8 caract��res')
+    .min(8, 'Le mot de passe doit contenir au moins 8 caractères')
     .regex(/[A-Z]/, 'Le mot de passe doit contenir au moins une majuscule')
     .regex(/[a-z]/, 'Le mot de passe doit contenir au moins une minuscule')
     .regex(/[0-9]/, 'Le mot de passe doit contenir au moins un chiffre')
-    .regex(/[^A-Za-z0-9]/, 'Le mot de passe doit contenir au moins un caract��re spǸcial'),
+    .regex(/[^A-Za-z0-9]/, 'Le mot de passe doit contenir au moins un caractère spécial'),
   // Optionnel côté serveur (le client ne l'envoie pas),
   // mais présent côté client avec valeur par défaut "" pour la validation.
   passwordConfirm: z.string().min(1, 'La confirmation du mot de passe est requise').optional(),
@@ -75,3 +75,4 @@ export const profileCompleteSchema = z.object({
   address_country: z.string().length(2).optional(),
 });
 export type ProfileCompleteInput = z.infer<typeof profileCompleteSchema>;
+

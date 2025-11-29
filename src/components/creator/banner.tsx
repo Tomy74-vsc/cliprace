@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { Info, AlertTriangle, XCircle } from 'lucide-react';
 
@@ -19,7 +20,7 @@ export function Banner({
   title: string;
   description?: string;
   variant?: BannerVariant;
-  action?: React.ReactNode;
+  action?: ReactNode;
   className?: string;
 }) {
   const base = {

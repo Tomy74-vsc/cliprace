@@ -28,7 +28,7 @@ export interface SessionResult {
  */
 export async function getSession(): Promise<SessionResult> {
   try {
-    const supabase = getSupabaseSSR();
+    const supabase = await getSupabaseSSR();
     const {
       data: { user: authUser },
       error: authError,
@@ -103,7 +103,7 @@ export async function getSession(): Promise<SessionResult> {
   } catch (error) {
     // Unexpected error - clean up session
     try {
-      const supabase = getSupabaseSSR();
+      const supabase = await getSupabaseSSR();
       await supabase.auth.signOut();
     } catch {
       // Ignore cleanup errors
@@ -122,7 +122,7 @@ export async function getSession(): Promise<SessionResult> {
 export async function getUserRole(userId: string): Promise<UserRole | null> {
   try {
     // Try SSR anon first (respects RLS)
-    const supabase = getSupabaseSSR();
+    const supabase = await getSupabaseSSR();
     const { data, error } = await supabase
       .from('profiles')
       .select('role')

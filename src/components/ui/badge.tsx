@@ -8,11 +8,14 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
+        // Palette de base (statuts génériques)
         default: 'bg-muted text-foreground',
         success: 'bg-emerald-500/15 text-emerald-500',
         warning: 'bg-amber-500/15 text-amber-600',
         danger: 'bg-rose-500/15 text-rose-600',
         info: 'bg-accent/15 text-accent',
+        secondary: 'bg-secondary/40 text-secondary-foreground',
+        outline: 'border border-border bg-transparent text-foreground',
         // Statuts soumissions
         pending: 'bg-muted text-muted-foreground',
         approved: 'bg-emerald-500/15 text-emerald-500',

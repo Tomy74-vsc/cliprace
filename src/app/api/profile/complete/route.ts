@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   try {
     // CSRF check (double-submit: cookie must match header)
     try {
-      assertCsrf(req.headers.get('x-csrf'));
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
       return formatErrorResponse(
         createError('FORBIDDEN', 'Token CSRF invalide', 403, csrfError)
@@ -206,7 +206,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Audit log
-    const ipAddress = req.headers.get('x-forwarded-for') || req.ip || undefined;
+    const ipAddress = req.headers.get('x-forwarded-for') || undefined;
     const userAgent = req.headers.get('user-agent') || undefined;
     await admin.from('audit_logs').insert({
       actor_id: user.id,

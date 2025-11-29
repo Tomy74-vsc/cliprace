@@ -22,7 +22,7 @@ const PLATFORM_KEYS: AllowedPlatform[] = ['tiktok', 'instagram', 'youtube'];
 
 export async function POST(req: NextRequest) {
   try {
-    const supabaseSSR = getSupabaseSSR();
+    const supabaseSSR = await getSupabaseSSR();
     const {
       data: { user },
     } = await supabaseSSR.auth.getUser();
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      assertCsrf(req.headers.get('x-csrf'));
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch {
       throw createError('FORBIDDEN', 'Jeton CSRF invalide ou manquant', 403);
     }

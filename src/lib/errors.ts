@@ -6,6 +6,7 @@ export type AppErrorCode =
   | 'NOT_FOUND'
   | 'RATE_LIMIT'
   | 'DATABASE_ERROR'
+  | 'BAD_REQUEST'
   | 'CONFLICT'
   | 'UNKNOWN';
 
@@ -41,4 +42,3 @@ export function formatErrorResponse(err: unknown) {
     { status: 500, headers: { 'content-type': 'application/json' } }
   );
 }
-

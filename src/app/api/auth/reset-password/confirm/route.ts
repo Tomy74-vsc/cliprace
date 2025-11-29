@@ -18,7 +18,7 @@ const confirmResetPasswordSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting: 5 req/15min par IP
-    const ip = req.headers.get('x-forwarded-for') || req.ip || 'unknown';
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
     const rlKey = `auth:reset-password-confirm:${ip}`;
     if (!(await rateLimit({ key: rlKey, route: 'auth:reset-password:confirm', windowMs: 15 * 60 * 1000, max: 5 }))) {
       return formatErrorResponse(
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
     // CSRF check
     try {
-      assertCsrf(req.headers.get('x-csrf'));
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
       return formatErrorResponse(
         createError('FORBIDDEN', 'Token CSRF invalide', 403, csrfError)

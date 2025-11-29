@@ -14,7 +14,7 @@ const BodySchema = z.object({ force: z.boolean().optional() });
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   try {
     const contestId = params.id;
-    const supabaseSSR = getSupabaseSSR();
+    const supabaseSSR = await getSupabaseSSR();
     const { data: { user } } = await supabaseSSR.auth.getUser();
     if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
     const role = await getUserRole(user.id);
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       changed_by: user.id,
     });
 
-    const ip = req.headers.get('x-forwarded-for') ?? req.ip ?? undefined;
+    const ip = req.headers.get('x-forwarded-for') ?? undefined;
     const ua = req.headers.get('user-agent') ?? undefined;
     await admin.from('audit_logs').insert({
       actor_id: user.id,
@@ -75,4 +75,3 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }
-

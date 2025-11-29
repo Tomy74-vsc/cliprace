@@ -1,6 +1,5 @@
 // Source: CSRF protection (double-submit cookie + header) (§4, §147-149)
 // Effects: generate crypto-secure token, validate on POST/PUT/DELETE
-import { cookies } from 'next/headers';
 import { randomBytes } from 'crypto';
 
 const CSRF_COOKIE_NAME = 'csrf';
@@ -24,39 +23,19 @@ export function generateCsrfToken(): string {
 }
 
 /**
- * Get or generate CSRF token and set cookie (httpOnly, SameSite=Lax).
- * Should be called on GET requests for form pages.
+ * Generate a CSRF token value.
+ * Note: cookie setting is handled in /api/auth/csrf and middleware.
  */
 export function getCsrfToken(): string {
-  const cookieStore = cookies();
-  const existing = cookieStore.get(CSRF_COOKIE_NAME)?.value;
-
-  if (existing) {
-    return existing;
-  }
-
-  // Generate new token
-  const token = generateCsrfToken();
-
-  // Set cookie (httpOnly, SameSite=Lax, Secure in production)
-  cookieStore.set(CSRF_COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 60 * 60 * 24, // 24 hours
-    path: '/',
-  });
-
-  return token;
+  return generateCsrfToken();
 }
 
 /**
  * Assert CSRF token validity (double-submit: cookie must match header).
  * Throws if invalid.
  */
-export function assertCsrf(headerValue?: string | null): void {
-  const cookieStore = cookies();
-  const cookieValue = cookieStore.get(CSRF_COOKIE_NAME)?.value;
+export function assertCsrf(cookieHeader?: string | null, headerValue?: string | null): void {
+  const cookieValue = getCookieFromHeader(cookieHeader, CSRF_COOKIE_NAME);
 
   if (!cookieValue) {
     throw new Error('CSRF token cookie missing');
@@ -70,6 +49,21 @@ export function assertCsrf(headerValue?: string | null): void {
   if (!constantTimeEqual(cookieValue, headerValue)) {
     throw new Error('CSRF token mismatch');
   }
+}
+
+function getCookieFromHeader(cookieHeader: string | null | undefined, name: string): string | null {
+  if (!cookieHeader) return null;
+
+  const pairs = cookieHeader.split(';');
+  for (const pair of pairs) {
+    const [rawName, ...rest] = pair.trim().split('=');
+    if (!rawName) continue;
+    if (rawName === name) {
+      return rest.join('=');
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -94,4 +88,3 @@ function constantTimeEqual(a: string, b: string): boolean {
 export function getCsrfHeaderName(): string {
   return CSRF_HEADER_NAME;
 }
-

@@ -25,6 +25,8 @@ export function MarkNotificationsReadButton({
 
   const handleClick = async () => {
     if (disabled || submitting) return;
+    if (!notificationIds || notificationIds.length === 0) return;
+
     setSubmitting(true);
     try {
       const response = await fetch('/api/notifications/read', {

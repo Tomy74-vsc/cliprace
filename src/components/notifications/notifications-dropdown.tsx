@@ -5,7 +5,7 @@ Notifications dropdown : affiche les notifs non lues + accès page liste.
 
 import Link from 'next/link';
 import { Bell, X } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -21,20 +21,28 @@ type NotificationItem = {
 export function NotificationsDropdown() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [activeIndex, setActiveIndex] = useState(0);
   const unread = items.filter((n) => !n.read).length;
   const panelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    void fetchNotifications();
-  }, []);
-
-  useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if (e.key === 'Escape') setOpen(false);
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && open && items.length > 0) {
+        e.preventDefault();
+        setActiveIndex((prev) => {
+          const next = e.key === 'ArrowDown' ? prev + 1 : prev - 1;
+          if (next < 0) return items.length - 1;
+          if (next >= items.length) return 0;
+          return next;
+        });
+      }
     }
     if (open) document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [open]);
+  }, [open, items.length]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -46,21 +54,41 @@ export function NotificationsDropdown() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [open]);
 
-  async function fetchNotifications() {
+  useEffect(() => {
+    if (!open || items.length === 0) return;
+    const links = panelRef.current?.querySelectorAll<HTMLAnchorElement>(
+      'a[data-notification-item]',
+    );
+    const target = links?.[activeIndex];
+    target?.focus();
+  }, [activeIndex, open, items.length]);
+
+  const fetchNotifications = useCallback(async () => {
     try {
+      setLoading(true);
+      setError(null);
       const res = await fetch('/api/notifications?limit=5', { cache: 'no-store' });
-      if (!res.ok) return;
+      if (!res.ok) throw new Error('Erreur de chargement des notifications');
       const data = await res.json();
       setItems(data.notifications || []);
     } catch (e) {
+      setError('Impossible de charger les notifications. Réessaie plus tard.');
       console.error('Notifications fetch error', e);
+    } finally {
+      setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    if (open) {
+      void fetchNotifications();
+    }
+  }, [open, fetchNotifications]);
 
   async function markAllRead() {
     try {
-      await fetch('/api/notifications/read', { method: 'POST' });
-      setItems((prev) => prev.map((n) => ({ ...n, read: true })));
+      await fetch('/api/notifications/read', { method: 'POST', cache: 'no-store' });
+      await fetchNotifications();
       setOpen(false);
     } catch (e) {
       console.error('Notifications mark read error', e);
@@ -76,7 +104,10 @@ export function NotificationsDropdown() {
         aria-label="Notifications"
         aria-expanded={open}
         aria-controls="notifications-panel"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          setOpen((v) => !v);
+          setActiveIndex(0);
+        }}
       >
         <Bell className="h-5 w-5" />
         {unread > 0 && (
@@ -117,13 +148,25 @@ export function NotificationsDropdown() {
               <X className="h-4 w-4" />
             </button>
           </div>
-          {items.length === 0 ? (
+          {loading ? (
+            <p className="text-sm text-muted-foreground">Chargement...</p>
+          ) : error ? (
+            <p className="text-sm text-destructive">{error}</p>
+          ) : items.length === 0 ? (
             <p className="text-sm text-muted-foreground">Aucune notification</p>
           ) : (
-            <ul className="divide-y divide-border" role="list">
+            <ul className="divide-y divide-border">
               {items.map((item) => (
-                <li key={item.id} className={cn('py-2', !item.read && 'bg-muted/40 rounded-lg px-2')}>
-                  <Link href={notificationLink(item)} className="block">
+                <li
+                  key={item.id}
+                  className={cn('py-2', !item.read && 'bg-muted/40 rounded-lg px-2')}
+                >
+                  <Link
+                    href={notificationLink(item)}
+                    className="block focus:outline-none focus:ring-2 focus:ring-primary rounded-lg"
+                    data-notification-item
+                    id={item.id}
+                  >
                     <p className="text-sm font-medium">{notificationTitle(item.type)}</p>
                     <p className="text-xs text-muted-foreground">
                       {item.content?.message || 'Action disponible'}
@@ -171,3 +214,4 @@ function notificationLink(item: NotificationItem) {
   }
   return '/app/creator/notifications';
 }
+

@@ -14,7 +14,7 @@ import { rateLimit } from '@/lib/rateLimit';
 import { assertCsrf } from '@/lib/csrf';
 
 export async function GET() {
-  const supabaseSSR = getSupabaseSSR();
+  const supabaseSSR = await getSupabaseSSR();
   const { data: { user } } = await supabaseSSR.auth.getUser();
   if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
   const admin = getSupabaseAdmin();
@@ -44,11 +44,11 @@ export async function POST(req: NextRequest) {
 
     // CSRF check (double submit)
     try {
-      assertCsrf(req.headers.get('x-csrf'));
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch {
       return NextResponse.json({ ok: false, message: 'CSRF invalide' }, { status: 403 });
     }
-    const supabaseSSR = getSupabaseSSR();
+    const supabaseSSR = await getSupabaseSSR();
     const { data: { user } } = await supabaseSSR.auth.getUser();
     if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
     const role = await getUserRole(user.id);

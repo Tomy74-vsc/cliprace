@@ -1,10 +1,10 @@
 /*
 Source: Component SubmissionForm
-Purpose: Formulaire pour participer à un concours
+Purpose: Formulaire pour participer à un concours (flow 3 étapes avec validations rapides)
 */
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -25,6 +25,7 @@ import { useToastContext } from '@/hooks/use-toast-context';
 import type { Platform } from '@/lib/validators/platforms';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
 import { track } from '@/lib/analytics';
+import { Progress } from '@/components/ui/progress';
 
 interface SubmissionFormProps {
   contestId: string;
@@ -40,6 +41,8 @@ const PLATFORM_LABELS: Record<Platform, string> = {
 
 export function SubmissionForm({ contestId, allowedPlatforms, onSuccess }: SubmissionFormProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [urlValid, setUrlValid] = useState(false);
+  const [acceptRules, setAcceptRules] = useState(false);
   const { toast } = useToastContext();
   const router = useRouter();
   const csrfToken = useCsrfToken();
@@ -62,6 +65,20 @@ export function SubmissionForm({ contestId, allowedPlatforms, onSuccess }: Submi
   });
 
   const selectedPlatform = watch('platform');
+  const videoUrl = watch('video_url');
+
+  useEffect(() => {
+    if (!videoUrl) {
+      setUrlValid(false);
+      return;
+    }
+    setUrlValid(isAllowedUrl(selectedPlatform, videoUrl));
+  }, [selectedPlatform, videoUrl]);
+
+  const progress = useMemo(() => {
+    const stepsCompleted = [Boolean(selectedPlatform), urlValid, acceptRules].filter(Boolean).length;
+    return (stepsCompleted / 3) * 100;
+  }, [acceptRules, selectedPlatform, urlValid]);
 
   const onSubmit = async (data: SubmissionCreateInput) => {
     setIsSubmitting(true);
@@ -85,12 +102,14 @@ export function SubmissionForm({ contestId, allowedPlatforms, onSuccess }: Submi
       toast({
         type: 'success',
         title: 'Soumission créée !',
-        message: 'Votre participation a été enregistrée avec succès.',
+        message: 'Ta participation a été enregistrée avec succès.',
       });
 
       reset();
+      setUrlValid(false);
+      setAcceptRules(false);
       onSuccess?.();
-      router.refresh();
+      router.push(`/app/creator/contests/${contestId}/leaderboard`);
     } catch (error) {
       toast({
         type: 'error',
@@ -106,12 +125,23 @@ export function SubmissionForm({ contestId, allowedPlatforms, onSuccess }: Submi
     <Card>
       <CardHeader>
         <CardTitle>Participer au concours</CardTitle>
-        <CardDescription>
-          Partagez votre vidéo en respectant les règles du concours
-        </CardDescription>
+        <CardDescription>3 étapes simples : choisir, coller le lien, confirmer.</CardDescription>
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm text-muted-foreground">
+              <span>Progression</span>
+              <span>{Math.round(progress)}%</span>
+            </div>
+            <Progress value={progress} />
+            <div className="grid grid-cols-3 gap-2 text-[12px] text-muted-foreground">
+              <div className={progress >= 33 ? 'text-primary font-medium' : ''}>1. Plateforme</div>
+              <div className={progress >= 66 ? 'text-primary font-medium' : ''}>2. Lien</div>
+              <div className={progress === 100 ? 'text-primary font-medium' : ''}>3. Confirmation</div>
+            </div>
+          </div>
+
           <div>
             <label htmlFor="platform" className="mb-2 block text-sm font-medium text-foreground">
               Plateforme *
@@ -154,14 +184,22 @@ export function SubmissionForm({ contestId, allowedPlatforms, onSuccess }: Submi
                     : 'https://www.youtube.com/shorts/abc123'
               }
               {...register('video_url')}
-              error={errors.video_url?.message}
             />
             {errors.video_url && (
-              <p className="mt-1 text-sm text-red-600">{errors.video_url.message}</p>
+              <p className="mt-1 text-sm text-red-600">
+                {typeof errors.video_url.message === 'string'
+                  ? errors.video_url.message
+                  : 'Lien invalide pour cette plateforme'}
+              </p>
             )}
             <p className="mt-1 text-xs text-muted-foreground">
-              Collez l'URL complète de votre vidéo {PLATFORM_LABELS[selectedPlatform]}
+              Colle l&apos;URL complète de ta vidéo {PLATFORM_LABELS[selectedPlatform]}
             </p>
+            {videoUrl && (
+              <p className={`mt-1 text-xs ${urlValid ? 'text-green-600' : 'text-red-600'}`}>
+                {urlValid ? 'Lien valide' : 'Lien non reconnu pour cette plateforme'}
+              </p>
+            )}
           </div>
 
           <div>
@@ -171,9 +209,8 @@ export function SubmissionForm({ contestId, allowedPlatforms, onSuccess }: Submi
             <Textarea
               id="caption"
               rows={4}
-              placeholder="Ajoutez une description à votre participation..."
+              placeholder="Ajoute une description à ta participation..."
               {...register('caption')}
-              error={errors.caption?.message}
             />
             {errors.caption && (
               <p className="mt-1 text-sm text-red-600">{errors.caption.message}</p>
@@ -188,15 +225,27 @@ export function SubmissionForm({ contestId, allowedPlatforms, onSuccess }: Submi
               Info
             </Badge>
             <p className="text-sm text-muted-foreground">
-              Votre soumission sera soumise à modération avant d'être visible.
+              Ta soumission sera soumise à modération avant d&apos;être visible.
             </p>
           </div>
+
+          <label className="flex items-start gap-2 text-sm text-foreground">
+            <input
+              type="checkbox"
+              checked={acceptRules}
+              onChange={(e) => setAcceptRules(e.target.checked)}
+              className="mt-1"
+            />
+            <span>
+              J&apos;accepte les règles du concours et je confirme respecter les conditions de publication.
+            </span>
+          </label>
 
           <Button
             type="submit"
             variant="primary"
             className="w-full"
-            disabled={isSubmitting}
+            disabled={isSubmitting || !urlValid || !acceptRules}
           >
             {isSubmitting ? 'Envoi en cours...' : 'Soumettre ma participation'}
           </Button>
@@ -206,3 +255,15 @@ export function SubmissionForm({ contestId, allowedPlatforms, onSuccess }: Submi
   );
 }
 
+function isAllowedUrl(platform: Platform, url: string): boolean {
+  try {
+    const parsed = new URL(url);
+    const host = parsed.hostname.toLowerCase();
+    if (platform === 'tiktok') return host.includes('tiktok.com');
+    if (platform === 'instagram') return host.includes('instagram.com');
+    if (platform === 'youtube') return host.includes('youtube.com') || host.includes('youtu.be');
+    return false;
+  } catch {
+    return false;
+  }
+}

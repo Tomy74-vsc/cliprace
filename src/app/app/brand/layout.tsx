@@ -12,8 +12,5 @@ export default async function BrandLayout({ children }: { children: ReactNode })
   if (error || !user) redirect('/auth/login');
   const role = await getUserRole(user.id);
   if (role !== 'brand' && role !== 'admin') redirect('/forbidden');
-  if (role === 'brand' && !user.onboarding_complete) {
-    redirect('/app/onboarding');
-  }
   return <>{children}</>;
 }

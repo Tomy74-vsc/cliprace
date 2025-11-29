@@ -13,6 +13,9 @@ import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, Trophy, Clock } from 'lucide-react';
 import type { Platform } from '@/lib/validators/platforms';
+import { track } from '@/lib/analytics';
+import { Button } from '@/components/ui/button';
+import { PlatformBadge, getPlatformLabel } from '@/components/creator/platform-badge';
 
 function formatTimeRemaining(endDate: Date): string {
   const now = new Date();
@@ -27,7 +30,7 @@ function formatTimeRemaining(endDate: Date): string {
   return 'bientôt';
 }
 
-function formatCurrency(amount: number, currency: string): string {
+function formatPrize(amount: number, currency: string): string {
   return new Intl.NumberFormat('fr-FR', {
     style: 'currency',
     currency: currency || 'EUR',
@@ -47,6 +50,9 @@ export interface ContestCardData {
   end_at: string;
   networks: Platform[];
   status: 'draft' | 'active' | 'paused' | 'ended' | 'archived';
+  min_followers?: number | null;
+  min_views?: number | null;
+  eligibility?: { ok: boolean; reasons?: string[] };
   brand?: {
     display_name?: string | null;
     avatar_url?: string | null;
@@ -57,30 +63,15 @@ interface ContestCardProps {
   contest: ContestCardData;
 }
 
-const PLATFORM_LABELS: Record<Platform, string> = {
-  tiktok: 'TikTok',
-  instagram: 'Instagram',
-  youtube: 'YouTube',
-};
-
-const PLATFORM_COLORS: Record<Platform, string> = {
-  tiktok: 'bg-black text-white',
-  instagram: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white',
-  youtube: 'bg-red-600 text-white',
-};
-
 export function ContestCard({ contest }: ContestCardProps) {
   const isActive = contest.status === 'active';
   const isEnded = contest.status === 'ended' || contest.status === 'archived';
   const endDate = new Date(contest.end_at);
   const timeRemaining = isActive ? formatTimeRemaining(endDate) : null;
+  const eligibility = contest.eligibility;
 
   const handleClick = () => {
-    if (typeof window !== 'undefined') {
-      import('@/lib/analytics').then(({ track }) =>
-        track('view_contest', { contest_id: contest.id, status: contest.status })
-      );
-    }
+    track('view_contest', { contest_id: contest.id, status: contest.status });
   };
 
   return (
@@ -88,13 +79,12 @@ export function ContestCard({ contest }: ContestCardProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
-      whileHover={{ y: -4 }}
-      className="h-full"
+      className="h-full transition-transform md:hover:-translate-y-1"
       onClick={handleClick}
     >
       <Link href={`/app/creator/contests/${contest.id}`}>
-        <Card className="group h-full transition-all duration-300 hover:shadow-card-hover overflow-hidden relative">
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/0 via-accent/0 to-transparent opacity-0 group-hover:opacity-10 transition-opacity duration-300 pointer-events-none z-0" />
+        <Card className="group h-full overflow-hidden relative transition-all duration-300 hover:shadow-card-hover">
+          <div className="pointer-events-none absolute inset-0 z-0 bg-gradient-to-br from-primary/0 via-accent/0 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-10" />
 
           <div className="relative h-48 w-full overflow-hidden rounded-t-lg bg-muted">
             {contest.cover_url ? (
@@ -110,31 +100,37 @@ export function ContestCard({ contest }: ContestCardProps) {
                 <span className="text-sm font-semibold text-muted-foreground">Concours ClipRace</span>
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-            {isActive && (
-              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="absolute top-3 right-3">
-                <Badge variant="success" className="shadow-lg backdrop-blur-sm">
-                  <Sparkles className="w-3 h-3 mr-1" />
-                  Actif
-                </Badge>
-              </motion.div>
-            )}
-            {isEnded && (
-              <div className="absolute top-3 right-3">
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+            <div className="absolute top-3 right-3 flex flex-col items-end gap-2">
+              {isActive && (
+                <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }}>
+                  <Badge variant="success" className="shadow-lg backdrop-blur-sm">
+                    <Sparkles className="mr-1 h-3 w-3" />
+                    Actif
+                  </Badge>
+                </motion.div>
+              )}
+              {isEnded && (
                 <Badge variant="default" className="shadow-lg backdrop-blur-sm">
                   Terminé
                 </Badge>
-              </div>
-            )}
+              )}
+              {timeRemaining && !isEnded && (
+                <Badge className="bg-muted/60 text-foreground shadow-sm backdrop-blur-sm">
+                  <Clock className="mr-1 h-3 w-3" />
+                  Se termine {timeRemaining}
+                </Badge>
+              )}
+            </div>
           </div>
 
-          <CardContent className="p-5 relative z-10">
-            <h3 className="mb-2 line-clamp-2 text-lg font-bold text-foreground group-hover:text-primary transition-colors duration-300">
+          <CardContent className="relative z-10 p-5">
+            <h3 className="mb-2 line-clamp-2 text-lg font-bold text-foreground transition-colors duration-300 group-hover:text-primary">
               {contest.title}
             </h3>
             {contest.brief_md && (
               <div
-                className="mb-4 line-clamp-2 text-sm text-muted-foreground prose prose-sm dark:prose-invert max-w-none"
+                className="prose prose-sm mb-4 line-clamp-2 max-w-none text-sm text-muted-foreground dark:prose-invert"
                 aria-label="Résumé du concours"
               >
                 <ReactMarkdown
@@ -157,18 +153,18 @@ export function ContestCard({ contest }: ContestCardProps) {
                   />
                 </motion.div>
               ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted text-xs font-semibold">
-                  {contest.brand?.display_name?.[0] ?? 'C'}
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-primary/15 to-accent/30 text-xs font-semibold text-primary">
+                  {contest.brand?.display_name?.slice(0, 2).toUpperCase() ?? 'CR'}
                 </div>
               )}
               <span className="font-medium">{contest.brand?.display_name || 'Marque'}</span>
             </div>
 
-            <div className="mb-4 p-3 rounded-xl bg-gradient-to-br from-primary/10 to-accent/10 border border-primary/20">
-              <div className="flex items-center gap-2 mb-1">
-                <Trophy className="w-4 h-4 text-primary" />
-                <div className="text-2xl font-bold bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-                  {formatCurrency(contest.prize_pool_cents, contest.currency)}
+            <div className="mb-4 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/10 to-accent/10 p-3">
+              <div className="mb-1 flex items-center gap-2">
+                <Trophy className="h-4 w-4 text-primary" />
+                <div className="bg-gradient-to-r from-primary to-accent bg-clip-text text-2xl font-bold text-transparent">
+                  {formatPrize(contest.prize_pool_cents, contest.currency)}
                 </div>
               </div>
               <div className="text-xs text-muted-foreground">À gagner</div>
@@ -178,46 +174,51 @@ export function ContestCard({ contest }: ContestCardProps) {
               <div className="mb-4 flex flex-wrap gap-2">
                 {contest.networks.map((platform) => (
                   <motion.div key={platform} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                    <Badge variant="default" className={`text-xs font-medium ${PLATFORM_COLORS[platform]} shadow-sm`}>
-                      {PLATFORM_LABELS[platform]}
-                    </Badge>
+                    <PlatformBadge platform={platform} />
                   </motion.div>
                 ))}
               </div>
             )}
 
+            <div className="mb-3 flex flex-wrap items-center gap-2 text-xs">
+              {contest.min_followers ? (
+                <Badge variant="secondary">
+                  Min {contest.min_followers.toLocaleString('fr-FR')} followers
+                </Badge>
+              ) : null}
+              {contest.min_views ? (
+                <Badge variant="secondary">
+                  Min {contest.min_views.toLocaleString('fr-FR')} vues moy.
+                </Badge>
+              ) : null}
+              {eligibility ? (
+                <Badge variant={eligibility.ok ? 'success' : 'warning'}>
+                  {eligibility.ok ? 'Éligibilité : OK' : 'Éligibilité : manquants'}
+                </Badge>
+              ) : null}
+            </div>
+
             {timeRemaining && (
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <Clock className="w-3 h-3" />
+                <Clock className="h-3 w-3" />
                 <span>Se termine {timeRemaining}</span>
               </div>
             )}
           </CardContent>
 
-          <CardFooter className="border-t border-border p-4 bg-muted/40 relative z-10">
-            <div className="w-full">
-              {isActive ? (
-                <motion.div
-                  className="flex items-center justify-between"
-                  whileHover={{ x: 4 }}
-                  transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-                >
-                  <span className="text-sm font-semibold text-foreground">Participer</span>
-                  <motion.span
-                    className="text-sm text-primary"
-                    animate={{ x: [0, 4, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: 'easeInOut' }}
-                  >
-                    → 
-                  </motion.span>
-                </motion.div>
-              ) : (
-                <span className="text-sm text-muted-foreground">Voir les détails</span>
-              )}
+          <CardFooter className="relative z-10 flex w-full items-center justify-between gap-3 border-t border-border bg-muted/40 p-4">
+            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              {contest.networks.slice(0, 2).map((p) => getPlatformLabel(p)).join(' · ')}
             </div>
+            <Button asChild size="sm" variant={isActive ? 'primary' : 'secondary'}>
+              <Link href={`/app/creator/contests/${contest.id}`}>
+                {isActive ? 'Participer' : 'Voir le concours'}
+              </Link>
+            </Button>
           </CardFooter>
         </Card>
       </Link>
     </motion.div>
   );
 }
+

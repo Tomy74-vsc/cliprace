@@ -1,4 +1,4 @@
-// Source: Validation Zod pour concours (��19, ��509-512)
+// Source: Validation Zod pour concours
 import { z } from 'zod';
 
 const prizeRangeSchema = z
@@ -15,7 +15,7 @@ const prizeRangeSchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'amount_cents ou percentage doit Ǧtre renseignǸ',
+        message: 'amount_cents ou percentage doit être renseigné',
         path: ['amount_cents'],
       });
     }
@@ -23,7 +23,7 @@ const prizeRangeSchema = z
     if (value.rank_to !== undefined && value.rank_to < value.rank_from) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'rank_to doit Ǧtre supǸrieur ou Ǹgal �� rank_from',
+        message: 'rank_to doit être supérieur ou égal à rank_from',
         path: ['rank_to'],
       });
     }
@@ -36,8 +36,8 @@ const contestAssetSchema = z.object({
 
 export const contestCreateSchema = z
   .object({
-    title: z.string().min(1).max(120, 'Le titre ne peut pas dǸpasser 120 caract��res'),
-    brief_md: z.string().min(1).max(5000, 'Le brief ne peut pas dǸpasser 5000 caract��res'),
+    title: z.string().min(1).max(120, 'Le titre ne peut pas dépasser 120 caractères'),
+    brief_md: z.string().min(1).max(5000, 'Le brief ne peut pas dépasser 5000 caractères'),
     cover_url: z.string().url().optional(),
     allowed_platforms: z
       .object({
@@ -64,7 +64,7 @@ export const contestCreateSchema = z
   })
   .refine(
     (data) => new Date(data.end_at) > new Date(data.start_at),
-    { message: 'La date de fin doit Ǧtre apr��s la date de dǸbut', path: ['end_at'] }
+    { message: 'La date de fin doit être après la date de début', path: ['end_at'] }
   )
   .refine(
     (data) => {
@@ -72,10 +72,11 @@ export const contestCreateSchema = z
       const total = data.prizes.reduce((sum, p) => sum + (p.amount_cents ?? 0), 0);
       return total <= data.total_prize_pool_cents;
     },
-    { message: 'La somme des prix ne peut pas dǸpasser le total du prize pool', path: ['prizes'] }
+    { message: 'La somme des prix ne peut pas dépasser le total du prize pool', path: ['prizes'] }
   );
 
 export const contestUpdateSchema = contestCreateSchema.partial();
 
 export type ContestCreateInput = z.infer<typeof contestCreateSchema>;
 export type ContestUpdateInput = z.infer<typeof contestUpdateSchema>;
+

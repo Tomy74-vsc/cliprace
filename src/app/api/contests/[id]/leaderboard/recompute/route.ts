@@ -9,7 +9,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/server';
 
 export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
   try {
-    const supabaseSSR = getSupabaseSSR();
+    const supabaseSSR = await getSupabaseSSR();
     const { data: { user } } = await supabaseSSR.auth.getUser();
     if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
     const role = await getUserRole(user.id);
@@ -24,4 +24,3 @@ export async function POST(_req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }
-

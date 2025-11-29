@@ -11,7 +11,7 @@ import { assertCsrf } from '@/lib/csrf';
 export async function POST(req: NextRequest) {
   try {
     // Rate limiting: 10 req/min par IP (Â§4, Â§156)
-    const ip = req.headers.get('x-forwarded-for') || req.ip || 'unknown';
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
     const rlKey = `auth:login:${ip}`;
     if (!(await rateLimit({ key: rlKey, route: 'auth:login', windowMs: 60 * 1000, max: 10 }))) {
       return formatErrorResponse(createError('RATE_LIMIT', 'Trop de tentatives. RÃ©essayez dans 1 minute.', 429));
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
     // CSRF check (double-submit: cookie must match header)
     try {
-      assertCsrf(req.headers.get('x-csrf'));
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
       return formatErrorResponse(
         createError('FORBIDDEN', 'Token CSRF invalide', 403, csrfError)
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { email, password } = parsed.data;
-    const supabaseSSR = getSupabaseSSR();
+    const supabaseSSR = await getSupabaseSSR();
 
     // Authentifier avec email/password
     const { data: authData, error: authError } = await supabaseSSR.auth.signInWithPassword({
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Audit log
-    const ipAddress = req.headers.get('x-forwarded-for') || req.ip || undefined;
+    const ipAddress = req.headers.get('x-forwarded-for') || undefined;
     const userAgent = req.headers.get('user-agent') || undefined;
     await admin.from('audit_logs').insert({
       actor_id: userId,
@@ -104,6 +104,3 @@ export async function POST(req: NextRequest) {
     return formatErrorResponse(error);
   }
 }
-
-
-

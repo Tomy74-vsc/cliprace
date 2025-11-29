@@ -1,6 +1,7 @@
 // Source: Design System — Buttons (§32, §1274)
 import * as React from 'react';
 import { cva, type VariantProps } from 'class-variance-authority';
+import { Slot } from '@radix-ui/react-slot';
 import { cn } from '@/lib/utils';
 
 const buttonVariants = cva(
@@ -34,20 +35,33 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   loading?: boolean;
+  asChild?: boolean;
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, loading, children, disabled, ...props }, ref) => {
-    return (
-      <button
-        className={cn(buttonVariants({ variant, size, className }))}
-        ref={ref}
-        disabled={disabled || loading}
-        {...props}
-      >
+  ({ className, variant, size, loading, children, disabled, asChild = false, ...props }, ref) => {
+    const Comp = asChild ? Slot : 'button';
+
+    const sharedProps = {
+      className: cn(buttonVariants({ variant, size, className })),
+      ...props,
+    };
+
+    if (asChild) {
+      // When using asChild, we delegate element type to the child.
+      // We ne gérons pas l'état `loading` ici pour éviter de passer des props à un Fragment.
+      return (
+        <Comp {...sharedProps} ref={ref as any}>
+          {children}
+        </Comp>
+      );
+    }
+
+    const content = (
+      <>
         {loading && (
           <svg
-            className="animate-spin h-4 w-4"
+            className="h-4 w-4 animate-spin"
             xmlns="http://www.w3.org/2000/svg"
             fill="none"
             viewBox="0 0 24 24"
@@ -68,7 +82,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           </svg>
         )}
         {children}
-      </button>
+      </>
+    );
+
+    return (
+      <Comp {...sharedProps} ref={ref} disabled={disabled || loading}>
+        {content}
+      </Comp>
     );
   }
 );
