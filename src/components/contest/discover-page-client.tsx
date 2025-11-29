@@ -1,21 +1,21 @@
-ï»¿/*
+/*
 Source: Component DiscoverPageClient
 Purpose: Client shell for discover filters + pagination (query-string sync)
 */
-'use client';
+"use client";
 
-import { useTransition } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ContestCard, type ContestCardData } from '@/components/contest/contest-card';
-import { DiscoverFilters } from '@/components/contest/discover-filters';
-import { Trophy } from 'lucide-react';
-import type { Platform } from '@/lib/validators/platforms';
-import { EmptyState } from '@/components/creator/empty-state';
-import { ContestCardSkeleton } from '@/components/creator/skeletons';
+import { useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { motion, AnimatePresence } from "framer-motion";
+import { ContestCard, type ContestCardData } from "@/components/contest/contest-card";
+import { DiscoverFilters } from "@/components/contest/discover-filters";
+import { Trophy } from "lucide-react";
+import type { Platform } from "@/lib/validators/platforms";
+import { EmptyState } from "@/components/creator/empty-state";
+import { ContestCardSkeleton } from "@/components/creator/skeletons";
 
-type StatusFilter = 'active' | 'upcoming' | 'ended';
-type SortOption = 'ending_soon' | 'prize_desc' | 'newest';
+type StatusFilter = "active" | "upcoming" | "ended";
+type SortOption = "ending_soon" | "prize_desc" | "newest";
 
 interface DiscoverPageClientProps {
   contests: ContestCardData[];
@@ -54,31 +54,31 @@ export function DiscoverPageClient({
     const params = new URLSearchParams(searchParams.toString());
 
     if (next.search !== undefined) {
-      if (next.search) params.set('search', next.search);
-      else params.delete('search');
+      if (next.search) params.set("search", next.search);
+      else params.delete("search");
     }
 
     if (next.platforms !== undefined) {
       if (next.platforms.length) {
-        params.set('platforms', next.platforms.join(','));
+        params.set("platforms", next.platforms.join(","));
       } else {
-        params.delete('platforms');
+        params.delete("platforms");
       }
     }
 
     if (next.status !== undefined) {
-      params.set('status', next.status);
+      params.set("status", next.status);
     }
 
     if (next.sort !== undefined) {
-      params.set('sort', next.sort);
+      params.set("sort", next.sort);
     }
 
     if (next.page !== undefined) {
-      if (next.page > 1) params.set('page', String(next.page));
-      else params.delete('page');
+      if (next.page > 1) params.set("page", String(next.page));
+      else params.delete("page");
     } else {
-      params.delete('page');
+      params.delete("page");
     }
 
     startTransition(() => {
@@ -113,19 +113,18 @@ export function DiscoverPageClient({
         transition={{ duration: 0.3, delay: 0.1 }}
         className="sticky top-16 z-20 rounded-2xl bg-background/80 backdrop-blur border border-border shadow-sm"
       >
-        <DiscoverFilters
-          value={filters}
-          isPending={isPending}
-          onFiltersChange={handleFiltersChange}
-          profileIncomplete={profileIncomplete}
-        />
+        <DiscoverFilters value={filters} isPending={isPending} onFiltersChange={handleFiltersChange} />
       </motion.div>
 
       {total > 0 && (
-        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 text-sm text-muted-foreground">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          className="flex items-center gap-2 text-sm text-muted-foreground"
+        >
           <Trophy className="h-4 w-4 text-primary" aria-hidden="true" />
           <span>
-            {total} concours{total > 1 ? 's' : ''} trouvÃ©s
+            {total} concours{total > 1 ? "s" : ""} trouvés
           </span>
         </motion.div>
       )}
@@ -144,40 +143,49 @@ export function DiscoverPageClient({
             ))}
           </motion.div>
         ) : contests.length === 0 ? (
-          <motion.div key="empty" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}>
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+          >
             <EmptyState
-              title={filters.search || filters.platforms.length > 0 ? 'Aucun concours trouvÃ©' : 'Aucun concours actif'}
+              title={
+                filters.search || filters.platforms.length > 0
+                  ? "Aucun concours trouvé"
+                  : "Aucun concours actif"
+              }
               description={
                 filters.search || filters.platforms.length > 0
-                  ? 'Modifie tes filtres pour voir plus de rÃ©sultats.'
-                  : 'Reviens bientÃ´t pour dÃ©couvrir de nouveaux concours.'
+                  ? "Modifie tes filtres pour voir plus de résultats."
+                  : "Reviens bientôt pour découvrir de nouveaux concours."
               }
               action={{
-                label: 'RÃ©initialiser',
+                label: "Réinitialiser",
                 onClick: () =>
                   updateQuery({
-                    search: '',
+                    search: "",
                     platforms: [],
-                    status: 'active',
-                    sort: 'ending_soon',
+                    status: "active",
+                    sort: "ending_soon",
                     page: 1,
                   }),
-                variant: 'secondary',
+                variant: "secondary",
               }}
               secondaryAction={
                 profileIncomplete
-                  ? { label: 'ComplÃ©ter mon profil', href: '/app/creator/settings', variant: 'ghost' }
+                  ? { label: "Compléter mon profil", href: "/app/creator/settings", variant: "ghost" }
                   : {
-                      label: 'Retirer les filtres',
+                      label: "Retirer les filtres",
                       onClick: () =>
                         updateQuery({
-                          search: '',
+                          search: "",
                           platforms: [],
-                          status: 'active',
-                          sort: 'ending_soon',
+                          status: "active",
+                          sort: "ending_soon",
                           page: 1,
                         }),
-                      variant: 'ghost',
+                      variant: "ghost",
                     }
               }
             />
@@ -211,7 +219,12 @@ export function DiscoverPageClient({
       </AnimatePresence>
 
       {totalPages > 1 && (
-        <PaginationControls page={page} totalPages={totalPages} isPending={isPending} onPageChange={handlePageChange} />
+        <PaginationControls
+          page={page}
+          totalPages={totalPages}
+          isPending={isPending}
+          onPageChange={handlePageChange}
+        />
       )}
     </div>
   );
@@ -229,14 +242,17 @@ function PaginationControls({ page, totalPages, isPending, onPageChange }: Pagin
   const canNext = page < totalPages;
 
   return (
-    <nav className="flex items-center justify-between border-t border-border pt-6" aria-label="Pagination">
+    <nav
+      className="flex items-center justify-between border-t border-border pt-6"
+      aria-label="Pagination"
+    >
       <button
         type="button"
         onClick={() => onPageChange(page - 1)}
         disabled={!canPrev || isPending}
         className="text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
       >
-        PrÃ©cÃ©dent
+        Précédent
       </button>
       <div className="text-sm text-muted-foreground" aria-live="polite">
         Page {page} sur {totalPages}

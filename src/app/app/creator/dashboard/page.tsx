@@ -15,6 +15,7 @@ import { ProgressSteps, type ProgressStep } from '@/components/creator/progress-
 import { formatCurrency } from '@/lib/formatters';
 import { Trophy, Clock, Bell, Lightbulb, Wallet2, ListVideo, Info } from 'lucide-react';
 import { TrackOnView } from '@/components/analytics/track-once';
+import { formatDate } from '@/lib/formatters';
 import { PlatformBadge } from '@/components/creator/platform-badge';
 import {
   ActiveContestsCarousel,
@@ -134,7 +135,7 @@ export default async function CreatorDashboard() {
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
-                    Fin le {new Date(data.next_contest.end_at).toLocaleDateString('fr-FR')}
+                    Fin le {formatDate(data.next_contest.end_at)}
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button asChild size="sm" disabled={!data.next_contest_can_submit}>
@@ -552,7 +553,7 @@ function RecommendedContestCard({ contest }: { contest: RecommendedContest }) {
       <div>
         <p className="text-sm font-semibold text-foreground line-clamp-2">{contest.title}</p>
         <p className="text-xs text-muted-foreground">
-          Fin le {new Date(contest.end_at).toLocaleDateString('fr-FR')}
+          Fin le {formatDate(contest.end_at)}
         </p>
       </div>
       {contest.networks.length > 0 && (

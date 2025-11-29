@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Bell, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { formatDate } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
@@ -172,7 +173,7 @@ export function NotificationsDropdown() {
                       {item.content?.message || 'Action disponible'}
                     </p>
                     <span className="text-[11px] text-muted-foreground">
-                      {new Date(item.created_at).toLocaleDateString('fr-FR')}
+                      {formatDate(item.created_at)}
                     </span>
                   </Link>
                 </li>

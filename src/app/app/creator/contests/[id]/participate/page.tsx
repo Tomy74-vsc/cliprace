@@ -1,4 +1,4 @@
-ï»¿import { redirect } from 'next/navigation';
+import { redirect } from 'next/navigation';
 import { AlertTriangle, CheckCircle2, Clock, Info, Shield } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { PlatformBadge } from '@/components/creator/platform-badge';
 import { TrackOnView } from '@/components/analytics/track-once';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 
 interface ContestRow {
   id: string;
@@ -84,7 +84,7 @@ export default async function ParticipatePage({ params }: { params: { id: string
   const canSubmit = Boolean(isActiveRes) && Boolean(canSubmitRes) && !isEnded;
 
   const eligibilityReasons: string[] = [];
-  if (!isActiveRes) eligibilityReasons.push('Concours inactif ou clÃ´turÃ©.');
+  if (!isActiveRes) eligibilityReasons.push('Concours inactif ou clôturé.');
   if (contest.min_followers && contest.min_followers > 0) {
     eligibilityReasons.push(
       `Followers requis : ${contest.min_followers.toLocaleString('fr-FR')}`,
@@ -119,7 +119,7 @@ export default async function ParticipatePage({ params }: { params: { id: string
                     <span>
                       Fin le{' '}
                       {contest.end_at
-                        ? new Date(contest.end_at).toLocaleDateString('fr-FR')
+                        ? formatDate(contest.end_at)
                         : '-'}
                     </span>
                   )}
@@ -127,7 +127,7 @@ export default async function ParticipatePage({ params }: { params: { id: string
               </div>
               <div className="flex flex-col items-end gap-2">
                 <Badge variant={isEnded ? 'default' : 'success'}>
-                  {isEnded ? 'ClÃ´turÃ©' : 'Actif'}
+                  {isEnded ? 'Clôturé' : 'Actif'}
                 </Badge>
                 {contest.prize_pool_cents ? (
                   <Badge variant="info">
@@ -143,8 +143,8 @@ export default async function ParticipatePage({ params }: { params: { id: string
           <CardContent className="space-y-4">
             {isEnded ? (
               <EmptyState
-                title="Concours terminÃ©"
-                description="Ce concours est clÃ´turÃ©. DÃ©couvre d'autres opportunitÃ©s."
+                title="Concours terminé"
+                description="Ce concours est clôturé. Découvre d'autres opportunités."
                 action={{
                   label: 'Voir les concours',
                   href: '/app/creator/contests',
@@ -153,15 +153,15 @@ export default async function ParticipatePage({ params }: { params: { id: string
               />
             ) : !canSubmit ? (
               <EmptyState
-                title="Non Ã©ligible pour le moment"
-                description="VÃ©rifie les conditions ci-dessous."
+                title="Non éligible pour le moment"
+                description="Vérifie les conditions ci-dessous."
                 action={{
                   label: 'Retour aux concours',
                   href: '/app/creator/contests',
                   variant: 'secondary',
                 }}
                 secondaryAction={{
-                  label: 'ComplÃ©ter mon profil',
+                  label: 'Compléter mon profil',
                   href: '/app/creator/settings',
                   variant: 'ghost',
                 }}
@@ -180,11 +180,11 @@ export default async function ParticipatePage({ params }: { params: { id: string
                 <div className="rounded-lg border border-dashed border-border bg-muted/40 p-3 text-sm text-muted-foreground flex flex-col gap-2">
                   <div className="flex items-center gap-2">
                     <Info className="h-4 w-4 text-primary" />
-                    Formats acceptÃ©s : TikTok / Instagram Reels / YouTube Shorts (lien public).
+                    Formats acceptés : TikTok / Instagram Reels / YouTube Shorts (lien public).
                   </div>
                   <div className="flex items-center gap-2">
                     <Shield className="h-4 w-4 text-primary" />
-                    1 soumission max par concours (doublons refusÃ©s).
+                    1 soumission max par concours (doublons refusés).
                   </div>
                 </div>
                 <SubmissionForm contestId={contest.id} allowedPlatforms={allowedPlatforms} />
@@ -204,7 +204,7 @@ export default async function ParticipatePage({ params }: { params: { id: string
                 <Clock className="h-4 w-4 text-primary" />
                 Fin le{' '}
                 {contest.end_at
-                  ? new Date(contest.end_at).toLocaleDateString('fr-FR')
+                  ? formatDate(contest.end_at)
                   : '-'}
               </div>
               <div className="flex items-center gap-2 flex-wrap">
@@ -240,7 +240,7 @@ export default async function ParticipatePage({ params }: { params: { id: string
                   Concours non actif
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  La participation sera dÃ©sactivÃ©e si le concours n&apos;est pas actif.
+                  La participation sera désactivée si le concours n&apos;est pas actif.
                 </p>
               </CardHeader>
             </Card>
@@ -253,8 +253,8 @@ export default async function ParticipatePage({ params }: { params: { id: string
 
 function StepList() {
   const steps = [
-    'VÃ©rifier mon Ã©ligibilitÃ©',
-    'Coller le lien vidÃ©o',
+    'Vérifier mon éligibilité',
+    'Coller le lien vidéo',
     'Confirmer et envoyer',
   ];
   return (

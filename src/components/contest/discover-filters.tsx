@@ -1,23 +1,22 @@
-﻿/*
+/*
 Source: Component DiscoverFilters
 Purpose: Filtres pour la page discover (plateformes, recherche, statut, tri)
 */
-'use client';
+"use client";
 
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Search, X, Filter, Sparkles, CheckCircle, AlertTriangle } from 'lucide-react';
-import type { Platform } from '@/lib/validators/platforms';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Search, X, Filter } from "lucide-react";
+import type { Platform } from "@/lib/validators/platforms";
 
 const PLATFORM_LABELS: Record<Platform, string> = {
-  tiktok: 'TikTok',
-  instagram: 'Instagram',
-  youtube: 'YouTube',
+  tiktok: "TikTok",
+  instagram: "Instagram",
+  youtube: "YouTube",
 };
 
-type StatusFilter = 'active' | 'upcoming' | 'ended';
-type SortOption = 'ending_soon' | 'prize_desc' | 'newest';
+type StatusFilter = "active" | "upcoming" | "ended";
+type SortOption = "ending_soon" | "prize_desc" | "newest";
 
 interface DiscoverFiltersProps {
   value: {
@@ -27,11 +26,10 @@ interface DiscoverFiltersProps {
     sort: SortOption;
   };
   isPending?: boolean;
-  profileIncomplete?: boolean;
   onFiltersChange: (filters: { search: string; platforms: Platform[]; status: StatusFilter; sort: SortOption }) => void;
 }
 
-export function DiscoverFilters({ value, isPending, profileIncomplete, onFiltersChange }: DiscoverFiltersProps) {
+export function DiscoverFilters({ value, isPending, onFiltersChange }: DiscoverFiltersProps) {
   const handlePlatformToggle = (platform: Platform) => {
     const newPlatforms = value.platforms.includes(platform)
       ? value.platforms.filter((p) => p !== platform)
@@ -44,7 +42,7 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
   };
 
   const clearFilters = () => {
-    onFiltersChange({ search: '', platforms: [], status: 'active', sort: 'ending_soon' });
+    onFiltersChange({ search: "", platforms: [], status: "active", sort: "ending_soon" });
   };
 
   const handleStatusChange = (status: StatusFilter) => {
@@ -55,13 +53,20 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
     onFiltersChange({ search: value.search, platforms: value.platforms, status: value.status, sort });
   };
 
-  const hasActiveFilters = value.search.length > 0 || value.platforms.length > 0 || value.status !== 'active' || value.sort !== 'ending_soon';
+  const hasActiveFilters =
+    value.search.length > 0 ||
+    value.platforms.length > 0 ||
+    value.status !== "active" ||
+    value.sort !== "ending_soon";
 
   return (
     <div className="mb-4 space-y-4 rounded-2xl border border-border bg-card/60 p-4 shadow-card">
       <div className="flex flex-wrap items-center gap-3 justify-between">
         <div className="relative w-full md:w-auto flex-1 min-w-[240px]">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" aria-hidden="true" />
+          <Search
+            className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground"
+            aria-hidden="true"
+          />
           <Input
             type="text"
             placeholder="Rechercher"
@@ -73,7 +78,7 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
           />
           {value.search && (
             <button
-              onClick={() => handleSearchChange('')}
+              onClick={() => handleSearchChange("")}
               className="absolute right-4 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
               aria-label="Effacer la recherche"
               disabled={isPending}
@@ -82,9 +87,6 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
             </button>
           )}
         </div>
-        <div className="hidden">
-          {/* Raccourci clavier Ctrl/Cmd + K retiré de l'UI */}
-        </div>
       </div>
 
       <div className="flex flex-wrap gap-3 items-center">
@@ -92,7 +94,7 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
           <Filter className="h-4 w-4" />
           <span>Plateformes :</span>
         </div>
-        {(['tiktok', 'instagram', 'youtube'] as Platform[]).map((platform) => {
+        {(["tiktok", "instagram", "youtube"] as Platform[]).map((platform) => {
           const isSelected = value.platforms.includes(platform);
           return (
             <button
@@ -100,8 +102,8 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
               onClick={() => handlePlatformToggle(platform)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 isSelected
-                  ? 'bg-gradient-to-r from-[#635BFF] to-[#7C3AED] text-white shadow-lg shadow-[#635BFF]/30'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-foreground hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                  ? "bg-gradient-to-r from-[#635BFF] to-[#7C3AED] text-white shadow-lg shadow-[#635BFF]/30"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-foreground hover:bg-zinc-200 dark:hover:bg-zinc-700"
               }`}
               disabled={isPending}
             >
@@ -113,9 +115,9 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
 
       <div className="flex flex-wrap gap-2 items-center">
         {[
-          { value: 'active', label: 'Actifs' },
-          { value: 'upcoming', label: 'À venir' },
-          { value: 'ended', label: 'Terminés' },
+          { value: "active", label: "Actifs" },
+          { value: "upcoming", label: "� venir" },
+          { value: "ended", label: "Termin�s" },
         ].map((s) => {
           const active = value.status === s.value;
           return (
@@ -124,8 +126,8 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
               onClick={() => handleStatusChange(s.value as StatusFilter)}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
                 active
-                  ? 'bg-primary text-primary-foreground shadow-sm'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-foreground hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                  ? "bg-primary text-primary-foreground shadow-sm"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-foreground hover:bg-zinc-200 dark:hover:bg-zinc-700"
               }`}
               disabled={isPending}
             >
@@ -140,9 +142,9 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
           <span>Trier par :</span>
         </div>
         {[
-          { value: 'ending_soon', label: 'Fin proche' },
-          { value: 'prize_desc', label: 'Prize pool' },
-          { value: 'newest', label: 'Nouveaux' },
+          { value: "ending_soon", label: "Fin proche" },
+          { value: "prize_desc", label: "Prize pool" },
+          { value: "newest", label: "Nouveaux" },
         ].map((s) => {
           const active = value.sort === s.value;
           return (
@@ -151,8 +153,8 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
               onClick={() => handleSortChange(s.value as SortOption)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                 active
-                  ? 'bg-primary/10 text-primary border border-primary/30'
-                  : 'bg-zinc-100 dark:bg-zinc-800 text-foreground hover:bg-zinc-200 dark:hover:bg-zinc-700'
+                  ? "bg-primary/10 text-primary border border-primary/30"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-foreground hover:bg-zinc-200 dark:hover:bg-zinc-700"
               }`}
               disabled={isPending}
             >
@@ -162,28 +164,16 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
         })}
 
         {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={clearFilters} className="ml-auto text-muted-foreground hover:text-foreground" disabled={isPending}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="ml-auto text-muted-foreground hover:text-foreground"
+            disabled={isPending}
+          >
             <X className="h-4 w-4 mr-1" />
             Effacer
           </Button>
-        )}
-      </div>
-
-      <div className="hidden flex-wrap items-center gap-3 text-xs text-muted-foreground">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <span>Éligibilité estimée</span>
-        </div>
-        {profileIncomplete ? (
-          <Badge variant="warning" className="flex items-center gap-1">
-            <AlertTriangle className="h-3 w-3" />
-            Compléter le profil pour des recommandations précises
-          </Badge>
-        ) : (
-          <Badge variant="secondary" className="flex items-center gap-1">
-            <CheckCircle className="h-3 w-3" />
-            Calculée selon ta plateforme et tes stats
-          </Badge>
         )}
       </div>
     </div>
