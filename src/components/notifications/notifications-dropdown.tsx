@@ -100,7 +100,7 @@ export function NotificationsDropdown() {
       <Button
         variant="ghost"
         size="sm"
-        className="relative h-10 w-10 rounded-full"
+        className="relative h-12 w-12 rounded-full"
         aria-label="Notifications"
         aria-expanded={open}
         aria-controls="notifications-panel"
@@ -109,7 +109,7 @@ export function NotificationsDropdown() {
           setActiveIndex(0);
         }}
       >
-        <Bell className="h-5 w-5" />
+        <Bell className="h-10 w-10" />
         {unread > 0 && (
           <Badge
             variant="danger"
@@ -214,4 +214,3 @@ function notificationLink(item: NotificationItem) {
   }
   return '/app/creator/notifications';
 }
-

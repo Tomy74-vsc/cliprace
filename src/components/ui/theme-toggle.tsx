@@ -27,9 +27,10 @@ export function ThemeToggle() {
       size="sm"
       aria-label={isDark ? 'Passer en thème clair' : 'Passer en thème sombre'}
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      className="h-10 w-10 rounded-full"
+      className="h-12 w-12 rounded-full"
     >
-      {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+      {isDark ? <Sun className="h-10 w-10" /> : <Moon className="h-10 w-10" />}
     </Button>
   );
 }
+

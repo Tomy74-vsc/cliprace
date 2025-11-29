@@ -64,7 +64,7 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" aria-hidden="true" />
           <Input
             type="text"
-            placeholder="Rechercher (Ctrl/Cmd + K)"
+            placeholder="Rechercher"
             value={value.search}
             onChange={(e) => handleSearchChange(e.target.value)}
             className="pl-12 pr-12 h-11 text-base rounded-full"
@@ -82,11 +82,8 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
             </button>
           )}
         </div>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <kbd className="rounded-md border px-1.5 py-0.5 text-[11px]">Ctrl/Cmd</kbd>
-          <span>+</span>
-          <kbd className="rounded-md border px-1.5 py-0.5 text-[11px]">K</kbd>
-          <span className="hidden sm:inline">ouvrir la recherche</span>
+        <div className="hidden">
+          {/* Raccourci clavier Ctrl/Cmd + K retiré de l'UI */}
         </div>
       </div>
 
@@ -172,7 +169,7 @@ export function DiscoverFilters({ value, isPending, profileIncomplete, onFilters
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+      <div className="hidden flex-wrap items-center gap-3 text-xs text-muted-foreground">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-primary" />
           <span>Éligibilité estimée</span>

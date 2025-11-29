@@ -83,7 +83,7 @@ export default async function CreatorLayout({ children }: { children: ReactNode 
     { label: 'Profil', href: '/app/creator/settings', icon: 'user' },
   ];
 
-  // const statusSegments = [
+  const statusSegments = [
     {
       label: 'Actif',
       hint: 'Prêt à participer',
@@ -127,7 +127,7 @@ export default async function CreatorLayout({ children }: { children: ReactNode 
             <div className="flex h-14 items-center justify-between px-4 lg:px-8">
               <div className="flex items-center gap-3 overflow-hidden">
                 <CreatorBreadcrumbs />
-                <div className="hidden md:flex items-center gap-2">
+                <div className="hidden">
                   {statusSegments.map((segment) => {
                     const variant =
                       segment.label === 'Actif'
@@ -155,9 +155,9 @@ export default async function CreatorLayout({ children }: { children: ReactNode 
               <div className="flex items-center gap-2">
                 <ThemeToggle />
                 <NotificationsDropdown />
-                <Button asChild variant="ghost" size="sm" className="h-10 rounded-full">
+                <Button asChild variant="ghost" size="sm" className="h-12 w-12 rounded-full">
                   <Link href="/app/creator/settings">
-                    <User className="h-5 w-5" />
+                    <User className="h-10 w-10" />
                     <span className="sr-only">Profil</span>
                   </Link>
                 </Button>
