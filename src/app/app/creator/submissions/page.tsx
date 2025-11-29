@@ -310,7 +310,7 @@ async function getSubmissions(
 
   const { data, count, error } = await query.range(from, to);
   if (error) {
-    console.error('Error fetching submissions:', (error as any)?.message ?? error);
+    console.error('Error fetching submissions:', error);
     return {
       submissions: [],
       total: 0,
@@ -409,4 +409,3 @@ function StatCard({ title, value }: { title: string; value: number }) {
     </Card>
   );
 }
-

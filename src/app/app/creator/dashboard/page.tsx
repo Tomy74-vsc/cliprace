@@ -505,7 +505,7 @@ async function fetchRecommendedContests({
     .limit(30);
 
   if (error) {
-    console.error('Recommended contests fetch error', (error as any)?.message ?? error);
+    console.error('Recommended contests fetch error', error);
     return [];
   }
 
@@ -657,4 +657,3 @@ function buildTodoList({
 
   return items;
 }
-

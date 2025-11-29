@@ -1,6 +1,5 @@
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { AlertTriangle, CheckCircle2, Clock, Info, Shield, Trophy } from 'lucide-react';
+﻿import { redirect } from 'next/navigation';
+import { AlertTriangle, CheckCircle2, Clock, Info, Shield } from 'lucide-react';
 import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { SubmissionForm } from '@/components/submission/submission-form';
@@ -25,14 +24,6 @@ interface ContestRow {
   min_views?: number | null;
 }
 
-function logError(label: string, error: unknown) {
-  if (error instanceof Error) {
-    console.error(label, error.message);
-  } else {
-    console.error(label, error);
-  }
-}
-
 export default async function ParticipatePage({ params }: { params: { id: string } }) {
   const { user } = await getSession();
   if (!user) {
@@ -49,7 +40,7 @@ export default async function ParticipatePage({ params }: { params: { id: string
     .maybeSingle<ContestRow>();
 
   if (error) {
-    logError('Contest fetch error', error);
+    console.error('Contest fetch error', error instanceof Error ? error.message : error);
   }
 
   if (!contest) {
@@ -75,13 +66,9 @@ export default async function ParticipatePage({ params }: { params: { id: string
 
   const isEnded = contest.status === 'ended' || contest.status === 'archived';
 
-  const { data: isActiveRes, error: isActiveErr } = await supabase.rpc('is_contest_active', {
+  const { data: isActiveRes } = await supabase.rpc('is_contest_active', {
     p_contest_id: contest.id,
   });
-  if (isActiveErr) {
-    logError('is_contest_active error', isActiveErr);
-  }
-
   const { data: canSubmitRes, error: canSubmitErr } = await supabase.rpc(
     'can_submit_to_contest',
     {
@@ -89,14 +76,12 @@ export default async function ParticipatePage({ params }: { params: { id: string
       p_user_id: user.id,
     },
   );
+
   if (canSubmitErr) {
-    logError('Eligibility check error', canSubmitErr);
+    console.error('Eligibility check error', canSubmitErr instanceof Error ? canSubmitErr.message : canSubmitErr);
   }
 
-  const canSubmit =
-    Boolean(isActiveRes) &&
-    Boolean(canSubmitRes) &&
-    !isEnded;
+  const canSubmit = Boolean(isActiveRes) && Boolean(canSubmitRes) && !isEnded;
 
   const eligibilityReasons: string[] = [];
   if (!isActiveRes) eligibilityReasons.push('Concours inactif ou clôturé.');
@@ -255,7 +240,7 @@ export default async function ParticipatePage({ params }: { params: { id: string
                   Concours non actif
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
-                  La participation sera désactivée si le concours n'est pas actif.
+                  La participation sera désactivée si le concours n&apos;est pas actif.
                 </p>
               </CardHeader>
             </Card>
@@ -288,4 +273,3 @@ function StepList() {
     </div>
   );
 }
-

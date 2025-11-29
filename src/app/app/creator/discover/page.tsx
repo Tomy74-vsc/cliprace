@@ -39,11 +39,19 @@ export default async function DiscoverContestsPage({
     Number.isFinite(currentPageRaw) && currentPageRaw > 0
       ? Math.floor(currentPageRaw)
       : 1;
-  const statusParam = STATUS_VALUES.includes(params.status as any)
-    ? (params.status as (typeof STATUS_VALUES)[number])
+
+  const rawStatus = typeof params.status === 'string' ? params.status : null;
+  const statusParam: (typeof STATUS_VALUES)[number] = STATUS_VALUES.includes(
+    rawStatus as (typeof STATUS_VALUES)[number],
+  )
+    ? (rawStatus as (typeof STATUS_VALUES)[number])
     : 'active';
-  const sortParam = SORT_VALUES.includes(params.sort as any)
-    ? (params.sort as (typeof SORT_VALUES)[number])
+
+  const rawSort = typeof params.sort === 'string' ? params.sort : null;
+  const sortParam: (typeof SORT_VALUES)[number] = SORT_VALUES.includes(
+    rawSort as (typeof SORT_VALUES)[number],
+  )
+    ? (rawSort as (typeof SORT_VALUES)[number])
     : 'ending_soon';
 
   const { contests, total, profileIncomplete } = await fetchContests({
@@ -252,4 +260,3 @@ function computeEligibility({
     reasons,
   };
 }
-
