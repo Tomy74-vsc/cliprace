@@ -78,6 +78,33 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       user_agent: ua,
     });
 
+    // Récupérer les détails du concours pour les notifications
+    const { data: contestDetails } = await admin
+      .from('contests')
+      .select('title, networks')
+      .eq('id', contestId)
+      .single();
+
+    if (contestDetails) {
+      // Notifier les créateurs éligibles
+      const { notifyEligibleCreatorsAboutNewContest } = await import('@/lib/notifications');
+      await notifyEligibleCreatorsAboutNewContest(
+        contestId,
+        contestDetails.title,
+        contestDetails.networks || [],
+        admin
+      );
+
+      // Notifier la marque
+      const { notifyBrandAboutContestActivation } = await import('@/lib/notifications');
+      await notifyBrandAboutContestActivation(
+        contest.brand_id,
+        contestId,
+        contestDetails.title,
+        admin
+      );
+    }
+
     return NextResponse.json({ ok: true });
   } catch (e: unknown) {
     const message = e instanceof Error ? e.message : 'Server error';

@@ -82,11 +82,15 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     });
 
     // Notify creator
-    await admin.from('notifications').insert({
-      user_id: sub.creator_id,
-      type: 'submission_moderated',
-      content: { submission_id: sub.id, status, reason: reason ?? null },
-    });
+    const { notifyCreatorAboutModeration } = await import('@/lib/notifications');
+    await notifyCreatorAboutModeration(
+      sub.creator_id,
+      sub.id,
+      sub.contest_id,
+      status,
+      reason ?? null,
+      admin
+    );
 
     // Audit
     const ip = req.headers.get('x-forwarded-for') ?? undefined;

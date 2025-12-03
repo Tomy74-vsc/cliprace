@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/creator/empty-state';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { formatCurrency } from '@/lib/formatters';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 import { Clock, Trophy, PlayCircle, CheckCircle2, Crown, Shield, AlertTriangle, Info } from 'lucide-react';
 import type { Platform } from '@/lib/validators/platforms';
 import { TrackedLink } from '@/components/analytics/track-once';
@@ -119,17 +119,17 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
     <main className="mx-auto max-w-6xl px-4 py-8 space-y-6">
       {isEnded && (
         <Alert variant="default">
-          <AlertTitle>Concours terminé</AlertTitle>
+          <AlertTitle>Concours terminï¿½</AlertTitle>
           <AlertDescription>
-            Ce concours est clôturé. Tu peux encore consulter les exemples, le classement et découvrir d&apos;autres concours recommandés ci-dessous.
+            Ce concours est clï¿½turï¿½. Tu peux encore consulter les exemples, le classement et dï¿½couvrir d&apos;autres concours recommandï¿½s ci-dessous.
           </AlertDescription>
         </Alert>
       )}
       {!isEnded && isUpcoming && (
         <Alert>
-          <AlertTitle>Concours à venir</AlertTitle>
+          <AlertTitle>Concours ï¿½ venir</AlertTitle>
           <AlertDescription>
-            Ce concours n&apos;est pas encore ouvert. Tu pourras participer dès la date d&apos;ouverture indiquée dans la fiche concours.
+            Ce concours n&apos;est pas encore ouvert. Tu pourras participer dï¿½s la date d&apos;ouverture indiquï¿½e dans la fiche concours.
           </AlertDescription>
         </Alert>
       )}
@@ -147,7 +147,7 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
             <CardHeader className="space-y-2">
               <div className="flex items-center gap-3 flex-wrap">
                 <Badge variant={isEnded ? 'default' : isUpcoming ? 'secondary' : 'success'}>
-                  {isEnded ? 'Clôturé' : isUpcoming ? 'À venir' : 'Actif'}
+                  {isEnded ? 'Clï¿½turï¿½' : isUpcoming ? 'ï¿½ venir' : 'Actif'}
                 </Badge>
                 <Badge variant="info" className="flex items-center gap-1">
                   <Trophy className="h-4 w-4" />
@@ -161,7 +161,7 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
               </div>
               <CardTitle className="text-3xl">{contest.title}</CardTitle>
               {contest.brand?.display_name && (
-                <p className="text-sm text-muted-foreground">Proposé par {contest.brand.display_name}</p>
+                <p className="text-sm text-muted-foreground">Proposï¿½ par {contest.brand.display_name}</p>
               )}
             </CardHeader>
             <CardContent className="space-y-4">
@@ -178,7 +178,7 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
                     event="click_participate"
                     payload={{ contest_id: contest.id, eligible: canSubmit }}
                   >
-                    {canSubmit ? 'Participer maintenant' : isEnded ? 'Concours terminé' : 'Vérification éligibilité...'}
+                    {canSubmit ? 'Participer maintenant' : isEnded ? 'Concours terminï¿½' : 'Vï¿½rification ï¿½ligibilitï¿½...'}
                   </TrackedLink>
                 </Button>
                 <Button asChild variant="secondary">
@@ -188,7 +188,7 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
               {!canSubmit && !isEnded && !isUpcoming && (
                 <div className="flex items-start gap-2 text-xs text-muted-foreground">
                   <AlertTriangle className="h-4 w-4 text-warning" />
-                  <span>Éligibilité requise (plateformes, followers ou vues minimales).</span>
+                  <span>ï¿½ligibilitï¿½ requise (plateformes, followers ou vues minimales).</span>
                 </div>
               )}
             </CardContent>
@@ -198,7 +198,7 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
             <div className="grid gap-3 md:grid-cols-3">
               <Badge variant="outline" className="flex items-center gap-2">
                 <Shield className="h-4 w-4 text-primary" />
-                Données sécurisées
+                Donnï¿½es sï¿½curisï¿½es
               </Badge>
               <Badge variant="outline" className="flex items-center gap-2">
                 <Clock className="h-4 w-4 text-primary" />
@@ -206,15 +206,15 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
               </Badge>
               <Badge variant="outline" className="flex items-center gap-2">
                 <Info className="h-4 w-4 text-primary" />
-                Réseaux : {contest.networks.join(', ')}
+                Rï¿½seauxï¿½: {contest.networks.join(', ')}
               </Badge>
             </div>
           </SectionCard>
 
-          <SectionCard title="Éligibilité">
+          <SectionCard title="ï¿½ligibilitï¿½">
             <div className="grid gap-3 md:grid-cols-2 text-sm text-muted-foreground">
               <div className="space-y-2">
-                <p>Plateformes autorisées:</p>
+                <p>Plateformes autorisï¿½es:</p>
                 <div className="flex flex-wrap gap-2">
                   {contest.networks.map((p) => (
                     <PlatformBadge key={p} platform={p} />
@@ -270,14 +270,14 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
                           ? formatCurrency(p.amount_cents, contest.currency || 'EUR')
                           : p.percentage
                             ? `${p.percentage}% du prize pool`
-                            : 'À définir'}
+                            : 'ï¿½ dï¿½finir'}
                       </span>
                     </div>
                   ))}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground">
-                Pas de répartition détaillée. Le prize pool global de {formatCurrency(contest.prize_pool_cents, contest.currency || 'EUR')} sera
+                Pas de rï¿½partition dï¿½taillï¿½e. Le prize pool global de {formatCurrency(contest.prize_pool_cents, contest.currency || 'EUR')} sera
                 distribue aux gagnants.
               </p>
             )}
@@ -289,7 +289,7 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
                 Consulter les conditions (version {contest.contest_terms.version || 'N/A'})
               </Link>
             ) : (
-              <p className="text-sm text-muted-foreground">Conditions non renseignées.</p>
+              <p className="text-sm text-muted-foreground">Conditions non renseignï¿½es.</p>
             )}
           </SectionCard>
 
@@ -297,7 +297,7 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
             {examples.length === 0 ? (
               <EmptyState
                 title="Pas encore d'exemples"
-                description="Les participations apparaîtront ici dès qu'elles seront approuvées."
+                description="Les participations apparaï¿½tront ici dï¿½s qu'elles seront approuvï¿½es."
                 action={{ label: 'Voir le leaderboard', href: `/app/creator/contests/${contest.id}/leaderboard`, variant: 'secondary' }}
               />
             ) : (
@@ -308,7 +308,7 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
                     className="rounded-2xl border border-border p-4 bg-card shadow-card flex flex-col gap-2"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-sm font-semibold">{item.creator_name || 'Créateur'}</span>
+                      <span className="text-sm font-semibold">{item.creator_name || 'Crï¿½ateur'}</span>
                       <PlatformBadge platform={item.platform} className="text-[10px]" />
                     </div>
                     <div className="text-xs text-muted-foreground">
@@ -319,7 +319,7 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
                     </div>
                     <Button asChild variant="secondary" size="sm" className="w-full justify-center">
                       <a href={item.external_url} target="_blank" rel="noopener noreferrer">
-                        Voir la vidéo
+                        Voir la vidï¿½o
                       </a>
                     </Button>
                   </div>
@@ -330,11 +330,11 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
 
           <SectionCard
             title="Pourquoi participer ?"
-            description="Gagne, gagne en Visibilité et simplifie ta participation."
+            description="Gagne, gagne en Visibilitï¿½ et simplifie ta participation."
           >
             <div className="grid md:grid-cols-3 gap-3">
               <Feature title="Gain" description="Prize pool garanti et classement clair." icon={<Trophy className="h-5 w-5" />} />
-              <Feature title="Visibilité" description="Expose ta vidéo auprès de la marque." icon={<PlayCircle className="h-5 w-5" />} />
+              <Feature title="Visibilitï¿½" description="Expose ta vidï¿½o auprï¿½s de la marque." icon={<PlayCircle className="h-5 w-5" />} />
               <Feature title="Validation simple" description="Soumission en quelques clics." icon={<CheckCircle2 className="h-5 w-5" />} />
             </div>
           </SectionCard>
@@ -342,7 +342,7 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
           <LeaderboardTop contestId={contest.id} leaderboard={leaderboard} />
 
           {recommended.length > 0 && (
-            <SectionCard title="Concours recommandés">
+            <SectionCard title="Concours recommandï¿½s">
               <div className="grid md:grid-cols-3 gap-3">
                 {recommended.map((c) => (
                   <Link
@@ -379,7 +379,7 @@ export default async function ContestDetailPage({ params }: { params: { id: stri
                     event="click_participate"
                     payload={{ contest_id: contest.id, surface: 'sticky_cta', eligible: canSubmit }}
                   >
-                    {canSubmit ? 'Participer maintenant' : isEnded ? 'Concours terminé' : 'Vérification éligibilité...'}
+                    {canSubmit ? 'Participer maintenant' : isEnded ? 'Concours terminï¿½' : 'Vï¿½rification ï¿½ligibilitï¿½...'}
                   </TrackedLink>
                 </Button>
                 <Button asChild variant="secondary" className="w-full">

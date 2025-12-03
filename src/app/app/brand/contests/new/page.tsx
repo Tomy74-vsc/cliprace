@@ -1,15 +1,28 @@
 /*
-Source:
-- Tables: contests, contest_terms, contest_assets, contest_prizes
-- Routes: /api/contests/create, /api/contests/[id]/update, /api/payments/brand/fund
+Page: Wizard création concours (5 étapes)
+Étapes:
+1. Informations générales (titre, brief, couverture, dates, objectif)
+2. Conditions & règles (réseaux, hashtags, min abonnés/vues, CGU)
+3. Budget & Cashprize (montant total, répartition, simulateur)
+4. Validation & aperçu (résumé, aperçu public/créateur)
+5. Paiement (Stripe Checkout, génération payments_brand, passage en active)
 */
+import { Suspense } from 'react';
+import { getSession } from '@/lib/auth';
+import { redirect } from 'next/navigation';
+import { ContestWizardClient } from '@/components/brand/contest-wizard-client';
 
-export default function NewContestWizardPage() {
+export default async function NewContestWizardPage() {
+  const { user } = await getSession();
+  if (!user) {
+    redirect('/auth/login');
+  }
+
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="display-2">Nouveau concours</h1>
-      <p>TODO: Wizard 5 étapes avec autosave et récap avant paiement.</p>
+      <Suspense fallback={<div>Chargement...</div>}>
+        <ContestWizardClient userId={user.id} />
+      </Suspense>
     </main>
   );
 }
-

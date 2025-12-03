@@ -9,7 +9,7 @@ import { getUserRole } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
 import { assertCsrf } from '@/lib/csrf';
 import { contestCreateSchema, type ContestCreateInput } from '@/lib/validators/contests';
-import { createError, formatErrorResponse } from '@/lib/errors';
+import { createError, type AppError } from '@/lib/errors';
 
 type AllowedPlatform = 'tiktok' | 'instagram' | 'youtube';
 type NormalizedPrize = {
@@ -35,11 +35,12 @@ export async function POST(req: NextRequest) {
       throw createError('FORBIDDEN', 'Seules les marques ou admins peuvent crǸer un concours', 403);
     }
 
-    // Rate limit: 2 creations / 5 min par utilisateur
-    const ip = req.headers.get('x-forwarded-for') || (req as any).ip || 'unknown';
+    // Rate limit: 5 créations / 5 min par utilisateur (augmenté pour permettre l'auto-save des brouillons)
+    // Note: Une fois le brouillon créé, les mises à jour utilisent /update qui n'a pas de rate limit strict
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
     const rlKey = `contests:create:${user.id}:${ip}`;
-    if (!(await rateLimit({ key: rlKey, route: 'contests:create', windowMs: 5 * 60 * 1000, max: 2 }))) {
-      throw createError('RATE_LIMIT', 'Trop de tentatives de crǸation, rǸessayez plus tard', 429);
+    if (!(await rateLimit({ key: rlKey, route: 'contests:create', windowMs: 5 * 60 * 1000, max: 5 }))) {
+      throw createError('RATE_LIMIT', 'Trop de tentatives de création, réessayez plus tard', 429);
     }
 
     try {
@@ -75,28 +76,61 @@ export async function POST(req: NextRequest) {
     const slug = await ensureUniqueSlug(admin, slugBase);
     const currency = (payload.currency || 'EUR').toUpperCase();
 
-    const { data: contestId, error: rpcError } = await admin.rpc('create_contest_complete', {
+    // Préparer les paramètres pour la fonction RPC
+    // Supabase convertit automatiquement les objets JS en JSONB
+    // S'assurer que les tableaux ne sont jamais undefined
+    const rpcParams: Record<string, unknown> = {
       p_brand_id: brandId,
       p_title: payload.title,
       p_slug: slug,
-      p_brief_md: payload.brief_md,
-      p_cover_url: payload.cover_url ?? null,
+      p_brief_md: payload.brief_md || '',
+      p_cover_url: payload.cover_url || null,
       p_start_at: payload.start_at,
       p_end_at: payload.end_at,
-      p_prize_pool_cents: payload.total_prize_pool_cents,
+      p_prize_pool_cents: payload.total_prize_pool_cents || 0,
       p_currency: currency,
-      p_networks: allowedPlatforms,
+      p_networks: allowedPlatforms.length > 0 ? allowedPlatforms : [],
       p_max_winners: maxWinners,
-      p_terms_version: payload.terms_version ?? null,
-      p_terms_markdown: payload.terms_markdown ?? null,
-      p_terms_url: payload.terms_url ?? null,
-      p_assets: normalizedAssets,
-      p_prizes: normalizedPrizes,
-      p_budget_cents: payload.total_prize_pool_cents,
+      p_terms_version: payload.terms_version || null,
+      p_terms_markdown: payload.terms_markdown || null,
+      p_terms_url: payload.terms_url || null,
+      p_assets: normalizedAssets.length > 0 ? normalizedAssets : [],
+      p_prizes: normalizedPrizes.length > 0 ? normalizedPrizes : [],
+      p_budget_cents: payload.total_prize_pool_cents || 0,
+    };
+
+    console.log('Calling RPC create_contest_complete with params:', {
+      ...rpcParams,
+      p_brief_md: rpcParams.p_brief_md ? `${(rpcParams.p_brief_md as string).substring(0, 50)}...` : null,
     });
 
-    if (rpcError || !contestId) {
-      throw createError('DATABASE_ERROR', 'CrǸation concours impossible', 500, rpcError?.message);
+    const { data: contestId, error: rpcError } = await admin.rpc('create_contest_complete', rpcParams);
+
+    if (rpcError) {
+      console.error('RPC error details:', {
+        message: rpcError.message,
+        details: rpcError.details,
+        hint: rpcError.hint,
+        code: rpcError.code,
+        fullError: JSON.stringify(rpcError, null, 2),
+      });
+      throw createError(
+        'DATABASE_ERROR',
+        `Création concours impossible: ${rpcError.message || 'Erreur inconnue'}. ${rpcError.hint ? `Hint: ${rpcError.hint}` : ''}`,
+        500,
+        {
+          rpcError: {
+            message: rpcError.message,
+            details: rpcError.details,
+            hint: rpcError.hint,
+            code: rpcError.code,
+          },
+        }
+      );
+    }
+
+    if (!contestId) {
+      throw createError('DATABASE_ERROR', 'Création concours impossible: aucun ID retourné', 500);
     }
 
     const auditPayload = {
@@ -126,7 +160,19 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ ok: true, contest_id: contestId, slug });
   } catch (error) {
-    return formatErrorResponse(error);
+    console.error('Error in POST /api/contests/create:', error);
+    // S'assurer que formatErrorResponse retourne une NextResponse
+    if (error && typeof error === 'object' && 'httpStatus' in error && 'code' in error) {
+      const e = error as AppError;
+      return NextResponse.json(
+        { ok: false, code: e.code, message: e.message, details: e.details },
+        { status: e.httpStatus }
+      );
+    }
+    return NextResponse.json(
+      { ok: false, code: 'UNKNOWN', message: 'Server error' },
+      { status: 500 }
+    );
   }
 }
 

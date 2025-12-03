@@ -34,34 +34,50 @@ const contestAssetSchema = z.object({
   type: z.enum(['image', 'video', 'pdf']).default('image'),
 });
 
-export const contestCreateSchema = z
-  .object({
-    title: z.string().min(1).max(120, 'Le titre ne peut pas dépasser 120 caractères'),
-    brief_md: z.string().min(1).max(5000, 'Le brief ne peut pas dépasser 5000 caractères'),
-    cover_url: z.string().url().optional(),
-    allowed_platforms: z
-      .object({
-        tiktok: z.boolean().optional(),
-        instagram: z.boolean().optional(),
-        youtube: z.boolean().optional(),
-      })
-      .optional(),
-    visibility: z.enum(['public', 'unlisted']).default('public'),
-    start_at: z.string().datetime(), // ISO 8601
-    end_at: z.string().datetime(),
-    min_followers: z.number().int().min(0).optional(),
-    min_views: z.number().int().min(0).optional(),
-    country: z.string().length(2).optional(), // ISO 3166-1 alpha-2
-    category: z.string().max(50).optional(),
-    total_prize_pool_cents: z.number().int().min(0),
-    prizes: z.array(prizeRangeSchema).max(30).optional(),
-    assets: z.array(contestAssetSchema).max(10).optional(),
-    terms_markdown: z.string().max(20000).optional(),
-    terms_url: z.string().url().optional(),
-    terms_version: z.string().max(64).optional(),
-    currency: z.string().length(3).default('EUR'),
-    brand_id: z.string().uuid().optional(),
-  })
+// Schéma pour les données produit
+// TODO: ajouter colonnes dédiées dans la table contests (product_name, product_one_liner, etc.)
+// Pour l'instant, on stocke dans product_brief JSONB
+const productBriefSchema = z.object({
+  productName: z.string().min(2, 'Nom trop court').optional(),
+  productOneLiner: z.string().min(5, 'Description trop courte').optional(),
+  productCategory: z.string().optional().nullable(),
+  productBenefits: z.array(z.string().min(2)).max(3).optional(),
+  productTargetAudience: z.array(z.string()).optional(),
+}).optional();
+
+// Schéma de base sans les refinements (pour pouvoir utiliser .partial())
+const contestCreateBaseSchema = z.object({
+  title: z.string().min(1).max(120, 'Le titre ne peut pas dépasser 120 caractères'),
+  brief_md: z.string().min(1).max(5000, 'Le brief ne peut pas dépasser 5000 caractères'),
+  cover_url: z.string().url().optional(),
+  allowed_platforms: z
+    .object({
+      tiktok: z.boolean().optional(),
+      instagram: z.boolean().optional(),
+      youtube: z.boolean().optional(),
+    })
+    .optional(),
+  visibility: z.enum(['public', 'unlisted']).default('public'),
+  start_at: z.string().datetime(), // ISO 8601
+  end_at: z.string().datetime(),
+  min_followers: z.number().int().min(0).optional(),
+  min_views: z.number().int().min(0).optional(),
+  country: z.string().length(2).optional(), // ISO 3166-1 alpha-2
+  category: z.string().max(50).optional(),
+  total_prize_pool_cents: z.number().int().min(0),
+  prizes: z.array(prizeRangeSchema).max(30).optional(),
+  assets: z.array(contestAssetSchema).max(10).optional(),
+  terms_markdown: z.string().max(20000).optional(),
+  terms_url: z.string().url().optional(),
+  terms_version: z.string().max(64).optional(),
+  currency: z.string().length(3).default('EUR'),
+  brand_id: z.string().uuid().optional(),
+  // TODO: ajouter colonne product_brief JSONB dans la table contests
+  // product_brief: productBriefSchema,
+});
+
+// Schéma de création avec validations supplémentaires
+export const contestCreateSchema = contestCreateBaseSchema
   .refine(
     (data) => new Date(data.end_at) > new Date(data.start_at),
     { message: 'La date de fin doit être après la date de début', path: ['end_at'] }
@@ -75,7 +91,8 @@ export const contestCreateSchema = z
     { message: 'La somme des prix ne peut pas dépasser le total du prize pool', path: ['prizes'] }
   );
 
-export const contestUpdateSchema = contestCreateSchema.partial();
+// Schéma de mise à jour : tous les champs sont optionnels
+export const contestUpdateSchema = contestCreateBaseSchema.partial();
 
 export type ContestCreateInput = z.infer<typeof contestCreateSchema>;
 export type ContestUpdateInput = z.infer<typeof contestUpdateSchema>;

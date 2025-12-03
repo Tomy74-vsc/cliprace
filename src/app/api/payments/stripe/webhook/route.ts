@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     if (eventType === 'checkout.session.completed') {
       const session = payload as { id: string; payment_intent?: string; metadata?: Record<string, unknown> };
       // Mark payment succeeded
-      const { error: updErr } = await admin
+      const { data: updatedPayment, error: updErr } = await admin
         .from('payments_brand')
         .update({
           status: 'succeeded',
@@ -61,8 +61,14 @@ export async function POST(req: NextRequest) {
           stripe_payment_intent_id: session.payment_intent || null,
           updated_at: new Date().toISOString(),
         })
-        .eq('stripe_checkout_session_id', session.id);
+        .eq('stripe_checkout_session_id', session.id)
+        .select('id')
+        .single();
       if (updErr) throw new Error(updErr.message);
+
+      // Note: La facture sera générée à la demande lors du premier téléchargement
+      // via /api/invoices/[payment_id]/download qui appelle generate si nécessaire
+      // Cela évite les problèmes de timeout et de dépendances dans le webhook
 
       // Auto-publish contest if possible (activation rule)
       const contest_id = session.metadata?.contest_id as string | undefined;
@@ -96,6 +102,33 @@ export async function POST(req: NextRequest) {
             old_values: { status: oldStatus },
             new_values: { status: 'active' },
           });
+
+          // Récupérer les détails du concours pour les notifications
+          const { data: contestDetails } = await admin
+            .from('contests')
+            .select('title, networks, brand_id')
+            .eq('id', contest_id)
+            .single();
+
+          if (contestDetails) {
+            // Notifier les créateurs éligibles
+            const { notifyEligibleCreatorsAboutNewContest } = await import('@/lib/notifications');
+            await notifyEligibleCreatorsAboutNewContest(
+              contest_id,
+              contestDetails.title,
+              contestDetails.networks || [],
+              admin
+            );
+
+            // Notifier la marque
+            const { notifyBrandAboutContestActivation } = await import('@/lib/notifications');
+            await notifyBrandAboutContestActivation(
+              contestDetails.brand_id,
+              contest_id,
+              contestDetails.title,
+              admin
+            );
+          }
         }
       }
     }

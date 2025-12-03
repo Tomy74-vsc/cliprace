@@ -90,7 +90,7 @@ BEGIN
       bucket_id = 'contest_assets'
       AND EXISTS (
         SELECT 1 FROM public.contests c
-        WHERE c.id::text = (storage.foldername(name))[1]
+        WHERE c.id::text = split_part(name, '/', 1)
         AND c.brand_id = (SELECT auth.uid())::uuid
       )
     );
@@ -109,7 +109,7 @@ BEGIN
       bucket_id = 'contest_assets'
       AND EXISTS (
         SELECT 1 FROM public.contests c
-        WHERE c.id::text = (storage.foldername(name))[1]
+        WHERE c.id::text = split_part(name, '/', 1)
         AND c.brand_id = (SELECT auth.uid())::uuid
       )
     );
@@ -122,7 +122,7 @@ BEGIN
       bucket_id = 'contest_assets'
       AND EXISTS (
         SELECT 1 FROM public.contests c
-        WHERE c.id::text = (storage.foldername(name))[1]
+        WHERE c.id::text = split_part(name, '/', 1)
         AND c.brand_id = (SELECT auth.uid())::uuid
       )
     );
@@ -215,8 +215,15 @@ BEGIN
     RETURN;
   END IF;
 
-  -- Pas de policy d'INSERT publique pour invoices (géré par service role)
+  -- Policy d'INSERT pour service role uniquement (génération automatique)
+  DROP POLICY IF EXISTS "invoices_insert_service_role" ON storage.objects;
+  CREATE POLICY "invoices_insert_service_role" ON storage.objects
+    FOR INSERT
+    TO service_role
+    WITH CHECK (bucket_id = 'invoices');
 
+  -- Policy de lecture : les marques peuvent lire leurs propres factures
+  -- Structure: {brand_id}/invoices/{filename}
   DROP POLICY IF EXISTS "invoices_read_own" ON storage.objects;
   CREATE POLICY "invoices_read_own" ON storage.objects
     FOR SELECT
@@ -224,16 +231,13 @@ BEGIN
     USING (
       bucket_id = 'invoices'
       AND (
+        -- Structure: {brand_id}/invoices/{filename}
         (storage.foldername(name))[1] = (SELECT auth.uid())::text
+        -- Ou via payments_brand (fallback pour compatibilité)
         OR EXISTS (
           SELECT 1 FROM public.payments_brand pb
-          WHERE pb.id::text = (storage.foldername(name))[1]
-          AND pb.brand_id = (SELECT auth.uid())::uuid
-        )
-        OR EXISTS (
-          SELECT 1 FROM public.cashouts c
-          WHERE c.id::text = (storage.foldername(name))[1]
-          AND c.creator_id = (SELECT auth.uid())::uuid
+          WHERE pb.brand_id = (SELECT auth.uid())::uuid
+          AND pb.metadata->>'invoice_pdf_url' LIKE '%' || name || '%'
         )
       )
     );

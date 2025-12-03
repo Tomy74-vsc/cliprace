@@ -25,3 +25,29 @@ export const profileUpdateSchema = z.object({
 
 export type ProfileUpdateInput = z.infer<typeof profileUpdateSchema>;
 export type NotificationPreferenceInput = z.infer<typeof notificationPreferenceSchema>;
+
+// Brand profile update schema
+export const brandProfileUpdateSchema = z.object({
+  display_name: z.string().min(2).max(80, 'Le nom doit contenir moins de 80 caractères'),
+  bio: z.string().max(500).nullable().optional(),
+  avatar_url: z.string().url().nullable().optional(),
+  company_name: z.string().min(1).max(200, 'Le nom de l\'entreprise doit contenir moins de 200 caractères'),
+  website: z
+    .string()
+    .refine((val) => val === '' || z.string().url().safeParse(val).success, {
+      message: 'URL invalide',
+    })
+    .transform((val) => (val === '' ? null : val))
+    .nullable()
+    .optional(),
+  industry: z.string().max(100).nullable().optional(),
+  vat_number: z.string().max(50).nullable().optional(),
+  address_line1: z.string().max(200).nullable().optional(),
+  address_line2: z.string().max(200).nullable().optional(),
+  address_city: z.string().max(120).nullable().optional(),
+  address_postal_code: z.string().max(30).nullable().optional(),
+  address_country: z.string().length(2).nullable().optional(),
+  notification_preferences: z.array(notificationPreferenceSchema).optional(),
+});
+
+export type BrandProfileUpdateInput = z.infer<typeof brandProfileUpdateSchema>;
