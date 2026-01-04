@@ -6,8 +6,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { getUserRole } from '@/lib/auth';
 import { createError, formatErrorResponse } from '@/lib/errors';
-import { pdf } from '@react-pdf/renderer';
+import { pdf, type DocumentProps } from '@react-pdf/renderer';
 import { ContestResultsPDF } from '@/components/pdf/contest-results-pdf';
+import { createElement, type ReactElement } from 'react';
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -170,22 +171,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
                      (contest.brand as any)?.display_name ||
                      'Marque';
 
-    const pdfDoc = (
-      <ContestResultsPDF
-        contest={{
-          title: contest.title,
-          start_at: contest.start_at,
-          end_at: contest.end_at,
-          prize_pool_cents: contest.prize_pool_cents,
-          currency: contest.currency || 'EUR',
-          brand_name: brandName,
-        }}
-        metrics={metrics}
-        leaderboard={leaderboard}
-        dailyViews={dailyViews}
-        cpv={cpv}
-      />
-    );
+    const pdfDoc = createElement(ContestResultsPDF, {
+      contest: {
+        title: contest.title,
+        start_at: contest.start_at,
+        end_at: contest.end_at,
+        prize_pool_cents: contest.prize_pool_cents,
+        currency: contest.currency || 'EUR',
+        brand_name: brandName,
+      },
+      metrics,
+      leaderboard,
+      dailyViews,
+      cpv,
+    }) as unknown as ReactElement<DocumentProps>;
 
     // Générer le PDF
     const pdfInstance = pdf(pdfDoc);

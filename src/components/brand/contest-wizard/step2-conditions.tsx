@@ -19,7 +19,7 @@ interface Step2ConditionsProps {
   data: ContestWizardData;
   updateData: (updates: Partial<ContestWizardData>) => void;
   errors: Record<string, string>;
-  userId: string;
+  brandId: string;
 }
 
 export function Step2Conditions({ data, updateData, errors }: Step2ConditionsProps) {

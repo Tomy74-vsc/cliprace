@@ -2,20 +2,24 @@
 import { z } from 'zod';
 import { validateVideoUrl } from './platforms';
 
-export const submissionCreateSchema = z.object({
-  contest_id: z.string().uuid('ID de concours invalide'),
-  platform: z.enum(['tiktok', 'instagram', 'youtube'], {
-    errorMap: () => ({ message: 'La plateforme doit être tiktok, instagram ou youtube' }),
-  }),
-  video_url: z.string().url('URL invalide').refine(
-    (url, ctx) => {
-      const platform = ctx.parent.platform;
-      return validateVideoUrl(url, platform);
-    },
-    { message: 'URL invalide pour cette plateforme' }
-  ),
-  caption: z.string().max(2200, 'La description ne peut pas dépasser 2200 caractères').optional(),
-});
+export const submissionCreateSchema = z
+  .object({
+    contest_id: z.string().uuid('ID de concours invalide'),
+    platform: z.enum(['tiktok', 'instagram', 'youtube'], {
+      errorMap: () => ({ message: 'La plateforme doit être tiktok, instagram ou youtube' }),
+    }),
+    video_url: z.string().url('URL invalide'),
+    caption: z.string().max(2200, 'La description ne peut pas dépasser 2200 caractères').optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (!validateVideoUrl(value.video_url, value.platform)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'URL invalide pour cette plateforme',
+        path: ['video_url'],
+      });
+    }
+  });
 
 export const moderateSubmissionSchema = z.object({
   status: z.enum(['approved', 'rejected'], {

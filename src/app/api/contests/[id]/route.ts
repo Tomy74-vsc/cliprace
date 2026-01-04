@@ -76,6 +76,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       throw createError('FORBIDDEN', 'Tu n\'as pas les droits pour accéder à ce concours', 403);
     }
 
+    const contestTerms = Array.isArray(contest.contest_terms)
+      ? contest.contest_terms[0] ?? null
+      : contest.contest_terms ?? null;
+
     // Formater la réponse pour le wizard
     const formattedContest = {
       id: contest.id,
@@ -89,11 +93,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       end_at: contest.end_at,
       brand_id: contest.brand_id, // Ajouter brand_id pour la vérification de propriété
       networks: contest.networks || [],
-      contest_terms: contest.contest_terms
+      contest_terms: contestTerms
         ? {
-            version: contest.contest_terms.version,
-            terms_markdown: contest.contest_terms.terms_markdown,
-            terms_url: contest.contest_terms.terms_url,
+            version: contestTerms.version,
+            terms_markdown: contestTerms.terms_markdown,
+            terms_url: contestTerms.terms_url,
           }
         : null,
       assets: (contest.contest_assets || []).map((asset: any) => ({

@@ -1,23 +1,24 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 import type { ContestWizardData } from '../contest-wizard-client';
 
 interface Step5PaymentProps {
   data: ContestWizardData;
   updateData: (updates: Partial<ContestWizardData>) => void;
   errors: Record<string, string>;
-  userId: string;
+  brandId: string;
 }
 
-export function Step5Payment({ data, updateData, userId }: Step5PaymentProps) {
+export function Step5Payment({ data, updateData, brandId }: Step5PaymentProps) {
   const router = useRouter();
+  const csrfToken = useCsrfToken();
   const [isCreating, setIsCreating] = useState(false);
   const [isLoadingPayment, setIsLoadingPayment] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -28,10 +29,18 @@ export function Step5Payment({ data, updateData, userId }: Step5PaymentProps) {
     setError(null);
 
     try {
+      if (!csrfToken) {
+        throw new Error('Token CSRF manquant. Recharge la page.');
+      }
+      if (!brandId) {
+        throw new Error('Brand ID manquant.');
+      }
+
       // 1. Créer le concours via l'API
       const response = await fetch('/api/contests/create', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-csrf': csrfToken },
+        credentials: 'include',
         body: JSON.stringify({
           title: data.title,
           brief_md: data.brief_md,
@@ -54,7 +63,7 @@ export function Step5Payment({ data, updateData, userId }: Step5PaymentProps) {
           })),
           terms_markdown: data.terms_markdown || undefined,
           terms_url: data.terms_url || undefined,
-          brand_id: userId,
+          brand_id: brandId,
         }),
       });
 
@@ -71,11 +80,10 @@ export function Step5Payment({ data, updateData, userId }: Step5PaymentProps) {
       setIsLoadingPayment(true);
       const paymentResponse = await fetch('/api/payments/brand/fund', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-csrf': csrfToken },
+        credentials: 'include',
         body: JSON.stringify({
           contest_id: contestId,
-          amount_cents: data.total_prize_pool_cents,
-          currency: data.currency,
         }),
       });
 

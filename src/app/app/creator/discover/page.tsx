@@ -1,18 +1,20 @@
 /*
 Source: Page Discover - Phase 2 (SEO + filtres server-side)
 */
-import Link from 'next/link';
-import { getSupabaseSSR } from '@/lib/supabase/ssr';
-import { DiscoverPageClient } from '@/components/contest/discover-page-client';
-import type { ContestCardData } from '@/components/contest/contest-card';
-import type { Platform } from '@/lib/validators/platforms';
-import { TrackOnView } from '@/components/analytics/track-once';
-import { Button } from '@/components/ui/button';
+import Link from "next/link";
+import { getSupabaseSSR } from "@/lib/supabase/ssr";
+import { DiscoverPageClient } from "@/components/contest/discover-page-client";
+import type { ContestCardData } from "@/components/contest/contest-card";
+import type { Platform } from "@/lib/validators/platforms";
+import { TrackOnView } from "@/components/analytics/track-once";
+import { Button } from "@/components/ui/button";
+import { CreatorCoach } from "@/components/creator/creator-coach";
+import { Sparkles } from "lucide-react";
 
 const PAGE_SIZE = 20;
-const PLATFORM_VALUES: Platform[] = ['tiktok', 'instagram', 'youtube'];
-const STATUS_VALUES = ['active', 'upcoming', 'ended'] as const;
-const SORT_VALUES = ['ending_soon', 'prize_desc', 'newest'] as const;
+const PLATFORM_VALUES: Platform[] = ["tiktok", "instagram", "youtube"];
+const STATUS_VALUES = ["active", "upcoming", "ended"] as const;
+const SORT_VALUES = ["ending_soon", "prize_desc", "newest"] as const;
 
 export const revalidate = 60;
 
@@ -20,39 +22,29 @@ interface DiscoverPageProps {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
-export default async function DiscoverContestsPage({
-  searchParams,
-}: DiscoverPageProps) {
+export default async function DiscoverContestsPage({ searchParams }: DiscoverPageProps) {
   const params = await searchParams;
 
-  const search = typeof params.search === 'string' ? params.search.slice(0, 80) : '';
-  const platformsParam =
-    typeof params.platforms === 'string' ? params.platforms : '';
+  const search = typeof params.search === "string" ? params.search.slice(0, 80) : "";
+  const platformsParam = typeof params.platforms === "string" ? params.platforms : "";
   const selectedPlatforms = platformsParam
     ? platformsParam
-        .split(',')
+        .split(",")
         .map((p) => p.trim())
         .filter((p): p is Platform => PLATFORM_VALUES.includes(p as Platform))
     : [];
   const currentPageRaw = Number(params.page);
-  const page =
-    Number.isFinite(currentPageRaw) && currentPageRaw > 0
-      ? Math.floor(currentPageRaw)
-      : 1;
+  const page = Number.isFinite(currentPageRaw) && currentPageRaw > 0 ? Math.floor(currentPageRaw) : 1;
 
-  const rawStatus = typeof params.status === 'string' ? params.status : null;
-  const statusParam: (typeof STATUS_VALUES)[number] = STATUS_VALUES.includes(
-    rawStatus as (typeof STATUS_VALUES)[number],
-  )
+  const rawStatus = typeof params.status === "string" ? params.status : null;
+  const statusParam: (typeof STATUS_VALUES)[number] = STATUS_VALUES.includes(rawStatus as (typeof STATUS_VALUES)[number])
     ? (rawStatus as (typeof STATUS_VALUES)[number])
-    : 'active';
+    : "active";
 
-  const rawSort = typeof params.sort === 'string' ? params.sort : null;
-  const sortParam: (typeof SORT_VALUES)[number] = SORT_VALUES.includes(
-    rawSort as (typeof SORT_VALUES)[number],
-  )
+  const rawSort = typeof params.sort === "string" ? params.sort : null;
+  const sortParam: (typeof SORT_VALUES)[number] = SORT_VALUES.includes(rawSort as (typeof SORT_VALUES)[number])
     ? (rawSort as (typeof SORT_VALUES)[number])
-    : 'ending_soon';
+    : "ending_soon";
 
   const { contests, total, profileIncomplete } = await fetchContests({
     search,
@@ -76,25 +68,34 @@ export default async function DiscoverContestsPage({
           platforms: selectedPlatforms,
         }}
       />
-      <div className="rounded-3xl border border-border bg-card/60 p-6 shadow-card">
+      <div className="rounded-3xl border border-border bg-card/60 p-5 sm:p-6 shadow-card space-y-4 cliprace-surface">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Concours créateurs</p>
-            <h1 className="text-3xl font-semibold">Découvre les concours actifs</h1>
-            <p className="text-muted-foreground text-base">
-              Choisis un brief, filme ta vidéo et dépose ta participation pour gagner
-              le cashprize.
+            <h1 className="text-2xl sm:text-3xl font-semibold leading-tight">Découvre les concours actifs</h1>
+            <p className="text-muted-foreground text-base max-w-2xl">
+              Choisis un brief, filme ta vidéo et dépose ta participation pour tenter de gagner.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
-            <Button asChild>
+            <Button asChild className="w-full sm:w-auto">
               <a href="#liste-concours">Voir les concours disponibles</a>
             </Button>
-            <Button asChild variant="secondary">
+            <Button asChild variant="secondary" className="w-full sm:w-auto">
               <Link href="/app/creator/submissions">Mes soumissions</Link>
             </Button>
           </div>
         </div>
+        <CreatorCoach
+          accent="Astuce Discover"
+          title="Choisis le bon concours pour toi"
+          description={
+            total > 0
+              ? "Commence par un concours adapté à ta plateforme principale et qui se termine bientôt."
+              : "Aucun concours avec ces filtres. Essaie une autre plateforme ou des filtres plus larges."
+          }
+          icon={<Sparkles className="h-4 w-4" />}
+        />
       </div>
 
       <section id="liste-concours" className="space-y-8">
@@ -121,8 +122,8 @@ async function fetchContests({
 }: {
   search: string;
   platforms: Platform[];
-  status: 'active' | 'upcoming' | 'ended';
-  sort: 'ending_soon' | 'prize_desc' | 'newest';
+  status: "active" | "upcoming" | "ended";
+  sort: "ending_soon" | "prize_desc" | "newest";
   page: number;
   pageSize: number;
 }): Promise<{
@@ -135,13 +136,10 @@ async function fetchContests({
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  const { data: profile } = await supabase
-    .from('profile_creators')
-    .select('primary_platform, followers, avg_views')
-    .maybeSingle();
+  const { data: profile } = await supabase.from("profile_creators").select("primary_platform, followers, avg_views").maybeSingle();
 
   let query = supabase
-    .from('contests')
+    .from("contests")
     .select(
       `
       id,
@@ -160,41 +158,39 @@ async function fetchContests({
         avatar_url
       )
     `,
-      { count: 'exact' },
+      { count: "exact" }
     )
-    .order('created_at', { ascending: false });
+    .order("created_at", { ascending: false });
 
-  if (status === 'active') {
-    query = query.eq('status', 'active').lte('start_at', now).gte('end_at', now);
-  } else if (status === 'upcoming') {
-    query = query.eq('status', 'active').gt('start_at', now);
-  } else if (status === 'ended') {
-    query = query.in('status', ['ended', 'archived']).lt('end_at', now);
+  if (status === "active") {
+    query = query.eq("status", "active").lte("start_at", now).gte("end_at", now);
+  } else if (status === "upcoming") {
+    query = query.eq("status", "active").gt("start_at", now);
+  } else if (status === "ended") {
+    query = query.in("status", ["ended", "archived"]).lt("end_at", now);
   }
 
   if (search) {
-    const sanitizedSearch = search.replace(/%/g, '');
-    query = query.or(
-      `title.ilike.%${sanitizedSearch}%,brief_md.ilike.%${sanitizedSearch}%`,
-    );
+    const sanitizedSearch = search.replace(/%/g, "");
+    query = query.or(`title.ilike.%${sanitizedSearch}%,brief_md.ilike.%${sanitizedSearch}%`);
   }
 
   if (platforms.length > 0) {
-    query = query.overlaps('networks', platforms);
+    query = query.overlaps("networks", platforms);
   }
 
-  if (sort === 'ending_soon') {
-    query = query.order('end_at', { ascending: true });
-  } else if (sort === 'prize_desc') {
-    query = query.order('prize_pool_cents', { ascending: false });
-  } else if (sort === 'newest') {
-    query = query.order('created_at', { ascending: false });
+  if (sort === "ending_soon") {
+    query = query.order("end_at", { ascending: true });
+  } else if (sort === "prize_desc") {
+    query = query.order("prize_pool_cents", { ascending: false });
+  } else if (sort === "newest") {
+    query = query.order("created_at", { ascending: false });
   }
 
   const { data, count, error } = await query.range(from, to);
 
   if (error) {
-    console.error('Error fetching contests:', error);
+    console.error("Error fetching contests:", error);
     return { contests: [], total: 0, profileIncomplete: false };
   }
 
@@ -213,15 +209,15 @@ async function fetchContests({
         brief_md: contest.brief_md,
         cover_url: contest.cover_url,
         prize_pool_cents: contest.prize_pool_cents,
-        currency: contest.currency || 'EUR',
+        currency: contest.currency || "EUR",
         start_at: contest.start_at,
         end_at: contest.end_at,
         networks: contest.networks || [],
-        status: contest.status as ContestCardData['status'],
+        status: contest.status as ContestCardData["status"],
         min_followers: undefined,
         min_views: undefined,
         eligibility,
-        brand: contest.brand as ContestCardData['brand'],
+        brand: contest.brand as ContestCardData["brand"],
       };
     }) ?? [];
 
@@ -249,10 +245,8 @@ function computeEligibility({
 }) {
   const reasons: string[] = [];
   const platformOk =
-    !primaryPlatform ||
-    contest.networks.length === 0 ||
-    contest.networks.includes(primaryPlatform as Platform);
-  if (!platformOk) reasons.push('Plateforme différente');
+    !primaryPlatform || contest.networks.length === 0 || contest.networks.includes(primaryPlatform as Platform);
+  if (!platformOk) reasons.push("Plateforme différente");
   void followers;
   void avgViews;
   return {

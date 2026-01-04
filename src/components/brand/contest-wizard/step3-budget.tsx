@@ -16,7 +16,7 @@ interface Step3BudgetProps {
   data: ContestWizardData;
   updateData: (updates: Partial<ContestWizardData>) => void;
   errors: Record<string, string>;
-  userId: string;
+  brandId: string;
 }
 
 export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
@@ -194,7 +194,7 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
               <Button
                 type="button"
                 onClick={recalculateAuto}
-                variant="outline"
+                variant="secondary"
                 size="sm"
                 className="w-full"
               >

@@ -13,9 +13,9 @@ import { NotificationsDropdown } from "@/components/notifications/notifications-
 import { CreatorBreadcrumbs } from "@/components/navigation/creator-breadcrumbs";
 
 /**
- * Shell créateur
- * - Garde d'accès rôle = creator (ou admin)
- * - Onboarding appliqué globalement via middleware.ts sur /app/*
+ * Shell crÃ©ateur
+ * - Garde d'accÃ¨s rÃ´le = creator (ou admin)
+ * - Onboarding appliquÃ© globalement via middleware.ts sur /app/*
  * - Layout : sidebar desktop, topbar, bottom nav mobile
  */
 export default async function CreatorLayout({ children }: { children: ReactNode }) {
@@ -103,7 +103,7 @@ export default async function CreatorLayout({ children }: { children: ReactNode 
             <Link href="/app/creator/faq" className="hover:text-primary transition-colors">
               Support / FAQ
             </Link>
-            <p className="text-muted-foreground/70">v1.0 créateur</p>
+            <p className="text-muted-foreground/70">v1.0 crÃ©ateur</p>
           </div>
         </aside>
 
@@ -126,15 +126,15 @@ export default async function CreatorLayout({ children }: { children: ReactNode 
             </div>
           </header>
 
-          <main className="flex-1 w-full max-w-6xl mx-auto px-4 lg:px-8 py-6 space-y-4">
+          <main className="flex-1 w-full max-w-6xl mx-auto px-4 lg:px-8 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-6 space-y-4">
             {profileIncomplete && (
               <Banner
                 variant="warning"
-                title="Complète ton profil créateur"
-                description="Ajoute ta plateforme principale pour débloquer toutes les fonctionnalités."
+                title="ComplÃ¨te ton profil crÃ©ateur"
+                description="Ajoute ta plateforme principale pour dÃ©bloquer toutes les fonctionnalitÃ©s."
                 action={
                   <Button asChild size="sm" variant="primary" className="animate-pulse">
-                    <Link href="/app/creator/settings">Compléter</Link>
+                    <Link href="/app/creator/settings">ComplÃ©ter</Link>
                   </Button>
                 }
               />
@@ -142,7 +142,7 @@ export default async function CreatorLayout({ children }: { children: ReactNode 
             {children}
           </main>
 
-          <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/95 backdrop-blur-xl">
+          <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
             <CreatorNav nav={nav} variant="bottom" />
           </nav>
         </div>

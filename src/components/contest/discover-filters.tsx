@@ -1,4 +1,4 @@
-/*
+ï»¿/*
 Source: Component DiscoverFilters
 Purpose: Filtres pour la page discover (plateformes, recherche, statut, tri)
 */
@@ -116,8 +116,8 @@ export function DiscoverFilters({ value, isPending, onFiltersChange }: DiscoverF
       <div className="flex flex-wrap gap-2 items-center">
         {[
           { value: "active", label: "Actifs" },
-          { value: "upcoming", label: "À venir" },
-          { value: "ended", label: "Terminés" },
+          { value: "upcoming", label: "Ã€ venir" },
+          { value: "ended", label: "TerminÃ©s" },
         ].map((s) => {
           const active = value.status === s.value;
           return (

@@ -530,7 +530,7 @@ async function fetchContests({
     // Soumissions
     const { data: submissions } = await supabase
       .from('submissions')
-      .select('contest_id, status')
+      .select('id, contest_id, status')
       .in('contest_id', contestIds);
 
     contestIds.forEach((id) => {

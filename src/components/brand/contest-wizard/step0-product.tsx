@@ -19,7 +19,7 @@ interface Step0ProductProps {
   data: ContestWizardData;
   updateData: (updates: Partial<ContestWizardData>) => void;
   errors: Record<string, string>;
-  userId: string;
+  brandId: string;
 }
 
 const PRODUCT_CATEGORIES = [
@@ -482,7 +482,8 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                     <Button
                       type="button"
                       variant="ghost"
-                      size="icon"
+                      size="sm"
+                      className="h-10 w-10 px-0"
                       onClick={() => removeBenefit(index)}
                     >
                       <X className="h-4 w-4" />
@@ -492,7 +493,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
               ))}
 
               {productBenefits.length < 3 && (
-                <Button type="button" variant="outline" onClick={addBenefit} className="w-full">
+                <Button type="button" variant="secondary" onClick={addBenefit} className="w-full">
                   <Plus className="h-4 w-4 mr-2" />
                   Ajouter un point
                 </Button>
@@ -538,7 +539,13 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                     }
                   }}
                 />
-                <Button type="button" variant="outline" onClick={addOtherTarget}>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  className="h-10 w-10 px-0"
+                  onClick={addOtherTarget}
+                >
                   <Plus className="h-4 w-4" />
                 </Button>
               </div>

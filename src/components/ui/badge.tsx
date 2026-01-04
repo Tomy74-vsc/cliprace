@@ -1,36 +1,35 @@
-// Source: Design System — Badges (§32, §1278)
-import * as React from 'react';
-import { cva, type VariantProps } from 'class-variance-authority';
-import { cn } from '@/lib/utils';
+// Source: Design System - Badges
+import * as React from "react";
+import { cva, type VariantProps } from "class-variance-authority";
+import { cn } from "@/lib/utils";
 
 const badgeVariants = cva(
-  'inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors',
+  "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium transition-colors",
   {
     variants: {
       variant: {
-        // Palette de base (statuts génériques)
-        default: 'bg-muted text-foreground',
-        success: 'bg-emerald-500/15 text-emerald-500',
-        warning: 'bg-amber-500/15 text-amber-600',
-        danger: 'bg-rose-500/15 text-rose-600',
-        info: 'bg-accent/15 text-accent',
-        secondary: 'bg-secondary/40 text-secondary-foreground',
-        outline: 'border border-border bg-transparent text-foreground',
-        // Statuts soumissions
-        pending: 'bg-muted text-muted-foreground',
-        approved: 'bg-emerald-500/15 text-emerald-500',
-        rejected: 'bg-rose-500/15 text-rose-600',
-        won: 'bg-amber-500/15 text-amber-600',
-        // Plateformes
-        tiktok: 'bg-black text-white',
-        instagram: 'bg-gradient-to-r from-purple-500 to-pink-500 text-white',
-        youtube: 'bg-red-600 text-white',
+        default: "bg-muted text-foreground",
+        success: "bg-success/15 text-success",
+        warning: "bg-warning/15 text-warning",
+        danger: "bg-danger/15 text-danger",
+        info: "bg-info/15 text-info",
+        secondary: "bg-secondary/40 text-secondary-foreground",
+        outline: "border border-border bg-transparent text-foreground",
+
+        pending: "bg-muted text-muted-foreground",
+        approved: "bg-success/15 text-success",
+        rejected: "bg-danger/15 text-danger",
+        won: "bg-warning/15 text-warning",
+
+        tiktok: "bg-black text-white",
+        instagram: "bg-gradient-to-r from-purple-500 to-pink-500 text-white",
+        youtube: "bg-red-600 text-white",
       },
     },
     defaultVariants: {
-      variant: 'default',
+      variant: "default",
     },
-  }
+  },
 );
 
 export interface BadgeProps

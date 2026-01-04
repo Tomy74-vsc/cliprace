@@ -1,41 +1,47 @@
-import { redirect } from 'next/navigation';
-import { getSession } from '@/lib/auth';
-import { getSupabaseSSR } from '@/lib/supabase/ssr';
-import { CreatorSettingsForm } from '@/components/settings/creator-settings-form';
-import { TrackOnView } from '@/components/analytics/track-once';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { redirect } from "next/navigation";
+import { getSession } from "@/lib/auth";
+import { getSupabaseSSR } from "@/lib/supabase/ssr";
+import { CreatorSettingsForm } from "@/components/settings/creator-settings-form";
+import { TrackOnView } from "@/components/analytics/track-once";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 export default async function CreatorSettingsPage() {
   const { user } = await getSession();
   if (!user) {
-    redirect('/auth/login');
+    redirect("/auth/login");
   }
 
   const supabase = await getSupabaseSSR();
 
   const { data: profile, error: profileError } = await supabase
-    .from('profiles')
-    .select('display_name, bio, avatar_url')
-    .eq('id', user.id)
+    .from("profiles")
+    .select("display_name, bio, avatar_url")
+    .eq("id", user.id)
     .single();
 
   const { data: creatorDetails, error: creatorError } = await supabase
-    .from('profile_creators')
-    .select('first_name, last_name, handle, primary_platform, followers, avg_views')
-    .eq('user_id', user.id)
+    .from("profile_creators")
+    .select("first_name, last_name, handle, primary_platform, followers, avg_views")
+    .eq("user_id", user.id)
     .maybeSingle();
 
   const { data: notificationPrefs, error: notificationError } = await supabase
-    .from('notification_preferences')
-    .select('event, channel, enabled')
-    .eq('user_id', user.id);
+    .from("notification_preferences")
+    .select("event, channel, enabled")
+    .eq("user_id", user.id);
 
-  if (profileError) console.error('Profile fetch error', profileError);
-  if (creatorError) console.error('Creator details error', creatorError);
-  if (notificationError) console.error('Notification prefs error', notificationError);
+  if (profileError) console.error("Profile fetch error", profileError);
+  if (creatorError) console.error("Creator details error", creatorError);
+  if (notificationError) console.error("Notification prefs error", notificationError);
 
   const completion = computeCompletion({ profile, creator: creatorDetails });
   const profileIncomplete = completion.percent < 80;
@@ -73,19 +79,24 @@ export default async function CreatorSettingsPage() {
             <CardTitle>Résumé profil</CardTitle>
             <CardDescription>Taux de complétion et aperçu public.</CardDescription>
           </div>
-          <Badge variant={completion.percent >= 80 ? 'success' : 'secondary'}>
+          <Badge variant={completion.percent >= 80 ? "success" : "secondary"}>
             {completion.percent}% complété
           </Badge>
         </CardHeader>
         <CardContent className="flex items-center gap-4">
           <Avatar className="h-12 w-12">
-            <AvatarImage src={profile?.avatar_url || ''} alt={profile?.display_name || 'Créateur'} />
-            <AvatarFallback>{(profile?.display_name || 'CR').slice(0, 2).toUpperCase()}</AvatarFallback>
+            <AvatarImage src={profile?.avatar_url || ""} alt={profile?.display_name || "Créateur"} />
+            <AvatarFallback>
+              {(profile?.display_name || "CR").slice(0, 2).toUpperCase()}
+            </AvatarFallback>
           </Avatar>
           <div className="space-y-1 text-sm">
-            <div className="font-semibold text-foreground">{profile?.display_name || 'Nom non renseigné'}</div>
+            <div className="font-semibold text-foreground">
+              {profile?.display_name || "Nom non renseigné"}
+            </div>
             <div className="text-muted-foreground">
-              {creatorDetails?.primary_platform || 'Plateforme ?'} · {creatorDetails?.followers ?? 0} followers ·{' '}
+              {creatorDetails?.primary_platform || "Plateforme ?"} ·{" "}
+              {creatorDetails?.followers ?? 0} followers ·{" "}
               {creatorDetails?.avg_views ?? 0} vues moyennes.
             </div>
           </div>
@@ -94,15 +105,16 @@ export default async function CreatorSettingsPage() {
 
       <CreatorSettingsForm
         initialProfile={{
-          display_name: profile?.display_name || '',
-          bio: profile?.bio || '',
-          avatar_url: profile?.avatar_url || '',
+          display_name: profile?.display_name || "",
+          bio: profile?.bio || "",
+          avatar_url: profile?.avatar_url || "",
         }}
         initialCreator={{
-          first_name: creatorDetails?.first_name || '',
-          last_name: creatorDetails?.last_name || '',
-          handle: creatorDetails?.handle || '',
-          primary_platform: (creatorDetails?.primary_platform as 'tiktok' | 'instagram' | 'youtube') || 'tiktok',
+          first_name: creatorDetails?.first_name || "",
+          last_name: creatorDetails?.last_name || "",
+          handle: creatorDetails?.handle || "",
+          primary_platform:
+            (creatorDetails?.primary_platform as "tiktok" | "instagram" | "youtube") || "tiktok",
           followers: creatorDetails?.followers ?? 0,
           avg_views: creatorDetails?.avg_views ?? 0,
         }}

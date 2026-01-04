@@ -17,7 +17,7 @@ export const revalidate = 45;
 type Mode = 'views' | 'score';
 
 interface ContestLeaderboardPageProps {
-  params: { id: string };
+  params: Promise<{ id: string }>;
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
@@ -25,12 +25,13 @@ export default async function ContestLeaderboardPage({ params, searchParams }: C
   const { user } = await getSession();
   const supabase = await getSupabaseSSR();
 
+  const { id } = await params;
   const paramsObj = await searchParams;
 
   const { data: contest, error } = await supabase
     .from('contests')
     .select('id, title, prize_pool_cents, currency, status')
-    .eq('id', params.id)
+    .eq('id', id)
     .maybeSingle();
 
   if (error) {

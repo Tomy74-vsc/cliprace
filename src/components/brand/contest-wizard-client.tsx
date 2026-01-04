@@ -102,7 +102,7 @@ const INITIAL_DATA: ContestWizardData = {
   payment_session_id: null,
 };
 
-export function ContestWizardClient({ userId }: { userId: string }) {
+export function ContestWizardClient({ brandId }: { brandId: string }) {
   const searchParams = useSearchParams();
   const draftId = searchParams.get('draft');
   const csrfToken = useCsrfToken();
@@ -292,7 +292,7 @@ export function ContestWizardClient({ userId }: { userId: string }) {
         assets: allAssets.length > 0 ? allAssets : undefined,
         // TODO: ajouter product_brief dans le schéma Zod et dans la DB
         // product_brief: Object.keys(productBrief).length > 0 ? productBrief : undefined,
-        brand_id: userId,
+        brand_id: brandId,
       };
 
       let response: Response;
@@ -390,7 +390,7 @@ export function ContestWizardClient({ userId }: { userId: string }) {
     } finally {
       setIsSaving(false);
     }
-  }, [data, csrfToken, userId, toast]);
+  }, [data, csrfToken, brandId, toast]);
 
   const handleSaveDraft = async () => {
     await saveDraft(false);
@@ -660,7 +660,7 @@ export function ContestWizardClient({ userId }: { userId: string }) {
             data={data}
             updateData={updateData}
             errors={errors}
-            userId={userId}
+            brandId={brandId}
           />
         </div>
       </div>

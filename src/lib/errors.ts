@@ -6,6 +6,9 @@ export type AppErrorCode =
   | 'NOT_FOUND'
   | 'RATE_LIMIT'
   | 'DATABASE_ERROR'
+  | 'STORAGE_ERROR'
+  | 'GENERATION_ERROR'
+  | 'DOWNLOAD_ERROR'
   | 'BAD_REQUEST'
   | 'CONFLICT'
   | 'UNKNOWN';

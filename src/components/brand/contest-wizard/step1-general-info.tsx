@@ -12,7 +12,7 @@ interface Step1GeneralInfoProps {
   data: ContestWizardData;
   updateData: (updates: Partial<ContestWizardData>) => void;
   errors: Record<string, string>;
-  userId: string;
+  brandId: string;
 }
 
 export function Step1GeneralInfo({ data, updateData, errors }: Step1GeneralInfoProps) {

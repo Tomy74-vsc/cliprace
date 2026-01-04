@@ -1,22 +1,23 @@
-import Link from 'next/link';
-import { getSupabaseSSR } from '@/lib/supabase/ssr';
-import { getSession } from '@/lib/auth';
-import { SubmissionsTable, type SubmissionData } from '@/components/submission/submissions-table';
-import { EmptyState } from '@/components/creator/empty-state';
-import { Badge } from '@/components/ui/badge';
-import { TrackOnView } from '@/components/analytics/track-once';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Search } from 'lucide-react';
+import Link from "next/link";
+import { getSupabaseSSR } from "@/lib/supabase/ssr";
+import { getSession } from "@/lib/auth";
+import { SubmissionsTable, type SubmissionData } from "@/components/submission/submissions-table";
+import { EmptyState } from "@/components/creator/empty-state";
+import { Badge } from "@/components/ui/badge";
+import { TrackOnView } from "@/components/analytics/track-once";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Search, Video } from "lucide-react";
+import { CreatorCoach } from "@/components/creator/creator-coach";
 
 const PAGE_SIZE = 20;
 
 const STATUS_FILTERS = [
-  { value: 'all', label: 'Toutes' },
-  { value: 'pending', label: 'En attente' },
-  { value: 'approved', label: 'En compétition' },
-  { value: 'rejected', label: 'Refusées' },
+  { value: "all", label: "Toutes" },
+  { value: "pending", label: "En attente" },
+  { value: "approved", label: "En compétition" },
+  { value: "rejected", label: "Refusées" },
 ];
 
 export default async function SubmissionsPage({
@@ -30,9 +31,9 @@ export default async function SubmissionsPage({
   const supabase = await getSupabaseSSR();
   const params = await searchParams;
 
-  const statusParam = typeof params.status === 'string' ? params.status : 'all';
-  const contestParam = typeof params.contest === 'string' ? params.contest : '';
-  const searchParam = typeof params.search === 'string' ? params.search.slice(0, 80) : '';
+  const statusParam = typeof params.status === "string" ? params.status : "all";
+  const contestParam = typeof params.contest === "string" ? params.contest : "";
+  const searchParam = typeof params.search === "string" ? params.search.slice(0, 80) : "";
   const pageParam = Number(params.page);
   const page = Number.isFinite(pageParam) && pageParam > 0 ? Math.floor(pageParam) : 1;
 
@@ -46,9 +47,9 @@ export default async function SubmissionsPage({
   const stats = buildStats(submissions);
 
   const { data: profile } = await supabase
-    .from('profile_creators')
-    .select('primary_platform')
-    .eq('user_id', user.id)
+    .from("profile_creators")
+    .select("primary_platform")
+    .eq("user_id", user.id)
     .maybeSingle();
   const profileIncomplete = !profile?.primary_platform;
 
@@ -58,7 +59,7 @@ export default async function SubmissionsPage({
         <EmptyState
           title="Erreur de chargement"
           description={error}
-          action={{ label: 'Réessayer', href: '/app/creator/submissions' }}
+          action={{ label: "Réessayer", href: "/app/creator/submissions" }}
         />
       </main>
     );
@@ -79,7 +80,7 @@ export default async function SubmissionsPage({
         }}
       />
 
-      <section className="rounded-3xl border border-border bg-card/60 p-6 shadow-card">
+      <section className="rounded-3xl border border-border bg-card/60 p-6 shadow-card space-y-4">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-2">
             <p className="text-sm text-muted-foreground">Suivi des participations</p>
@@ -97,6 +98,20 @@ export default async function SubmissionsPage({
             </Button>
           </div>
         </div>
+        <CreatorCoach
+          accent="Astuce soumissions"
+          title={
+            stats.total === 0
+              ? "Lance-toi avec une première vidéo"
+              : "Optimise tes prochaines participations"
+          }
+          description={
+            stats.total === 0
+              ? "Choisis un concours avec un brief clair et un délai confortable, puis soumets une première vidéo pour te familiariser avec le process."
+              : "Repère les concours où tes vidéos ont été approuvées et performantes, et concentre tes efforts sur des briefs similaires."
+          }
+          icon={<Video className="h-4 w-4" />}
+        />
       </section>
 
       <section>
@@ -104,15 +119,16 @@ export default async function SubmissionsPage({
           <CardContent className="py-3 text-xs text-muted-foreground space-y-1">
             <p className="font-medium text-foreground text-sm">Comprendre les statuts</p>
             <p>
-              <span className="font-semibold">En attente</span> : soumission reçue, en cours de modération.
+              <span className="font-semibold">En attente</span> : soumission reçue, en cours de
+              modération.
             </p>
             <p>
-              <span className="font-semibold">En compétition</span> : soumission approuvée et prise en compte
-              dans le classement.
+              <span className="font-semibold">En compétition</span> : soumission approuvée et prise en
+              compte dans le classement.
             </p>
             <p>
-              <span className="font-semibold">Refusée</span> : soumission non conforme (raison indiquée si
-              fournie).
+              <span className="font-semibold">Refusée</span> : soumission non conforme (raison indiquée
+              si fournie).
             </p>
             <p>
               <span className="font-semibold">Retirée</span> : soumission annulée ou retirée du concours.
@@ -130,21 +146,21 @@ export default async function SubmissionsPage({
 
       <div className="flex flex-wrap items-center gap-3 sticky top-16 z-10 bg-background/80 backdrop-blur py-2">
         {STATUS_FILTERS.map((f) => {
-          const active = (statusParam || 'all') === f.value;
+          const active = (statusParam || "all") === f.value;
           const url = new URLSearchParams({
             ...(contestParam && { contest: contestParam }),
             ...(page > 1 && { page: String(page) }),
             ...(searchParam && { search: searchParam }),
           });
-          if (f.value !== 'all') url.set('status', f.value);
+          if (f.value !== "all") url.set("status", f.value);
           return (
             <Link
               key={f.value}
               href={`?${url.toString()}`}
               className={`text-sm px-3 py-1.5 rounded-full border transition ${
                 active
-                  ? 'bg-primary text-primary-foreground border-primary'
-                  : 'border-border text-muted-foreground hover:text-foreground'
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "border-border text-muted-foreground hover:text-foreground"
               }`}
             >
               {f.label}
@@ -200,10 +216,10 @@ export default async function SubmissionsPage({
           title="Aucune participation pour l'instant"
           description={
             profileIncomplete
-              ? 'Complète ton profil pour débloquer plus de concours.'
-              : 'Choisis un concours actif et dépose ta première vidéo.'
+              ? "Complète ton profil pour débloquer plus de concours."
+              : "Choisis un concours actif et dépose ta première vidéo."
           }
-          action={{ label: 'Trouver un concours', href: '/app/creator/contests' }}
+          action={{ label: "Trouver un concours", href: "/app/creator/contests" }}
         />
       ) : (
         <SubmissionsTable submissions={submissions} />
@@ -221,7 +237,7 @@ export default async function SubmissionsPage({
               search: searchParam,
               page: page > 1 ? page - 1 : 1,
             })}
-            className={`hover:text-foreground ${page <= 1 ? 'pointer-events-none opacity-50' : ''}`}
+            className={`hover:text-foreground ${page <= 1 ? "pointer-events-none opacity-50" : ""}`}
           >
             Précédent
           </Link>
@@ -235,7 +251,9 @@ export default async function SubmissionsPage({
               search: searchParam,
               page: page < totalPages ? page + 1 : totalPages,
             })}
-            className={`hover:text-foreground ${page >= totalPages ? 'pointer-events-none opacity-50' : ''}`}
+            className={`hover:text-foreground ${
+              page >= totalPages ? "pointer-events-none opacity-50" : ""
+            }`}
           >
             Suivant
           </Link>
@@ -256,32 +274,32 @@ async function getSubmissions(
   // Optional search by contest title: resolve matching contest_ids first
   let contestIdsFilter: string[] | null = null;
   if (opts.search) {
-    const sanitizedSearch = opts.search.replace(/%/g, '');
+    const sanitizedSearch = opts.search.replace(/%/g, "");
     const { data: contestsSearch, error: contestsSearchError } = await supabase
-      .from('contests')
-      .select('id, title')
-      .ilike('title', `%${sanitizedSearch}%`);
+      .from("contests")
+      .select("id, title")
+      .ilike("title", `%${sanitizedSearch}%`);
 
     if (contestsSearchError) {
-      console.error('Error searching contests for submissions:', contestsSearchError);
+      console.error("Error searching contests for submissions:", contestsSearchError);
       return {
         submissions: [],
         total: 0,
         contests: [],
-        error: 'Impossible de charger tes soumissions. Réessaie plus tard ou contacte le support.',
+        error: "Impossible de charger tes soumissions. Réessaie plus tard ou contacte le support.",
       };
     }
 
     contestIdsFilter = (contestsSearch || []).map((c) => c.id as string);
 
     if (!contestIdsFilter.length) {
-      // No contest matches the search: short‑circuit with empty result
+      // No contest matches the search: short-circuit with empty result
       return { submissions: [], total: 0, contests: [], error: undefined };
     }
   }
 
   let query = supabase
-    .from('submissions')
+    .from("submissions")
     .select(
       `
       id,
@@ -293,29 +311,29 @@ async function getSubmissions(
       submitted_at,
       approved_at
     `,
-      { count: 'exact' },
+      { count: "exact" },
     )
-    .eq('creator_id', userId)
-    .order('submitted_at', { ascending: false });
+    .eq("creator_id", userId)
+    .order("submitted_at", { ascending: false });
 
-  if (opts.status && opts.status !== 'all') {
-    query = query.eq('status', opts.status);
+  if (opts.status && opts.status !== "all") {
+    query = query.eq("status", opts.status);
   }
   if (opts.contestId) {
-    query = query.eq('contest_id', opts.contestId);
+    query = query.eq("contest_id", opts.contestId);
   }
   if (contestIdsFilter) {
-    query = query.in('contest_id', contestIdsFilter);
+    query = query.in("contest_id", contestIdsFilter);
   }
 
   const { data, count, error } = await query.range(from, to);
   if (error) {
-    console.error('Error fetching submissions:', error);
+    console.error("Error fetching submissions:", error);
     return {
       submissions: [],
       total: 0,
       contests: [],
-      error: 'Impossible de charger tes soumissions. Réessaie plus tard ou contacte le support.',
+      error: "Impossible de charger tes soumissions. Réessaie plus tard ou contacte le support.",
     };
   }
 
@@ -323,11 +341,11 @@ async function getSubmissions(
   const metricMap = new Map<string, { views: number; likes: number }>();
   if (submissionIds.length > 0) {
     const { data: metrics, error: metricsError } = await supabase
-      .from('metrics_daily')
-      .select('submission_id, views, likes')
-      .in('submission_id', submissionIds);
+      .from("metrics_daily")
+      .select("submission_id, views, likes")
+      .in("submission_id", submissionIds);
     if (metricsError) {
-      console.error('Error fetching metrics:', metricsError);
+      console.error("Error fetching metrics:", metricsError);
     }
     metrics?.forEach((m) => {
       const current = metricMap.get(m.submission_id) || { views: 0, likes: 0 };
@@ -345,15 +363,18 @@ async function getSubmissions(
 
   if (contestIds.length > 0) {
     const { data: contestsData, error: contestsError } = await supabase
-      .from('contests')
-      .select('id, title')
-      .in('id', contestIds);
+      .from("contests")
+      .select("id, title")
+      .in("id", contestIds);
 
     if (contestsError) {
-      console.error('Error fetching contests for submissions:', contestsError);
+      console.error("Error fetching contests for submissions:", contestsError);
     }
 
-    contests = (contestsData || []).map((c) => ({ id: c.id as string, title: (c.title as string) || 'Concours' }));
+    contests = (contestsData || []).map((c) => ({
+      id: c.id as string,
+      title: (c.title as string) || "Concours",
+    }));
     contests.forEach((c) => contestTitleMap.set(c.id, c.title));
   }
 
@@ -362,11 +383,11 @@ async function getSubmissions(
       data?.map((submission) => ({
         id: submission.id,
         contest_id: submission.contest_id,
-        contest_title: contestTitleMap.get(submission.contest_id as string) || 'Concours inconnu',
-        platform: submission.platform as SubmissionData['platform'],
+        contest_title: contestTitleMap.get(submission.contest_id as string) || "Concours inconnu",
+        platform: submission.platform as SubmissionData["platform"],
         external_url: submission.external_url,
         caption: null,
-        status: submission.status as SubmissionData['status'],
+        status: submission.status as SubmissionData["status"],
         rejection_reason: submission.rejection_reason,
         submitted_at: submission.submitted_at,
         approved_at: submission.approved_at,
@@ -380,10 +401,10 @@ async function getSubmissions(
 
 function buildUrl(params: { status?: string; contest?: string; search?: string; page?: number }) {
   const sp = new URLSearchParams();
-  if (params.status && params.status !== 'all') sp.set('status', params.status);
-  if (params.contest) sp.set('contest', params.contest);
-  if (params.search) sp.set('search', params.search);
-  if (params.page && params.page > 1) sp.set('page', String(params.page));
+  if (params.status && params.status !== "all") sp.set("status", params.status);
+  if (params.contest) sp.set("contest", params.contest);
+  if (params.search) sp.set("search", params.search);
+  if (params.page && params.page > 1) sp.set("page", String(params.page));
   return `?${sp.toString()}`;
 }
 
@@ -391,9 +412,9 @@ function buildStats(submissions: SubmissionData[]) {
   const total = submissions.length;
   return {
     total,
-    pending: submissions.filter((s) => s.status === 'pending').length,
-    approved: submissions.filter((s) => s.status === 'approved').length,
-    rejected: submissions.filter((s) => s.status === 'rejected').length,
+    pending: submissions.filter((s) => s.status === "pending").length,
+    approved: submissions.filter((s) => s.status === "approved").length,
+    rejected: submissions.filter((s) => s.status === "rejected").length,
   };
 }
 
@@ -409,3 +430,4 @@ function StatCard({ title, value }: { title: string; value: number }) {
     </Card>
   );
 }
+

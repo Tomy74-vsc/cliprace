@@ -28,9 +28,10 @@ module.exports = {
         "accent-foreground": "var(--accent-foreground)",
         destructive: "var(--destructive)",
         "destructive-foreground": "var(--destructive-foreground)",
-        success: "#10b981", // emerald-500
-        warning: "#f59e0b", // amber-500
-        danger: "#f43f5e", // rose-500
+        success: "var(--success)",
+        warning: "var(--warning)",
+        info: "var(--info)",
+        danger: "var(--danger)",
       },
       fontFamily: {
         sans: ["var(--font-sans)", "var(--font-inter)", "system-ui", "sans-serif"],

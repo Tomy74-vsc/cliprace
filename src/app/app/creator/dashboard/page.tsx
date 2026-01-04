@@ -2,26 +2,26 @@
 Page: Creator dashboard
 Objectifs: stats, prochaine échéance, recommandations, notifications, milestones.
 */
-import { Suspense } from 'react';
-import Link from 'next/link';
-import { getSession } from '@/lib/auth';
-import { getSupabaseSSR } from '@/lib/supabase/ssr';
-import { StatCard } from '@/components/creator/stat-card';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { EmptyState } from '@/components/creator/empty-state';
-import { ProgressSteps, type ProgressStep } from '@/components/creator/progress-steps';
-import { formatCurrency } from '@/lib/formatters';
-import { Trophy, Clock, Bell, Lightbulb, Wallet2, ListVideo, Info } from 'lucide-react';
-import { TrackOnView } from '@/components/analytics/track-once';
-import { formatDate } from '@/lib/formatters';
-import { PlatformBadge } from '@/components/creator/platform-badge';
+import { Suspense, type ReactNode } from "react";
+import Link from "next/link";
+import { getSession } from "@/lib/auth";
+import { getSupabaseSSR } from "@/lib/supabase/ssr";
+import { StatCard } from "@/components/creator/stat-card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/creator/empty-state";
+import { ProgressSteps, type ProgressStep } from "@/components/creator/progress-steps";
+import { formatCurrency, formatDate } from "@/lib/formatters";
+import { Trophy, Clock, Bell, Lightbulb, Wallet2, ListVideo, Info, User } from "lucide-react";
+import { TrackOnView } from "@/components/analytics/track-once";
+import { PlatformBadge } from "@/components/creator/platform-badge";
 import {
   ActiveContestsCarousel,
   ActiveContestsCarouselSkeleton,
-} from '@/components/creator/active-contests-carousel';
-import type { Platform } from '@/lib/validators/platforms';
+} from "@/components/creator/active-contests-carousel";
+import type { Platform } from "@/lib/validators/platforms";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export const revalidate = 60;
 
@@ -35,9 +35,10 @@ export default async function CreatorDashboard() {
     return (
       <main className="space-y-6">
         <EmptyState
+          type="error"
           title="Erreur de chargement"
           description="Impossible de charger le dashboard. Réessaie plus tard ou contacte le support si le problème persiste."
-          action={{ label: 'Réessayer', href: '/app/creator/dashboard', variant: 'secondary' }}
+          action={{ label: "Réessayer", href: "/app/creator/dashboard", variant: "secondary" }}
         />
       </main>
     );
@@ -47,35 +48,43 @@ export default async function CreatorDashboard() {
 
   const milestones: ProgressStep[] = [
     {
-      title: 'Onboarding terminé',
-      state: 'completed',
-      description: 'Profil créateur prêt',
+      title: "Onboarding terminé",
+      state: "completed",
+      description: "Profil créateur prêt",
     },
     {
-      title: 'Première participation',
-      state: data.stats.submissions_count > 0 ? 'completed' : 'current',
-      description: 'Soumets une première vidéo',
+      title: "Première participation",
+      state: data.stats.submissions_count > 0 ? "completed" : "current",
+      description: "Soumets une première vidéo",
     },
     {
-      title: 'Vidéo approuvée',
-      state: data.stats.approved_submissions > 0 ? 'completed' : 'upcoming',
-      description: 'Statut approuvé',
+      title: "Vidéo approuvée",
+      state: data.stats.approved_submissions > 0 ? "completed" : "upcoming",
+      description: "Statut approuvé",
     },
     {
-      title: 'Premier gain',
-      state: data.stats.total_earnings_cents > 0 ? 'completed' : 'upcoming',
-      description: 'Gains visibles',
+      title: "Premier gain",
+      state: data.stats.total_earnings_cents > 0 ? "completed" : "upcoming",
+      description: "Gains visibles",
     },
   ];
 
   const tips = [
-    'Priorise les concours qui se terminent bientôt.',
-    'Ajoute #ClipRace et le hashtag de la marque pour éviter les refus.',
-    'Vérifie tes liens vidéo avant de soumettre.',
+    "Priorise les concours qui se terminent bientôt.",
+    "Ajoute #ClipRace et le hashtag de la marque pour éviter les refus.",
+    "Vérifie tes liens vidéo avant de soumettre.",
   ];
 
-  const firstName = (user.display_name || '').split(' ')[0] || 'créateur';
+  const firstName = (user.display_name || "").split(" ")[0] || "créateur";
   const countdown = data.next_contest ? computeCountdown(data.next_contest.end_at) : null;
+
+  const level = getCreatorLevel(data.stats);
+  const nextGoal = getNextGoal(data.stats);
+
+  const completedMilestones = milestones.filter((m) => m.state === "completed").length;
+  const milestonesProgressPercent =
+    milestones.length > 0 ? Math.round((completedMilestones / milestones.length) * 100) : 0;
+
   const todo = buildTodoList({
     profileIncomplete: data.profileIncomplete,
     hasSubmissions: data.stats.submissions_count > 0,
@@ -87,21 +96,38 @@ export default async function CreatorDashboard() {
 
   return (
     <main className="space-y-8">
-      <TrackOnView event="view_dashboard" payload={{ role: 'creator' }} />
+      <TrackOnView event="view_dashboard" payload={{ role: "creator" }} />
 
-      <section className="rounded-3xl border border-border bg-gradient-to-r from-primary/10 via-accent/5 to-background p-6 md:p-8 shadow-card">
+      <section className="rounded-3xl border border-border p-6 md:p-8 shadow-card cliprace-hero">
         <div className="grid gap-6 md:grid-cols-[2fr,1.1fr] md:items-center">
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">Espace créateur</p>
-            <h1 className="text-3xl font-semibold">Bienvenue, {firstName}</h1>
+          <div className="space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center items-start gap-4">
+              <Avatar className="h-16 w-16 border border-border shadow-sm">
+                <AvatarImage src={user.avatar_url || undefined} alt={user.display_name || "Créateur"} />
+                <AvatarFallback>
+                  {(user.display_name || "CR").slice(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="space-y-1">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Espace créateur
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="display-3 leading-tight text-2xl sm:text-3xl">Bienvenue, {firstName}</h1>
+                  <Badge variant={level.variant}>{level.label}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground">{level.subtitle}</p>
+              </div>
+            </div>
             <p className="text-base text-muted-foreground">
-              Participe aux concours, suis tes vues, encaisse tes gains en toute sécurité.
+              Choisis un concours, poste ta vidéo, et suis tes gains en toute sécurité.
             </p>
+            <p className="text-sm font-medium text-foreground">{nextGoal}</p>
             <div className="flex flex-wrap gap-3">
-              <Button asChild>
+              <Button asChild className="w-full sm:w-auto">
                 <Link href="/app/creator/contests">Découvrir les concours</Link>
               </Button>
-              <Button asChild variant="secondary">
+              <Button asChild variant="secondary" className="w-full sm:w-auto">
                 <Link href="/app/creator/submissions">Mes soumissions</Link>
               </Button>
             </div>
@@ -111,12 +137,14 @@ export default async function CreatorDashboard() {
               <div className="flex items-center justify-between">
                 <CardTitle>Prochaine échéance</CardTitle>
                 {data.next_contest ? (
-                  <Badge variant="success">{countdown?.label ?? 'Actif'}</Badge>
+                  <Badge variant="success">{countdown?.label ?? "Actif"}</Badge>
                 ) : (
                   <Badge variant="secondary">Aucun concours</Badge>
                 )}
               </div>
-              <p className="text-sm text-muted-foreground">Suis la date limite pour ne rien rater.</p>
+              <p className="text-sm text-muted-foreground">
+                Suis la date limite pour ne rien rater.
+              </p>
             </CardHeader>
             <CardContent className="space-y-3">
               {data.next_contest ? (
@@ -125,13 +153,16 @@ export default async function CreatorDashboard() {
                     <div>
                       <p className="font-semibold">{data.next_contest.title}</p>
                       <p className="text-xs text-muted-foreground">
-                        Prize pool{' '}
-                        {formatCurrency(data.next_contest.prize_pool_cents, data.next_contest.currency)}
+                        Prize pool{" "}
+                        {formatCurrency(
+                          data.next_contest.prize_pool_cents,
+                          data.next_contest.currency,
+                        )}
                       </p>
                     </div>
                     <Badge variant="info" className="flex items-center gap-1">
                       <Clock className="h-3 w-3" />
-                      {countdown?.short ?? 'En cours'}
+                      {countdown?.short ?? "En cours"}
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground">
@@ -140,7 +171,7 @@ export default async function CreatorDashboard() {
                   <div className="flex flex-wrap gap-2">
                     <Button asChild size="sm" disabled={!data.next_contest_can_submit}>
                       <Link href={`/app/creator/contests/${data.next_contest.id}`}>
-                        {data.next_contest_can_submit ? 'Participer' : 'Voir le concours'}
+                        {data.next_contest_can_submit ? "Participer" : "Voir le concours"}
                       </Link>
                     </Button>
                     <Button asChild size="sm" variant="secondary">
@@ -149,7 +180,8 @@ export default async function CreatorDashboard() {
                   </div>
                   {!data.next_contest_can_submit && (
                     <p className="text-xs text-muted-foreground">
-                      Éligibilité requise (plateforme ou seuils). Vérifie le brief pour débloquer la participation.
+                      Éligibilité requise (plateforme ou seuils). Vérifie le brief pour débloquer la
+                      participation.
                     </p>
                   )}
                 </>
@@ -158,9 +190,9 @@ export default async function CreatorDashboard() {
                   title="Aucun concours en cours"
                   description="Découvre les opportunités disponibles."
                   action={{
-                    label: 'Découvrir les concours',
-                    href: '/app/creator/contests',
-                    variant: 'secondary',
+                    label: "Découvrir les concours",
+                    href: "/app/creator/contests",
+                    variant: "secondary",
                   }}
                 />
               )}
@@ -201,9 +233,10 @@ export default async function CreatorDashboard() {
           />
           <StatCard
             label="Gains cumulés"
-            value={formatCurrency(data.stats.total_earnings_cents, 'EUR')}
+            value={formatCurrency(data.stats.total_earnings_cents, "EUR")}
             hint="Total gagné"
             icon={<Trophy className="h-4 w-4" />}
+            accent
           />
         </div>
       </section>
@@ -213,18 +246,34 @@ export default async function CreatorDashboard() {
           <CardHeader>
             <CardTitle>À faire</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
+            <div className="space-y-1">
+              <p className="text-xs text-muted-foreground">
+                Tu as complété {completedMilestones}/{milestones.length} étapes vers ton premier gain.
+              </p>
+              <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div
+                  className="h-2 rounded-full bg-primary transition-all"
+                  style={{ width: `${milestonesProgressPercent}%` }}
+                />
+              </div>
+            </div>
             {todo.length === 0 ? (
-              <p className="text-sm text-muted-foreground">Tu es à jour. Continue à participer !</p>
+              <p className="text-sm text-muted-foreground">
+                Tu es à jour. Continue à participer !
+              </p>
             ) : (
               <ul className="space-y-2">
                 {todo.map((item) => (
-                  <li key={item.title} className="flex items-start gap-2">
-                    <Badge variant={item.variant} className="mt-0.5">
-                      {item.label}
-                    </Badge>
+                  <li key={item.title} className="flex items-start gap-3">
+                    <div className="mt-0.5 text-muted-foreground">{item.icon}</div>
                     <div>
-                      <p className="text-sm font-medium text-foreground">{item.title}</p>
+                      <p className="flex items-center gap-2 text-sm font-medium text-foreground">
+                        {item.title}
+                        <Badge variant={item.variant} className="text-[10px] px-1.5 py-0.5">
+                          {item.label}
+                        </Badge>
+                      </p>
                       {item.description ? (
                         <p className="text-xs text-muted-foreground">{item.description}</p>
                       ) : null}
@@ -251,19 +300,24 @@ export default async function CreatorDashboard() {
                 title="Rien de nouveau"
                 description="Tu seras alerté dès qu'il y aura du mouvement."
                 action={{
-                  label: 'Centre de notifications',
-                  href: '/app/creator/notifications',
-                  variant: 'secondary',
+                  label: "Centre de notifications",
+                  href: "/app/creator/notifications",
+                  variant: "secondary",
                 }}
               />
             ) : (
               <ul className="divide-y divide-border">
                 {data.notifications.map((notification) => (
-                  <li key={notification.id} className="flex items-start justify-between gap-3 py-3">
+                  <li
+                    key={notification.id}
+                    className="flex items-start justify-between gap-3 py-3"
+                  >
                     <div>
-                      <p className="text-sm font-medium">{notificationTitle(notification.type)}</p>
+                      <p className="text-sm font-medium">
+                        {notificationTitle(notification.type)}
+                      </p>
                       <p className="text-xs text-muted-foreground">
-                        {notification.content?.message || 'Nouvelle action disponible.'}
+                        {notification.content?.message || "Nouvelle action disponible."}
                       </p>
                     </div>
                     {!notification.read && (
@@ -392,49 +446,49 @@ async function fetchDashboardData(
     const now = new Date().toISOString();
 
     const { data: summary, error: summaryError } = await supabase
-      .from('creator_dashboard_summary')
-      .select('total_submissions, approved_submissions, total_views, total_earnings_cents')
-      .eq('creator_id', userId)
+      .from("creator_dashboard_summary")
+      .select("total_submissions, approved_submissions, total_views, total_earnings_cents")
+      .eq("creator_id", userId)
       .maybeSingle();
 
     if (summaryError) {
-      console.error('Dashboard summary error', summaryError);
+      console.error("Dashboard summary error", summaryError);
     }
 
     const { data: nextContest } = await supabase
-      .from('contests')
-      .select('id, title, prize_pool_cents, currency, end_at')
-      .eq('status', 'active')
-      .gte('end_at', now)
-      .order('end_at', { ascending: true })
+      .from("contests")
+      .select("id, title, prize_pool_cents, currency, end_at")
+      .eq("status", "active")
+      .gte("end_at", now)
+      .order("end_at", { ascending: true })
       .limit(1)
       .maybeSingle();
 
     const { data: notifications } = await supabase
-      .from('notifications')
-      .select('id, type, content, read, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
+      .from("notifications")
+      .select("id, type, content, read, created_at")
+      .eq("user_id", userId)
+      .order("created_at", { ascending: false })
       .limit(5);
 
     const unread_notifications = notifications?.filter((n) => !n.read).length || 0;
 
     const { data: profileCreator } = await supabase
-      .from('profile_creators')
-      .select('primary_platform, followers, avg_views')
-      .eq('user_id', userId)
+      .from("profile_creators")
+      .select("primary_platform, followers, avg_views")
+      .eq("user_id", userId)
       .maybeSingle();
 
     const { data: canSubmitRes, error: canSubmitErr } =
       nextContest?.id
-        ? await supabase.rpc('can_submit_to_contest', {
+        ? await supabase.rpc("can_submit_to_contest", {
             p_contest_id: nextContest.id,
             p_user_id: userId,
           })
         : { data: null, error: null };
 
     if (canSubmitErr) {
-      console.error('can_submit_to_contest error', canSubmitErr);
+      console.error("can_submit_to_contest error", canSubmitErr);
     }
 
     const recommended = await fetchRecommendedContests({
@@ -457,7 +511,7 @@ async function fetchDashboardData(
               id: nextContest.id,
               title: nextContest.title,
               prize_pool_cents: nextContest.prize_pool_cents,
-              currency: nextContest.currency || 'EUR',
+              currency: nextContest.currency || "EUR",
               end_at: nextContest.end_at,
             }
           : null,
@@ -468,9 +522,10 @@ async function fetchDashboardData(
       },
     };
   } catch (err) {
-    console.error('Dashboard load error', err);
+    console.error("Dashboard load error", err);
     return {
-      error: 'Impossible de charger le dashboard. Réessaie plus tard ou contacte le support.',
+      error:
+        "Impossible de charger le dashboard. Réessaie plus tard ou contacte le support.",
     };
   }
 }
@@ -498,15 +553,15 @@ async function fetchRecommendedContests({
   const supabase = await getSupabaseSSR();
   const now = new Date().toISOString();
   const { data, error } = await supabase
-    .from('contests')
-    .select('id, title, end_at, prize_pool_cents, currency, networks')
-    .eq('status', 'active')
-    .gte('end_at', now)
-    .order('end_at', { ascending: true })
+    .from("contests")
+    .select("id, title, end_at, prize_pool_cents, currency, networks")
+    .eq("status", "active")
+    .gte("end_at", now)
+    .order("end_at", { ascending: true })
     .limit(30);
 
   if (error) {
-    console.error('Recommended contests fetch error', error);
+    console.error("Recommended contests fetch error", error);
     return [];
   }
 
@@ -527,23 +582,23 @@ async function fetchRecommendedContests({
     title: contest.title,
     end_at: contest.end_at,
     prize_pool_cents: contest.prize_pool_cents,
-    currency: contest.currency || 'EUR',
+    currency: contest.currency || "EUR",
     networks: (contest.networks as string[]) || [],
   }));
 }
 
 function notificationTitle(type: string) {
   switch (type) {
-    case 'submission_approved':
-      return 'Ta participation est acceptée';
-    case 'submission_rejected':
-      return 'Ta participation est refusée';
-    case 'contest_ending_soon':
-      return 'Concours bientôt terminé';
-    case 'cashout_completed':
-      return 'Retrait effectué';
+    case "submission_approved":
+      return "Ta participation est acceptée";
+    case "submission_rejected":
+      return "Ta participation est refusée";
+    case "contest_ending_soon":
+      return "Concours bientôt terminé";
+    case "cashout_completed":
+      return "Retrait effectué";
     default:
-      return 'Notification';
+      return "Notification";
   }
 }
 
@@ -551,7 +606,9 @@ function RecommendedContestCard({ contest }: { contest: RecommendedContest }) {
   return (
     <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card p-4 shadow-card">
       <div>
-        <p className="text-sm font-semibold text-foreground line-clamp-2">{contest.title}</p>
+        <p className="text-sm font-semibold text-foreground line-clamp-2">
+          {contest.title}
+        </p>
         <p className="text-xs text-muted-foreground">
           Fin le {formatDate(contest.end_at)}
         </p>
@@ -584,10 +641,77 @@ function computeCountdown(endAt: string) {
   const days = Math.floor(totalHours / 24);
   const hours = totalHours % 24;
   return {
-    label: diffMs === 0 ? 'Terminé' : days > 0 ? `Se termine dans ${days}j` : `Dans ${hours}h`,
-    short: diffMs === 0 ? 'Terminé' : days > 0 ? `${days}j ${hours}h` : `${hours}h`,
+    label:
+      diffMs === 0
+        ? "Terminé"
+        : days > 0
+          ? `Se termine dans ${days}j`
+          : `Dans ${hours}h`,
+    short: diffMs === 0 ? "Terminé" : days > 0 ? `${days}j ${hours}h` : `${hours}h`,
   };
 }
+
+function getCreatorLevel(stats: DashboardData["stats"]): {
+  label: string;
+  subtitle: string;
+  variant: "secondary" | "success" | "warning";
+} {
+  const { submissions_count, approved_submissions, total_earnings_cents } = stats;
+
+  if (total_earnings_cents <= 0 && submissions_count < 3) {
+    return {
+      label: "Nouveau créateur",
+      subtitle: "Commence par tes premiers concours pour débloquer ton premier gain.",
+      variant: "secondary",
+    };
+  }
+
+  if (total_earnings_cents <= 0 && approved_submissions > 0) {
+    return {
+      label: "Créateur engagé",
+      subtitle: "Tes vidéos sont approuvées, vise maintenant ton premier gain.",
+      variant: "warning",
+    };
+  }
+
+  if (total_earnings_cents > 0 && total_earnings_cents < 50000) {
+    return {
+      label: "Créateur régulier",
+      subtitle: "Tu as déjà gagné, continue à enchaîner les briefs qui te ressemblent.",
+      variant: "success",
+    };
+  }
+
+  return {
+    label: "Top créateur",
+    subtitle: "Tes performances sont au-dessus de la moyenne, vise les plus gros cashprizes.",
+    variant: "success",
+  };
+}
+
+function getNextGoal(stats: DashboardData["stats"]): string {
+  if (stats.submissions_count === 0) {
+    return "Ton prochain objectif : soumettre ta première vidéo.";
+  }
+
+  if (stats.approved_submissions === 0) {
+    return "Ton prochain objectif : obtenir ta première vidéo approuvée.";
+  }
+
+  if (stats.total_earnings_cents === 0) {
+    return "Ton prochain objectif : décrocher ton premier gain.";
+  }
+
+  return "Ton prochain objectif : augmenter tes gains sur le prochain concours.";
+}
+
+type TodoItem = {
+  title: string;
+  description?: string;
+  label: string;
+  variant: "warning" | "info" | "success" | "secondary";
+  icon: ReactNode;
+};
 
 function buildTodoList({
   profileIncomplete,
@@ -600,59 +724,59 @@ function buildTodoList({
   profileIncomplete: boolean;
   hasSubmissions: boolean;
   hasUnread: boolean;
-  nextContest: DashboardData['next_contest'];
+  nextContest: DashboardData["next_contest"];
   canSubmitNext: boolean;
   hasEarnings: boolean;
-}) {
-  const items: Array<{
-    title: string;
-    description?: string;
-    label: string;
-    variant: 'warning' | 'info' | 'success' | 'secondary';
-  }> = [];
+}): TodoItem[] {
+  const items: TodoItem[] = [];
 
   if (profileIncomplete) {
     items.push({
-      title: 'Compléter mon profil',
-      description: 'Ajoute ta plateforme principale pour débloquer tous les concours.',
-      label: 'Profil',
-      variant: 'warning',
+      title: "Compléter mon profil",
+      description: "Ajoute ta plateforme principale pour débloquer tous les concours.",
+      label: "Profil",
+      variant: "warning",
+      icon: <User className="h-4 w-4" />,
     });
   }
 
   if (!hasSubmissions && nextContest) {
     items.push({
-      title: 'Soumettre ma première vidéo',
+      title: "Soumettre ma première vidéo",
       description: nextContest.title,
-      label: 'Action',
-      variant: 'info',
+      label: "Action",
+      variant: "info",
+      icon: <ListVideo className="h-4 w-4" />,
     });
   }
 
   if (hasUnread) {
     items.push({
-      title: 'Lire mes notifications',
-      description: 'Modération, gains, messages.',
-      label: 'Notifications',
-      variant: 'info',
+      title: "Lire mes notifications",
+      description: "Modération, gains, messages.",
+      label: "Notifications",
+      variant: "info",
+      icon: <Bell className="h-4 w-4" />,
     });
   }
 
   if (nextContest && !canSubmitNext) {
     items.push({
-      title: 'Vérifier l’éligibilité',
-      description: 'Plateformes / seuils du concours en cours.',
-      label: 'Concours',
-      variant: 'warning',
+      title: "Vérifier l'éligibilité",
+      description: "Plateformes / seuils du concours en cours.",
+      label: "Concours",
+      variant: "warning",
+      icon: <Info className="h-4 w-4" />,
     });
   }
 
   if (hasEarnings) {
     items.push({
-      title: 'Consulter mes gains',
-      description: 'Planifie tes retraits dans Wallet.',
-      label: 'Gains',
-      variant: 'secondary',
+      title: "Consulter mes gains",
+      description: "Planifie tes retraits dans Wallet.",
+      label: "Gains",
+      variant: "secondary",
+      icon: <Wallet2 className="h-4 w-4" />,
     });
   }
 

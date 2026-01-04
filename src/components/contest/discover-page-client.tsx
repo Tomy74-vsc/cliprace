@@ -1,4 +1,4 @@
-/*
+Ôªø/*
 Source: Component DiscoverPageClient
 Purpose: Client shell for discover filters + pagination (query-string sync)
 */
@@ -124,7 +124,7 @@ export function DiscoverPageClient({
         >
           <Trophy className="h-4 w-4 text-primary" aria-hidden="true" />
           <span>
-            {total} concours{total > 1 ? "s" : ""} trouvÈs
+            {total} concours{total > 1 ? "s" : ""} trouv√©s
           </span>
         </motion.div>
       )}
@@ -133,9 +133,9 @@ export function DiscoverPageClient({
         {isPending ? (
           <motion.div
             key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
           >
             {Array.from({ length: 6 }).map((_, i) => (
@@ -145,23 +145,23 @@ export function DiscoverPageClient({
         ) : contests.length === 0 ? (
           <motion.div
             key="empty"
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.97 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
+            exit={{ opacity: 0, scale: 0.97 }}
           >
             <EmptyState
               title={
                 filters.search || filters.platforms.length > 0
-                  ? "Aucun concours trouvÈ"
+                  ? "Aucun concours trouv√©"
                   : "Aucun concours actif"
               }
               description={
                 filters.search || filters.platforms.length > 0
-                  ? "Modifie tes filtres pour voir plus de rÈsultats."
-                  : "Reviens bientÙt pour dÈcouvrir de nouveaux concours."
+                  ? "Modifie tes filtres pour voir plus de r√©sultats."
+                  : "Reviens bient√¥t pour d√©couvrir de nouveaux concours."
               }
               action={{
-                label: "RÈinitialiser",
+                label: "R√©initialiser",
                 onClick: () =>
                   updateQuery({
                     search: "",
@@ -174,7 +174,7 @@ export function DiscoverPageClient({
               }}
               secondaryAction={
                 profileIncomplete
-                  ? { label: "ComplÈter mon profil", href: "/app/creator/settings", variant: "ghost" }
+                  ? { label: "Compl√©ter mon profil", href: "/app/creator/settings", variant: "ghost" }
                   : {
                       label: "Retirer les filtres",
                       onClick: () =>
@@ -193,9 +193,9 @@ export function DiscoverPageClient({
         ) : (
           <motion.div
             key="grid"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
             role="list"
             aria-busy={isPending}
@@ -252,7 +252,7 @@ function PaginationControls({ page, totalPages, isPending, onPageChange }: Pagin
         disabled={!canPrev || isPending}
         className="text-sm font-medium text-muted-foreground hover:text-foreground disabled:opacity-50"
       >
-        PrÈcÈdent
+        Pr√©c√©dent
       </button>
       <div className="text-sm text-muted-foreground" aria-live="polite">
         Page {page} sur {totalPages}

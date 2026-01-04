@@ -16,7 +16,7 @@ import { createError, formatErrorResponse } from '@/lib/errors';
 
 const BodySchema = z.object({
   submission_ids: z.array(z.string().uuid()).min(1, 'Au moins une soumission requise'),
-  status: z.enum(['approved', 'rejected']),
+  status: z.enum(['approved', 'rejected', 'removed']),
   reason: z.string().max(500).optional(),
 });
 
@@ -48,6 +48,9 @@ export async function POST(req: NextRequest) {
     }
 
     const { submission_ids, status, reason } = parsed.data;
+    if ((status === 'rejected' || status === 'removed') && !reason) {
+      throw createError('VALIDATION_ERROR', 'Reason required for rejection/removal', 400);
+    }
 
     const admin = getSupabaseAdmin();
     const now = new Date().toISOString();
@@ -100,13 +103,12 @@ export async function POST(req: NextRequest) {
       moderated_by: user.id,
       updated_at: now,
     };
-    if (status === 'rejected') {
-      updatePayload.rejection_reason = reason ?? null;
-    } else {
-      updatePayload.rejection_reason = null;
-    }
     if (status === 'approved') {
+      updatePayload.rejection_reason = null;
       updatePayload.approved_at = now;
+    } else {
+      updatePayload.rejection_reason = reason ?? null;
+      updatePayload.approved_at = null;
     }
 
     // Mettre à jour toutes les soumissions
@@ -119,11 +121,21 @@ export async function POST(req: NextRequest) {
       throw createError('DATABASE_ERROR', 'Erreur lors de la mise à jour', 500, updErr.message);
     }
 
+    // Update moderation queue status
+    await admin
+      .from('moderation_queue')
+      .update({
+        status: 'completed',
+        reviewed_by: user.id,
+        reviewed_at: now,
+        updated_at: now,
+      })
+      .in('submission_id', pendingSubmissions.map((s) => s.id));
     // Créer les actions de modération
     const moderationActions = pendingSubmissions.map((sub) => ({
       target_table: 'submissions',
       target_id: sub.id,
-      action: status === 'approved' ? 'approve' : 'reject',
+      action: status === 'approved' ? 'approve' : status === 'removed' ? 'remove' : 'reject',
       reason: reason ?? null,
       actor_id: user.id,
       created_at: now,
@@ -169,4 +181,5 @@ export async function POST(req: NextRequest) {
     return formatErrorResponse(error);
   }
 }
+
 

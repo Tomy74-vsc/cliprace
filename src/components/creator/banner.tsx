@@ -24,9 +24,9 @@ export function Banner({
   className?: string;
 }) {
   const base = {
-    info: 'bg-accent/10 border-accent/30 text-foreground',
+    info: 'bg-info/10 border-info/30 text-foreground',
     warning: 'bg-warning/15 border-warning/30 text-foreground',
-    error: 'bg-destructive/10 border-destructive/40 text-foreground',
+    error: 'bg-danger/10 border-danger/40 text-foreground',
   }[variant];
 
   return (

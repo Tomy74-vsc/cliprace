@@ -2,15 +2,15 @@
 Component: WalletBalance
 Affiche solde, graphique gains, historique gains et cashouts avec confirmations.
 */
-'use client';
+"use client";
 
-import { useMemo, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from 'recharts';
-import { Info, Shield } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
+import { Info, Shield } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -19,11 +19,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from '@/components/ui/dialog';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
-import { useToastContext } from '@/hooks/use-toast-context';
-import { useCsrfToken } from '@/hooks/use-csrf-token';
-import { track } from '@/lib/analytics';
+} from "@/components/ui/dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { useToastContext } from "@/hooks/use-toast-context";
+import { useCsrfToken } from "@/hooks/use-csrf-token";
+import { track } from "@/lib/analytics";
 
 export interface WalletData {
   balance_cents: number;
@@ -46,7 +46,7 @@ export interface WalletData {
   cashouts: {
     id: string;
     amount_cents: number;
-    status: 'requested' | 'processing' | 'paid' | 'failed' | 'canceled';
+    status: "requested" | "processing" | "paid" | "failed" | "canceled";
     requested_at: string;
     processed_at: string | null;
   }[];
@@ -57,32 +57,32 @@ interface WalletBalanceProps {
 }
 
 const CASHOUT_STATUS_LABELS: Record<
-  WalletData['cashouts'][number]['status'],
-  { label: string; variant: 'default' | 'success' | 'warning' | 'danger' }
+  WalletData["cashouts"][number]["status"],
+  { label: string; variant: "default" | "success" | "warning" | "danger" }
 > = {
-  requested: { label: 'Demande', variant: 'default' },
-  processing: { label: 'En cours', variant: 'warning' },
-  paid: { label: 'Payé', variant: 'success' },
-  failed: { label: 'Échec', variant: 'danger' },
-  canceled: { label: 'Annulé', variant: 'default' },
+  requested: { label: "Demande", variant: "default" },
+  processing: { label: "En cours", variant: "warning" },
+  paid: { label: "Payé", variant: "success" },
+  failed: { label: "Échec", variant: "danger" },
+  canceled: { label: "Annulé", variant: "default" },
 };
 
 function formatCurrency(amount: number, currency: string): string {
-  return new Intl.NumberFormat('fr-FR', {
-    style: 'currency',
-    currency: currency || 'EUR',
+  return new Intl.NumberFormat("fr-FR", {
+    style: "currency",
+    currency: currency || "EUR",
     minimumFractionDigits: 0,
   }).format(amount / 100);
 }
 
 function formatDate(dateString: string): string {
   const date = new Date(dateString);
-  return new Intl.DateTimeFormat('fr-FR', {
-    day: 'numeric',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   }).format(date);
 }
 
@@ -106,41 +106,76 @@ export function WalletBalance({ wallet }: WalletBalanceProps) {
     return Array.from(grouped.entries())
       .sort(([a], [b]) => (a > b ? 1 : -1))
       .map(([date, value]) => ({
-        date: new Intl.DateTimeFormat('fr-FR', { month: 'short', day: 'numeric' }).format(new Date(date)),
+        date: new Intl.DateTimeFormat("fr-FR", { month: "short", day: "numeric" }).format(new Date(date)),
         value,
       }));
   }, [wallet.winnings]);
 
+  const [animatedBalance, setAnimatedBalance] = useState(0);
+  const [animatedTotalEarnings, setAnimatedTotalEarnings] = useState(0);
+  const [animatedWithdrawn, setAnimatedWithdrawn] = useState(0);
+
+  useEffect(() => {
+    const duration = 600;
+    const frameRate = 1000 / 60;
+    const steps = Math.max(1, Math.round(duration / frameRate));
+
+    const animateValue = (target: number, setter: (v: number) => void) => {
+      let currentStep = 0;
+      const start = 0;
+      const diff = target - start;
+
+      const interval = setInterval(() => {
+        currentStep += 1;
+        const progress = Math.min(1, currentStep / steps);
+        setter(Math.round(start + diff * progress));
+        if (progress >= 1) clearInterval(interval);
+      }, frameRate);
+
+      return interval;
+    };
+
+    const i1 = animateValue(wallet.balance_cents, setAnimatedBalance);
+    const i2 = animateValue(wallet.total_earnings_cents, setAnimatedTotalEarnings);
+    const i3 = animateValue(wallet.withdrawn_cents, setAnimatedWithdrawn);
+
+    return () => {
+      clearInterval(i1);
+      clearInterval(i2);
+      clearInterval(i3);
+    };
+  }, [wallet.balance_cents, wallet.total_earnings_cents, wallet.withdrawn_cents]);
+
   const handleCashout = async () => {
     if (wallet.balance_cents <= 0) {
-      toast({ type: 'error', title: 'Erreur', message: "Vous n'avez pas de solde disponible." });
+      toast({ type: "error", title: "Erreur", message: "Vous n'avez pas de solde disponible." });
       return;
     }
     setOpenConfirm(false);
-    track('start_cashout', { amount_cents: wallet.balance_cents });
+    track("start_cashout", { amount_cents: wallet.balance_cents });
     setIsRequestingCashout(true);
     try {
-      const response = await fetch('/api/payments/creator/cashout', {
-        method: 'POST',
+      const response = await fetch("/api/payments/creator/cashout", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'x-csrf': csrfToken || '',
+          "Content-Type": "application/json",
+          "x-csrf": csrfToken || "",
         },
         body: JSON.stringify({ amount_cents: wallet.balance_cents }),
       });
       const result = await response.json();
-      if (!response.ok) throw new Error(result.message || 'Erreur lors de la demande de retrait');
+      if (!response.ok) throw new Error(result.message || "Erreur lors de la demande de retrait");
       toast({
-        type: 'success',
-        title: 'Demande de retrait créée',
-        message: 'Votre demande a bien été enregistrée.',
+        type: "success",
+        title: "Demande de retrait créée",
+        message: "Votre demande a bien été enregistrée.",
       });
       router.refresh();
     } catch (error) {
       toast({
-        type: 'error',
-        title: 'Erreur',
-        message: error instanceof Error ? error.message : 'Une erreur est survenue',
+        type: "error",
+        title: "Erreur",
+        message: error instanceof Error ? error.message : "Une erreur est survenue",
       });
     } finally {
       setIsRequestingCashout(false);
@@ -170,7 +205,7 @@ export function WalletBalance({ wallet }: WalletBalanceProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold">
-              {formatCurrency(wallet.balance_cents, wallet.currency)}
+              {formatCurrency(animatedBalance, wallet.currency)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Montant que tu peux demander en retrait (hors retraits déjà en cours).
@@ -184,7 +219,7 @@ export function WalletBalance({ wallet }: WalletBalanceProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-semibold">
-              {formatCurrency(wallet.withdrawn_cents, wallet.currency)}
+              {formatCurrency(animatedWithdrawn, wallet.currency)}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Total versé via les retraits validés.
@@ -200,7 +235,7 @@ export function WalletBalance({ wallet }: WalletBalanceProps) {
         </CardHeader>
         <CardContent>
           <div className="text-4xl font-bold text-foreground mb-4">
-            {formatCurrency(wallet.balance_cents, wallet.currency)}
+            {formatCurrency(animatedBalance, wallet.currency)}
           </div>
           <Dialog open={openConfirm} onOpenChange={setOpenConfirm}>
             <DialogTrigger asChild>
@@ -209,17 +244,17 @@ export function WalletBalance({ wallet }: WalletBalanceProps) {
                 disabled={isRequestingCashout || wallet.balance_cents <= 0}
                 className="w-full sm:w-auto"
               >
-                {isRequestingCashout ? 'Traitement...' : 'Demander un retrait'}
+                {isRequestingCashout ? "Traitement..." : "Demander un retrait"}
               </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
                 <DialogTitle>Confirmer le retrait</DialogTitle>
                 <DialogDescription>
-                  Montant : {formatCurrency(wallet.balance_cents, wallet.currency)}.{' '}
+                  Montant : {formatCurrency(wallet.balance_cents, wallet.currency)}.{" "}
                   {wallet.average_processing_days
                     ? `Délai estimé : ~${wallet.average_processing_days} jours ouvrés.`
-                    : 'Traitement dès réception.'}
+                    : "Traitement dès réception."}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-2 text-sm text-muted-foreground">
@@ -349,26 +384,26 @@ export function WalletBalance({ wallet }: WalletBalanceProps) {
                       </div>
                       <div className="text-sm text-muted-foreground">
                         Demande le {formatDate(cashout.requested_at)}
-                        {cashout.processed_at ? ` · Traitée le ${formatDate(cashout.processed_at)}` : ''}
+                        {cashout.processed_at ? ` · Traitée le ${formatDate(cashout.processed_at)}` : ""}
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge
                         variant={statusInfo.variant}
-                        className={cashout.status === 'processing' ? 'animate-pulse' : ''}
+                        className={cashout.status === "processing" ? "animate-pulse" : ""}
                       >
                         {statusInfo.label}
                       </Badge>
-                      {cashout.status === 'failed' && (
+                      {cashout.status === "failed" && (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() =>
                             toast({
-                              type: 'info',
-                              title: 'Contact support',
+                              type: "info",
+                              title: "Contact support",
                               message:
-                                'Merci de contacter le support si ce retrait reste en échec plusieurs jours.',
+                                "Merci de contacter le support si ce retrait reste en échec plusieurs jours.",
                             })
                           }
                         >
@@ -401,8 +436,8 @@ export function WalletBalance({ wallet }: WalletBalanceProps) {
           <AccordionContent className="text-sm text-muted-foreground space-y-2">
             <p>1. Les gains sont calculés après clôture des concours et apparaissent d&apos;abord en attente.</p>
             <p>
-              2. Les retraits peuvent prendre {wallet.average_processing_days ?? 'quelques'} jours ouvrés, selon ton
-              moyen de paiement.
+              2. Les retraits peuvent prendre {wallet.average_processing_days ?? "quelques"} jours ouvrés,
+              selon ton moyen de paiement.
             </p>
             <p>3. Vérifie tes informations de paiement avant de demander un retrait.</p>
           </AccordionContent>
@@ -411,3 +446,4 @@ export function WalletBalance({ wallet }: WalletBalanceProps) {
     </div>
   );
 }
+

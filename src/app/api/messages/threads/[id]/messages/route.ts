@@ -22,8 +22,11 @@ const BodySchema = z.object({
   { message: 'Un message ou une pièce jointe est requis', path: ['body'] }
 );
 
-export async function GET(_: NextRequest, { params }: { params: { id: string } }) {
-  const threadId = params.id;
+export async function GET(
+  _: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
+  const { id: threadId } = await context.params;
   const supabaseSSR = await getSupabaseSSR();
   const {
     data: { user },
@@ -72,7 +75,10 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
   return NextResponse.json({ ok: true, messages: messages || [] });
 }
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     // Rate limit: 60 messages/min per user
     const ip = req.headers.get('x-forwarded-for') || (req as any).ip || 'unknown';
@@ -87,7 +93,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     } catch {
       return NextResponse.json({ ok: false, message: 'CSRF invalide' }, { status: 403 });
     }
-    const threadId = params.id;
+    const { id: threadId } = await context.params;
     const supabaseSSR = await getSupabaseSSR();
     const { data: { user } } = await supabaseSSR.auth.getUser();
     if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
@@ -109,9 +115,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       return NextResponse.json({ ok: false, message: 'Invalid body', errors: parsed.error.flatten() }, { status: 400 });
     }
 
+    const bodyText = (parsed.data.body ?? '').trim();
+
     const { data: msg, error: mErr } = await admin
       .from('messages')
-      .insert({ thread_id: threadId, sender_id: user.id, body: parsed.data.body?.trim() || '' })
+      .insert({ thread_id: threadId, sender_id: user.id, body: bodyText })
       .select('id')
       .single();
     if (mErr) return NextResponse.json({ ok: false, message: 'Insert failed', error: mErr.message }, { status: 500 });
@@ -132,7 +140,12 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     const unread_for_creator = user.id !== thread.creator_id;
     await admin
       .from('messages_threads')
-      .update({ last_message: parsed.data.body.slice(0, 200), unread_for_brand, unread_for_creator, updated_at: new Date().toISOString() })
+      .update({
+        last_message: bodyText.slice(0, 200),
+        unread_for_brand,
+        unread_for_creator,
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', threadId);
 
     // Notify the other participant

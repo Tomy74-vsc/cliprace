@@ -7,7 +7,10 @@ import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { getUserRole } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 
-export async function POST(_req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(
+  _req: NextRequest,
+  _context: { params: Promise<{ id: string }> }
+) {
   try {
     const supabaseSSR = await getSupabaseSSR();
     const { data: { user } } = await supabaseSSR.auth.getUser();

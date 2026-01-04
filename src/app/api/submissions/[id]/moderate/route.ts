@@ -12,13 +12,16 @@ import { getUserRole } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 
 const BodySchema = z.object({
-  status: z.enum(['approved', 'rejected']),
+  status: z.enum(['approved', 'rejected', 'removed']),
   reason: z.string().max(500).optional(),
 });
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
-    const submissionId = params.id;
+    const { id: submissionId } = await context.params;
     const supabaseSSR = await getSupabaseSSR();
     const {
       data: { user },
@@ -55,6 +58,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!isOwner && !isAdmin) return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
 
     const { status, reason } = parsed.data;
+    if ((status === 'rejected' || status === 'removed') && !reason) {
+      return NextResponse.json({ ok: false, message: 'Reason required for rejection/removal' }, { status: 400 });
+    }
 
     // Update submission
     const updatePayload: Record<string, any> = {
@@ -62,8 +68,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       moderated_by: user.id,
       updated_at: new Date().toISOString(),
     };
-    if (status === 'rejected') updatePayload.rejection_reason = reason ?? null;
-    if (status === 'approved') updatePayload.rejection_reason = null;
+    if (status === 'approved') {
+      updatePayload.rejection_reason = null;
+      updatePayload.approved_at = new Date().toISOString();
+    } else {
+      updatePayload.rejection_reason = reason ?? null;
+      updatePayload.approved_at = null;
+    }
     if (reason) updatePayload.moderation_notes = reason;
 
     const { error: updErr } = await admin
@@ -72,11 +83,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       .eq('id', submissionId);
     if (updErr) return NextResponse.json({ ok: false, message: 'Update failed', error: updErr.message }, { status: 500 });
 
+    // Update moderation queue status
+    await admin
+      .from('moderation_queue')
+      .update({
+        status: 'completed',
+        reviewed_by: user.id,
+        reviewed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('submission_id', submissionId);
     // Write moderation action
     await admin.from('moderation_actions').insert({
       target_table: 'submissions',
       target_id: submissionId,
-      action: status === 'approved' ? 'approve' : 'reject',
+      action: status === 'approved' ? 'approve' : status === 'removed' ? 'remove' : 'reject',
       reason: reason ?? null,
       actor_id: user.id,
     });
@@ -112,3 +133,4 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }
+

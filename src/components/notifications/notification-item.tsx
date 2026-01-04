@@ -6,6 +6,7 @@ import { motion } from 'framer-motion';
 import { Bell, CreditCard, MessageSquare, Upload, MoreHorizontal } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -26,6 +27,7 @@ export type NotificationRow = {
   title: string;
   message: string;
   actionUrl?: string;
+  avatarUrl?: string;
 };
 
 function NotificationIcon({ type }: { type: NotificationType }) {
@@ -91,7 +93,16 @@ export function NotificationItem({ notification }: NotificationItemProps) {
     >
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <NotificationIcon type={notification.type} />
+          {notification.avatarUrl ? (
+            <Avatar className="h-9 w-9 border border-border">
+              <AvatarImage src={notification.avatarUrl} alt={notification.title} />
+              <AvatarFallback>CR</AvatarFallback>
+            </Avatar>
+          ) : (
+            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+              <NotificationIcon type={notification.type} />
+            </div>
+          )}
           <div>
             <p className="text-sm font-semibold text-foreground">{notification.title}</p>
             <p className="text-xs text-muted-foreground">{notification.message}</p>
@@ -149,4 +160,3 @@ export function NotificationItem({ notification }: NotificationItemProps) {
     </motion.div>
   );
 }
-

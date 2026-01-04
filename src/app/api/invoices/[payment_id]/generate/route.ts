@@ -8,9 +8,10 @@ import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { getUserRole } from '@/lib/auth';
 import { assertCsrf } from '@/lib/csrf';
 import { createError, formatErrorResponse } from '@/lib/errors';
-import { pdf } from '@react-pdf/renderer';
+import { pdf, type DocumentProps } from '@react-pdf/renderer';
 import { InvoicePDF } from '@/components/pdf/invoice-pdf';
 import crypto from 'crypto';
+import { createElement, type ReactElement } from 'react';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ payment_id: string }> }) {
   try {
@@ -88,8 +89,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
       throw createError('VALIDATION_ERROR', 'Le paiement doit être réussi pour générer une facture', 400);
     }
 
-    const contest = payment.contest as { title: string; prize_pool_cents: number } | null;
-    const brand = payment.brand as {
+    const contest = (Array.isArray((payment as any).contest)
+      ? (payment as any).contest[0]
+      : (payment as any).contest) as { title: string; prize_pool_cents: number } | null;
+
+    const brand = (Array.isArray((payment as any).brand)
+      ? (payment as any).brand[0]
+      : (payment as any).brand) as {
       display_name?: string | null;
       profile_brands?: {
         company_name: string;
@@ -131,48 +137,46 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
     const address = addressParts.join(', ');
 
     // Générer le PDF
-    const pdfDoc = (
-      <InvoicePDF
-        invoice={{
-          number: invoiceNumber,
-          issued_at: payment.created_at,
-          due_date: payment.created_at, // Même date car déjà payé
-        }}
-        brand={{
-          company_name: brand.profile_brands.company_name,
-          address: address || undefined,
-          vat_number: brand.profile_brands.vat_number || undefined,
-        }}
-        contest={{
-          title: contest.title,
-          id: payment.contest_id,
-        }}
-        payment={{
-          amount_cents: payment.amount_cents,
-          currency: payment.currency || 'EUR',
-          stripe_payment_intent_id: payment.stripe_payment_intent_id || undefined,
-          created_at: payment.created_at,
-        }}
-        items={[
-          {
-            description: `Prize pool - Concours "${contest.title}"`,
-            quantity: 1,
-            unit_price_cents: prizePoolCents,
-            total_cents: prizePoolCents,
-          },
-          {
-            description: 'Commission de plateforme (15%)',
-            quantity: 1,
-            unit_price_cents: commissionCents,
-            total_cents: commissionCents,
-          },
-        ]}
-        subtotal_cents={subtotalCents}
-        vat_rate={vatRate}
-        vat_amount_cents={vatAmountCents}
-        total_cents={totalCents}
-      />
-    );
+    const pdfDoc = createElement(InvoicePDF, {
+      invoice: {
+        number: invoiceNumber,
+        issued_at: payment.created_at,
+        due_date: payment.created_at,
+      },
+      brand: {
+        company_name: brand.profile_brands.company_name,
+        address: address || undefined,
+        vat_number: brand.profile_brands.vat_number || undefined,
+      },
+      contest: {
+        title: contest.title,
+        id: payment.contest_id,
+      },
+      payment: {
+        amount_cents: payment.amount_cents,
+        currency: payment.currency || 'EUR',
+        stripe_payment_intent_id: payment.stripe_payment_intent_id || undefined,
+        created_at: payment.created_at,
+      },
+      items: [
+        {
+          description: `Prize pool - Concours "${contest.title}"`,
+          quantity: 1,
+          unit_price_cents: prizePoolCents,
+          total_cents: prizePoolCents,
+        },
+        {
+          description: 'Commission de plateforme (15%)',
+          quantity: 1,
+          unit_price_cents: commissionCents,
+          total_cents: commissionCents,
+        },
+      ],
+      subtotal_cents: subtotalCents,
+      vat_rate: vatRate,
+      vat_amount_cents: vatAmountCents,
+      total_cents: totalCents,
+    }) as unknown as ReactElement<DocumentProps>;
 
     // Générer le PDF
     const pdfInstance = pdf(pdfDoc);
@@ -218,15 +222,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
     }
 
     // Audit log
-    await admin.from('audit_logs').insert({
+    const { error: auditError } = await admin.from('audit_logs').insert({
       actor_id: user.id,
       action: 'invoice_generate',
       table_name: 'payments_brand',
       row_pk: payment_id,
       new_values: { invoice_number: invoiceNumber, invoice_pdf_url: urlData.publicUrl },
-    }).catch((err) => {
-      console.error('Audit log failed for invoice_generate', err);
     });
+    if (auditError) {
+      console.error('Audit log failed for invoice_generate', auditError);
+    }
 
     // Retourner l'URL du PDF
     return NextResponse.json({

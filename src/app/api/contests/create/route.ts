@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
       user_agent: ua,
     });
     if (auditError) {
-      // Ne bloque pas la r��ponse, mais journalise pour investigation
+      // Ne bloque pas la r?ponse, mais journalise pour investigation
       console.error('Audit log failed for contest_create', auditError);
     }
 
@@ -206,7 +206,7 @@ function normalizePrizes(prizes?: ContestCreateInput['prizes']): NormalizedPrize
       if (seen.has(position)) {
         throw createError(
           'VALIDATION_ERROR',
-          `La position ${position} est dǸj�� dǸfinie dans les rǸcompenses`,
+          `La position ${position} est d?j? d?finie dans les rǸcompenses`,
           400
         );
       }
@@ -273,7 +273,7 @@ async function resolveBrandId({
       throw createError('NOT_FOUND', 'Marque cible introuvable', 404, error?.message);
     }
     if (data.role !== 'brand') {
-      throw createError('FORBIDDEN', 'Le profil cibl�� n\'est pas une marque', 403);
+      throw createError('FORBIDDEN', "Le profil ciblé n'est pas une marque", 403);
     }
     return data.id;
   }

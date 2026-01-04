@@ -72,31 +72,6 @@ export default function ConfirmResetPasswordPage() {
     };
 
     const hydrateTokens = async () => {
-      try {
-        const { data, error } = await supabase.auth.getSessionFromUrl({
-          storeSession: false,
-        });
-
-        if (!error && data.session?.access_token && data.session?.refresh_token) {
-          await supabase.auth.setSession({
-            access_token: data.session.access_token,
-            refresh_token: data.session.refresh_token,
-          });
-
-          if (isMounted) {
-            setTokens({
-              access_token: data.session.access_token,
-              refresh_token: data.session.refresh_token,
-            });
-            window.history.replaceState({}, document.title, window.location.pathname + window.location.search);
-            setTokensReady(true);
-            return;
-          }
-        }
-      } catch {
-        // Ignore and fallback to manual parsing
-      }
-
       const hashTokens = typeof window !== 'undefined' ? parseTokens(window.location.hash) : null;
       if (hashTokens) {
         await supabase.auth.setSession(hashTokens).catch(() => void 0);

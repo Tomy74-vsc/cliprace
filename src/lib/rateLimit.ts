@@ -41,12 +41,7 @@ export async function rateLimit(options: RateLimitOptions): Promise<boolean> {
     } else {
       // Best-effort cleanup of expired entries (async, fire-and-forget)
       const cleanupThreshold = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      admin
-        .from('rate_limits')
-        .delete()
-        .lt('expires_at', cleanupThreshold)
-        .then(() => void 0)
-        .catch(() => void 0);
+      void admin.from('rate_limits').delete().lt('expires_at', cleanupThreshold);
     }
 
     return true;

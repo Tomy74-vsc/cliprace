@@ -180,8 +180,14 @@ export function EmptyStateEnhanced({
 // Composant spécifique pour les différents types
 export function BrandEmptyState({
   type,
+  title,
+  description,
   ...props
-}: Omit<EmptyStateEnhancedProps, 'type'> & { type: EmptyStateType }) {
+}: Omit<EmptyStateEnhancedProps, 'type' | 'title' | 'description'> & {
+  type: EmptyStateType;
+  title?: string;
+  description?: string;
+}) {
   const defaultConfigs: Record<EmptyStateType, Partial<EmptyStateEnhancedProps>> = {
     'no-contests': {
       title: 'Prêt à lancer ton premier concours ?',
@@ -217,24 +223,22 @@ export function BrandEmptyState({
       description: 'Tu es à jour ! Toutes tes notifications importantes apparaîtront ici.',
     },
     error: {
-      title: props.title || 'Erreur',
-      description: props.description || 'Une erreur est survenue.',
+      title: title || 'Erreur',
+      description: description || 'Une erreur est survenue.',
     },
     default: {
-      title: props.title || 'Aucun élément',
-      description: props.description,
+      title: title || 'Aucun élément',
+      description: description,
     },
   };
 
   const defaultConfig = defaultConfigs[type];
 
+  const resolvedTitle = defaultConfig.title || title || 'Aucun élément';
+  const resolvedDescription = description || defaultConfig.description;
+
   return (
-    <EmptyStateEnhanced
-      type={type}
-      title={defaultConfig.title || props.title || 'Aucun élément'}
-      description={props.description || defaultConfig.description}
-      {...props}
-    />
+    <EmptyStateEnhanced {...props} type={type} title={resolvedTitle} description={resolvedDescription} />
   );
 }
 

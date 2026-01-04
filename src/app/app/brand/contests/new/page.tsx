@@ -21,7 +21,7 @@ export default async function NewContestWizardPage() {
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
       <Suspense fallback={<div>Chargement...</div>}>
-        <ContestWizardClient userId={user.id} />
+        <ContestWizardClient brandId={user.id} />
       </Suspense>
     </main>
   );

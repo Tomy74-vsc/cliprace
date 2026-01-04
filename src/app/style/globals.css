@@ -23,6 +23,16 @@
   --secondary-foreground: #0f172a;
   --destructive: #f43f5e;
   --destructive-foreground: #fef2f2;
+
+  /* Statuts (palette secondaire) */
+  --success: #10b981;
+  --success-foreground: #052e24;
+  --warning: #f59e0b;
+  --warning-foreground: #451a03;
+  --info: #0ea5e9;
+  --info-foreground: #082f49;
+  --danger: #f43f5e;
+  --danger-foreground: #4c0519;
   --border: #e2e8f0;
   --input: #e2e8f0;
   --ring: #6366f1;
@@ -37,6 +47,14 @@
   --accent-violet: #7c3aed;
   --accent-indigo: #6366f1;
   --accent-gradient: linear-gradient(90deg, var(--accent-indigo), var(--accent-violet));
+
+  /* Gradient "ClipRace" réutilisable */
+  --cliprace-gradient: linear-gradient(135deg, rgba(99, 91, 255, 0.20), rgba(124, 58, 237, 0.14), transparent 70%);
+  --cliprace-pattern:
+    radial-gradient(1px 1px at 12% 18%, rgba(99, 91, 255, 0.24), transparent 60%),
+    radial-gradient(1px 1px at 68% 22%, rgba(124, 58, 237, 0.22), transparent 60%),
+    radial-gradient(1px 1px at 82% 64%, rgba(14, 165, 233, 0.18), transparent 60%),
+    radial-gradient(1px 1px at 28% 78%, rgba(99, 91, 255, 0.16), transparent 60%);
 
   /* Parallax (pilotée en JS) */
   --hero-parallax: 0px;
@@ -66,6 +84,15 @@
   --secondary-foreground: #e2e8f0;
   --destructive: #f43f5e;
   --destructive-foreground: #fff1f2;
+
+  --success: #10b981;
+  --success-foreground: #d1fae5;
+  --warning: #f59e0b;
+  --warning-foreground: #ffedd5;
+  --info: #0ea5e9;
+  --info-foreground: #bae6fd;
+  --danger: #f43f5e;
+  --danger-foreground: #ffe4e6;
   --border: #1e293b;
   --input: #1e293b;
   --ring: #6366f1;
@@ -77,6 +104,40 @@
 
   --scrollbar-thumb: rgba(99, 102, 241, 0.45);
   --scrollbar-thumb-hover: rgba(99, 102, 241, 0.65);
+}
+
+/* =========================
+   ClipRace: surfaces & patterns
+   ========================= */
+.cliprace-surface {
+  background-image: var(--cliprace-gradient), var(--cliprace-pattern);
+  background-repeat: no-repeat, no-repeat;
+  background-size: cover, cover;
+}
+
+.cliprace-hero {
+  position: relative;
+}
+.cliprace-hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--cliprace-gradient), var(--cliprace-pattern);
+  opacity: 1;
+  pointer-events: none;
+}
+.cliprace-hero::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(900px 480px at 50% -10%, rgba(124,58,237,.10), transparent 60%),
+              radial-gradient(700px 360px at 80% 10%, rgba(99,91,255,.08), transparent 60%);
+  opacity: 1;
+  pointer-events: none;
+}
+.cliprace-hero > * {
+  position: relative;
+  z-index: 1;
 }
 
 /* =========================
@@ -479,6 +540,78 @@ p {
 }
 .dark .hr-muted {
   background: linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent);
+}
+
+/* =========================
+   Admin Design System
+   ========================= */
+.admin-scope {
+  --admin-control-h: 2.5rem;
+  --admin-control-fs: 0.875rem;
+  --admin-control-radius: 0.9rem;
+  --admin-filters-gap: 0.75rem;
+  --admin-table-px: 1rem;
+  --admin-table-py: 0.875rem;
+  --admin-table-fs: 0.875rem;
+}
+
+.admin-scope[data-admin-density="compact"] {
+  --admin-control-h: 2.4rem;
+  --admin-control-fs: 0.875rem;
+  --admin-filters-gap: 0.65rem;
+  --admin-table-px: 0.95rem;
+  --admin-table-py: 0.75rem;
+  --admin-table-fs: 0.875rem;
+}
+
+.admin-scope[data-admin-density="dense"] {
+  --admin-control-h: 2.15rem;
+  --admin-control-fs: 0.8125rem;
+  --admin-filters-gap: 0.55rem;
+  --admin-table-px: 0.85rem;
+  --admin-table-py: 0.6rem;
+  --admin-table-fs: 0.8125rem;
+}
+
+.admin-filters {
+  gap: var(--admin-filters-gap);
+}
+
+.admin-filters input,
+.admin-filters select,
+.admin-filters textarea {
+  height: var(--admin-control-h);
+  font-size: var(--admin-control-fs);
+  border-radius: var(--admin-control-radius);
+}
+
+.admin-table__table {
+  font-size: var(--admin-table-fs);
+}
+
+.admin-table thead th {
+  position: sticky;
+  top: 0;
+  background: var(--surface-elev-1);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  z-index: 1;
+}
+
+.admin-table thead th,
+.admin-table tbody td {
+  padding: var(--admin-table-py) var(--admin-table-px);
+}
+
+.admin-table tbody tr {
+  transition: background-color 140ms ease;
+}
+
+.admin-table tbody tr:hover {
+  background: rgba(2, 6, 23, 0.03);
+}
+.dark .admin-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 /* =========================

@@ -1,20 +1,22 @@
 /*
 Page Wallet - récap gains + retraits, empty state si aucun gain.
 */
-import { getSupabaseSSR } from '@/lib/supabase/ssr';
-import { getSession } from '@/lib/auth';
-import { WalletBalance, type WalletData } from '@/components/wallet/wallet-balance';
-import { EmptyState } from '@/components/creator/empty-state';
-import { Card, CardContent } from '@/components/ui/card';
-import { Skeleton } from '@/components/creator/skeletons';
-import { TrackOnView } from '@/components/analytics/track-once';
+import { getSupabaseSSR } from "@/lib/supabase/ssr";
+import { getSession } from "@/lib/auth";
+import { WalletBalance, type WalletData } from "@/components/wallet/wallet-balance";
+import { EmptyState } from "@/components/creator/empty-state";
+import { Card, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/creator/skeletons";
+import { TrackOnView } from "@/components/analytics/track-once";
+import { CreatorCoach } from "@/components/creator/creator-coach";
+import { Trophy } from "lucide-react";
 
 async function getWalletData(userId: string): Promise<{ wallet?: WalletData; error?: string }> {
   try {
     const supabase = await getSupabaseSSR();
 
     const { data: winnings, error: winError } = await supabase
-      .from('contest_winnings')
+      .from("contest_winnings")
       .select(
         `
         id,
@@ -28,16 +30,16 @@ async function getWalletData(userId: string): Promise<{ wallet?: WalletData; err
         contest:contest_id ( title )
       `,
       )
-      .eq('creator_id', userId)
-      .order('calculated_at', { ascending: false });
+      .eq("creator_id", userId)
+      .order("calculated_at", { ascending: false });
 
     if (winError) throw winError;
 
     const { data: cashouts, error: cashoutError } = await supabase
-      .from('cashouts')
-      .select('id, amount_cents, status, requested_at, processed_at')
-      .eq('creator_id', userId)
-      .order('requested_at', { ascending: false });
+      .from("cashouts")
+      .select("id, amount_cents, status, requested_at, processed_at")
+      .eq("creator_id", userId)
+      .order("requested_at", { ascending: false });
 
     if (cashoutError) throw cashoutError;
 
@@ -47,7 +49,7 @@ async function getWalletData(userId: string): Promise<{ wallet?: WalletData; err
 
     const activeCashouts =
       (cashouts || [])
-        .filter((c) => ['requested', 'processing'].includes(c.status))
+        .filter((c) => ["requested", "processing"].includes(c.status))
         .reduce((sum, c) => sum + c.amount_cents, 0) || 0;
 
     const balance_cents = Math.max(0, unpaidWinnings - activeCashouts);
@@ -56,7 +58,7 @@ async function getWalletData(userId: string): Promise<{ wallet?: WalletData; err
       0,
     );
     const withdrawn_cents = (cashouts || [])
-      .filter((c) => c.status === 'paid')
+      .filter((c) => c.status === "paid")
       .reduce((sum, c) => sum + c.amount_cents, 0);
 
     const delays: number[] = (cashouts || [])
@@ -78,14 +80,14 @@ async function getWalletData(userId: string): Promise<{ wallet?: WalletData; err
         total_earnings_cents,
         withdrawn_cents,
         pending_cents: unpaidWinnings,
-        currency: 'EUR',
+        currency: "EUR",
         average_processing_days,
         winnings: (winnings || []).map((w) => {
           const contestRel = w.contest as unknown;
           const contestTitle =
             (Array.isArray(contestRel)
               ? (contestRel[0] as { title?: string } | undefined)?.title
-              : (contestRel as { title?: string } | null | undefined)?.title) || 'Concours inconnu';
+              : (contestRel as { title?: string } | null | undefined)?.title) || "Concours inconnu";
 
           return {
             id: w.id,
@@ -102,17 +104,17 @@ async function getWalletData(userId: string): Promise<{ wallet?: WalletData; err
         cashouts: (cashouts || []).map((c) => ({
           id: c.id,
           amount_cents: c.amount_cents,
-          status: c.status as WalletData['cashouts'][number]['status'],
+          status: c.status as WalletData["cashouts"][number]["status"],
           requested_at: c.requested_at,
           processed_at: c.processed_at,
         })),
       },
     };
   } catch (error) {
-    console.error('Wallet load error', error);
+    console.error("Wallet load error", error);
     return {
       error:
-        'Impossible de charger ton portefeuille. Réessaie plus tard ou contacte le support.',
+        "Impossible de charger ton portefeuille. Réessaie plus tard ou contacte le support.",
     };
   }
 }
@@ -151,7 +153,7 @@ export default async function WalletPage() {
         <EmptyState
           title="Erreur de chargement"
           description="Impossible de charger ton portefeuille. Réessaie plus tard ou contacte le support si le problème persiste."
-          action={{ label: 'Réessayer', href: '/app/creator/wallet', variant: 'secondary' }}
+          action={{ label: "Réessayer", href: "/app/creator/wallet", variant: "secondary" }}
         />
       </main>
     );
@@ -181,11 +183,26 @@ export default async function WalletPage() {
         <p className="text-muted-foreground">Gère tes gains et demande des retraits.</p>
       </div>
 
+      <CreatorCoach
+        accent="Confiance & gains"
+        title={
+          wallet.total_earnings_cents > 0
+            ? "Tu as déjà débloqué des gains sur ClipRace"
+            : "Ton prochain objectif : débloquer ton premier gain"
+        }
+        description={
+          wallet.total_earnings_cents > 0
+            ? "Suis tes gains, planifie tes retraits et garde un œil sur l’historique de tes cashouts."
+            : "Participe à un concours qui te ressemble, décroche ton premier cashprize puis demande un retrait ici."
+        }
+        icon={<Trophy className="h-4 w-4" />}
+      />
+
       {!wallet.winnings.length && !wallet.cashouts.length ? (
         <EmptyState
           title="Aucun gain pour l'instant"
           description="Participe à des concours pour débloquer des récompenses."
-          action={{ label: 'Découvrir les concours', href: '/app/creator/contests' }}
+          action={{ label: "Découvrir les concours", href: "/app/creator/contests" }}
         />
       ) : (
         <WalletBalance wallet={wallet} />
@@ -193,3 +210,4 @@ export default async function WalletPage() {
     </main>
   );
 }
+

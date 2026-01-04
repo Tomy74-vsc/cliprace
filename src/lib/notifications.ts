@@ -55,11 +55,6 @@ export async function notifyEligibleCreatorsAboutNewContest(
       return networks.includes(creator.primary_platform);
     });
 
-    if (creatorsError) {
-      console.error('Error fetching eligible creators:', creatorsError);
-      return { notified: 0, errors: 0 };
-    }
-
     if (!eligibleCreators || eligibleCreators.length === 0) {
       return { notified: 0, errors: 0 };
     }
@@ -109,14 +104,19 @@ export async function notifyCreatorAboutModeration(
   creatorId: string,
   submissionId: string,
   contestId: string,
-  status: 'approved' | 'rejected',
+  status: 'approved' | 'rejected' | 'removed',
   reason: string | null,
   admin?: ReturnType<typeof getSupabaseAdmin>
 ): Promise<boolean> {
   const supabase = admin || getSupabaseAdmin();
 
   try {
-    const notificationType = status === 'approved' ? 'submission_approved' : 'submission_rejected';
+    const notificationType =
+      status === 'approved'
+        ? 'submission_approved'
+        : status === 'removed'
+          ? 'submission_removed'
+          : 'submission_rejected';
 
     const { error } = await supabase.from('notifications').insert({
       user_id: creatorId,

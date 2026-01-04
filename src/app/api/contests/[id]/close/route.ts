@@ -11,9 +11,12 @@ import { getSupabaseAdmin } from '@/lib/supabase/server';
 
 const BodySchema = z.object({ force: z.boolean().optional() });
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
-    const contestId = params.id;
+    const { id: contestId } = await context.params;
     const supabaseSSR = await getSupabaseSSR();
     const { data: { user } } = await supabaseSSR.auth.getUser();
     if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
