@@ -2,7 +2,6 @@
 Helper functions for creating notifications
 */
 import { getSupabaseAdmin } from '@/lib/supabase/server';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 /**
  * Notifie tous les créateurs éligibles lorsqu'un nouveau concours est activé

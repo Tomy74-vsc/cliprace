@@ -5,6 +5,7 @@ import { getAdminClient } from '@/lib/admin/supabase';
 import { assertAdminBreakGlass } from '@/lib/admin/break-glass';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 const UpdateSchema = z.object({
@@ -19,14 +20,15 @@ export async function PATCH(
   try {
     const { key } = await context.params;
     const { user } = await requireAdminPermission('settings.write');
-    await enforceAdminRateLimit(req, { route: 'admin:settings:update', max: 10, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:settings:update', max: 10, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
       throw createError('FORBIDDEN', 'Invalid CSRF token', 403, csrfError);
     }
 
-    const breakGlass = assertAdminBreakGlass(req, 'settings.write');
+    const breakGlass = await assertAdminBreakGlass(req, 'settings.write', user.id);
 
     const body = await req.json();
     const parsed = UpdateSchema.safeParse(body);
@@ -70,14 +72,15 @@ export async function DELETE(
   try {
     const { key } = await context.params;
     const { user } = await requireAdminPermission('settings.write');
-    await enforceAdminRateLimit(req, { route: 'admin:settings:delete', max: 10, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:settings:delete', max: 10, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
       throw createError('FORBIDDEN', 'Invalid CSRF token', 403, csrfError);
     }
 
-    const breakGlass = assertAdminBreakGlass(req, 'settings.write');
+    const breakGlass = await assertAdminBreakGlass(req, 'settings.write', user.id);
 
     const admin = getAdminClient();
     const { error } = await admin.from('platform_settings').delete().eq('key', key);

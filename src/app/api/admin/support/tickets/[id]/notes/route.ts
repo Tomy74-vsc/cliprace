@@ -4,6 +4,7 @@ import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 const BodySchema = z.object({
@@ -17,7 +18,8 @@ export async function POST(
   try {
     const { id } = await context.params;
     const { user } = await requireAdminPermission('support.write');
-    await enforceAdminRateLimit(req, { route: 'admin:support:tickets:note', max: 60, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:support:tickets:note', max: 60, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {

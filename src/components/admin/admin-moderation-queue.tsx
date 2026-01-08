@@ -9,6 +9,7 @@ import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToastContext } from '@/hooks/use-toast-context';
 import { formatDateTime } from '@/lib/formatters';
+import { getCsrfToken } from '@/lib/csrf-client';
 
 type QueueItem = {
   id: string;
@@ -47,12 +48,6 @@ function statusVariant(status: string): BadgeProps['variant'] {
   if (status === 'completed') return 'success';
   if (status === 'failed') return 'danger';
   return 'default';
-}
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
 }
 
 export function AdminModerationQueue({ items, canWrite = true }: AdminModerationQueueProps) {
@@ -128,6 +123,7 @@ export function AdminModerationQueue({ items, canWrite = true }: AdminModeration
               </td>
               <td>
                 {item.submission?.thumbnail_url ? (
+                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={item.submission.thumbnail_url}
                     alt=""
@@ -227,4 +223,3 @@ export function AdminModerationQueue({ items, canWrite = true }: AdminModeration
     </AdminTable>
   );
 }
-

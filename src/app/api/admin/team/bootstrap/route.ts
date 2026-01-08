@@ -9,9 +9,9 @@ import { createError, formatErrorResponse } from '@/lib/errors';
 type SupabaseErrorLike = { message?: string; code?: string } | null | undefined;
 
 function isMissingTable(error: SupabaseErrorLike, tableName: string) {
-  const code = String((error as any)?.code || '').toUpperCase();
+  const code = String((error as UnsafeAny)?.code || '').toUpperCase();
   if (code === '42P01') return true;
-  const msg = String((error as any)?.message || '').toLowerCase();
+  const msg = String((error as UnsafeAny)?.message || '').toLowerCase();
   if (!msg.includes(tableName.toLowerCase())) return false;
   if (msg.includes('schema cache')) return msg.includes('table') && !msg.includes('column');
   return msg.includes('does not exist') || msg.includes('could not find');
@@ -20,14 +20,14 @@ function isMissingTable(error: SupabaseErrorLike, tableName: string) {
 export async function POST(req: NextRequest) {
   try {
     const { user } = await requireAdminPermission('admin.team.write');
-    await enforceAdminRateLimit(req, { route: 'admin:team:bootstrap', max: 10, windowMs: 60_000 });
+    await enforceAdminRateLimit(req, { route: 'admin:team:bootstrap', max: 10, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
       throw createError('FORBIDDEN', 'Jeton CSRF invalide', 403, csrfError);
     }
 
-    const breakGlass = assertAdminBreakGlass(req, 'admin.team.write');
+    const breakGlass = await assertAdminBreakGlass(req, 'admin.team.write', user.id);
 
     const admin = getAdminClient();
     const now = new Date().toISOString();
@@ -75,3 +75,4 @@ export async function POST(req: NextRequest) {
     return formatErrorResponse(error);
   }
 }
+

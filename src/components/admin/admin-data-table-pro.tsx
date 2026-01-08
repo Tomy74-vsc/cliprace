@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useMemo, useState, type ReactNode } from 'react';
 import {
@@ -29,7 +29,7 @@ import {
 
 export type AdminDataTableProProps<TData> = {
   data: TData[];
-  columns: Array<ColumnDef<TData, any>>;
+  columns: Array<ColumnDef<TData, UnsafeAny>>;
   getRowId?: (row: TData, index: number) => string;
   emptyTitle?: string;
   emptyDescription?: string;
@@ -56,7 +56,7 @@ export function AdminDataTablePro<TData>({
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(initialVisibility ?? {});
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 
-  const selectionColumn = useMemo<ColumnDef<TData, any>>(
+  const selectionColumn = useMemo<ColumnDef<TData, UnsafeAny>>(
     () => ({
       id: '__select',
       header: ({ table }) => (
@@ -198,3 +198,4 @@ export function AdminDataTablePro<TData>({
     </div>
   );
 }
+

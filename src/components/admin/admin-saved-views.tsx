@@ -1,8 +1,8 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { Bookmark, Trash2 } from 'lucide-react';
+import { Bookmark, Trash2, Users, User, Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -12,6 +12,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 type SavedView = {
@@ -19,6 +22,9 @@ type SavedView = {
   name: string;
   params: Record<string, string>;
   route: string;
+  visibility?: 'personal' | 'team';
+  is_default?: boolean;
+  created_by?: string;
 };
 
 function storageKey(route: string) {
@@ -55,6 +61,8 @@ export function AdminSavedViews() {
   const [openSave, setOpenSave] = useState(false);
   const [openManage, setOpenManage] = useState(false);
   const [name, setName] = useState('');
+  const [visibility, setVisibility] = useState<'personal' | 'team'>('personal');
+  const [isDefault, setIsDefault] = useState(false);
   const [views, setViews] = useState<SavedView[]>([]);
   const [backendAvailable, setBackendAvailable] = useState(true);
 
@@ -72,11 +80,14 @@ export function AdminSavedViews() {
         if (res.ok && data?.ok && Array.isArray(data.items) && !data.missing_table) {
           setBackendAvailable(true);
           setViews(
-            data.items.map((v: any) => ({
+            data.items.map((v: UnsafeAny) => ({
               id: v.id,
               name: v.name,
               params: (v.params ?? {}) as Record<string, string>,
               route: v.route,
+              visibility: v.visibility || 'personal',
+              is_default: v.is_default || false,
+              created_by: v.created_by,
             }))
           );
           return;
@@ -130,7 +141,13 @@ export function AdminSavedViews() {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'x-csrf': csrfToken },
       credentials: 'include',
-      body: JSON.stringify({ route: pathname, name: trimmed, params }),
+      body: JSON.stringify({ 
+        route: pathname, 
+        name: trimmed, 
+        params,
+        visibility,
+        is_default: isDefault,
+      }),
     });
     const data = await res.json().catch(() => null);
     if (!res.ok || !data?.ok) {
@@ -194,7 +211,21 @@ export function AdminSavedViews() {
           ) : (
             views.map((view) => (
               <DropdownMenuItem key={view.id} onSelect={() => applyView(view)}>
-                {view.name}
+                <div className="flex items-center gap-2 w-full">
+                  {view.is_default && <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />}
+                  <span className="flex-1">{view.name}</span>
+                  {view.visibility === 'team' ? (
+                    <Badge variant="secondary" className="text-xs">
+                      <Users className="h-3 w-3 mr-1" />
+                      Team
+                    </Badge>
+                  ) : (
+                    <Badge variant="outline" className="text-xs">
+                      <User className="h-3 w-3 mr-1" />
+                      Perso
+                    </Badge>
+                  )}
+                </div>
               </DropdownMenuItem>
             ))
           )}
@@ -211,15 +242,57 @@ export function AdminSavedViews() {
           <DialogHeader>
             <DialogTitle>Sauvegarder une vue</DialogTitle>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="space-y-4">
             <Input
               label="Nom"
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Ex: Mes concours actifs"
             />
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="visibility" className="flex items-center gap-2">
+                  {visibility === 'team' ? <Users className="h-4 w-4" /> : <User className="h-4 w-4" />}
+                  Visibilité
+                </Label>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant={visibility === 'personal' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setVisibility('personal')}
+                  >
+                    <User className="h-4 w-4 mr-1" />
+                    Personnel
+                  </Button>
+                  <Button
+                    variant={visibility === 'team' ? 'secondary' : 'ghost'}
+                    size="sm"
+                    onClick={() => setVisibility('team')}
+                  >
+                    <Users className="h-4 w-4 mr-1" />
+                    Équipe
+                  </Button>
+                </div>
+              </div>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="is_default" className="flex items-center gap-2">
+                  <Star className="h-4 w-4" />
+                  Vue par défaut
+                </Label>
+                <Switch
+                  id="is_default"
+                  checked={isDefault}
+                  onCheckedChange={setIsDefault}
+                />
+              </div>
+            </div>
             <div className="flex items-center justify-end gap-2">
-              <Button variant="secondary" onClick={() => setOpenSave(false)}>
+              <Button variant="secondary" onClick={() => {
+                setOpenSave(false);
+                setName('');
+                setVisibility('personal');
+                setIsDefault(false);
+              }}>
                 Annuler
               </Button>
               <Button onClick={createView} disabled={name.trim().length < 2}>
@@ -244,8 +317,24 @@ export function AdminSavedViews() {
                   key={view.id}
                   className="flex items-center justify-between gap-3 rounded-xl border border-border bg-card px-3 py-2"
                 >
-                  <div className="min-w-0">
-                    <div className="font-medium truncate">{view.name}</div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <div className="font-medium truncate">{view.name}</div>
+                      {view.is_default && (
+                        <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                      )}
+                      {view.visibility === 'team' ? (
+                        <Badge variant="secondary" className="text-xs">
+                          <Users className="h-3 w-3 mr-1" />
+                          Team
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-xs">
+                          <User className="h-3 w-3 mr-1" />
+                          Perso
+                        </Badge>
+                      )}
+                    </div>
                     <div className="text-xs text-muted-foreground truncate">
                       {serializeParams(view.params) || '(aucun filtre)'}
                     </div>
@@ -267,4 +356,5 @@ export function AdminSavedViews() {
     </>
   );
 }
+
 

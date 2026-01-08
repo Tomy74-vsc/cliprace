@@ -10,6 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToastContext } from '@/hooks/use-toast-context';
 import { formatDateTime } from '@/lib/formatters';
+import { getCsrfToken } from '@/lib/csrf-client';
 
 type DashboardTask = {
   type: string;
@@ -24,12 +25,6 @@ type DashboardTask = {
   cta: { kind: string; label: string; href: string };
   href: string;
 };
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
-}
 
 function priorityBadge(priority: DashboardTask['priority']) {
   if (priority === 'urgent') return <Badge variant="danger">urgent</Badge>;

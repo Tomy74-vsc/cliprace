@@ -12,9 +12,9 @@ function toDateStringUTC(date: Date) {
 type SupabaseErrorLike = { message?: string; code?: string } | null | undefined;
 
 function isMissingTable(error: SupabaseErrorLike, tableName: string) {
-  const code = String((error as any)?.code || '').toUpperCase();
+  const code = String((error as UnsafeAny)?.code || '').toUpperCase();
   if (code === '42P01') return true;
-  const msg = String((error as any)?.message || '').toLowerCase();
+  const msg = String((error as UnsafeAny)?.message || '').toLowerCase();
   if (!msg.includes(tableName.toLowerCase())) return false;
   return msg.includes('does not exist') || msg.includes('could not find') || msg.includes('schema cache');
 }
@@ -140,7 +140,7 @@ export async function GET() {
     const payDay = new Map<string, number>();
     for (const p of paymentsRes.data ?? []) {
       if (p.status !== 'succeeded') continue;
-      const d = toDateStringUTC(new Date(p.created_at as any));
+      const d = toDateStringUTC(new Date(p.created_at as UnsafeAny));
       payDay.set(d, (payDay.get(d) ?? 0) + (p.amount_cents ?? 0));
     }
     const revenueToday = payDay.get(todayDate) ?? 0;
@@ -170,8 +170,8 @@ export async function GET() {
     if (supportErr) throw createError('DATABASE_ERROR', 'Failed to load support', 500, supportErr.message);
 
     // ---- Top 10 actionable tasks
-    const tasks: Array<any> = [];
-    const myWork: any = {
+    const tasks: Array<UnsafeAny> = [];
+    const myWork: UnsafeAny = {
       moderation_claimed: 0,
       support_assigned_to_me: 0,
       leads_assigned_to_me: 0,
@@ -224,20 +224,20 @@ export async function GET() {
 
       const rows = [...(mineRows ?? []), ...(pendingRows ?? [])];
       for (const row of rows) {
-        const submission: any = (row as any).submission;
+        const submission: UnsafeAny = (row as UnsafeAny).submission;
         const creator = submission?.creator ?? null;
         const contest = submission?.contest ?? null;
-        const isMine = (row as any).reviewed_by && (row as any).reviewed_by === user.id;
+        const isMine = (row as UnsafeAny).reviewed_by && (row as UnsafeAny).reviewed_by === user.id;
         const canClaim = can('moderation.write');
         tasks.push({
           type: 'moderation.queue',
-          id: (row as any).id,
+          id: (row as UnsafeAny).id,
           priority: 'high',
           title: 'Modération',
           subtitle: contest?.title ? `Concours : ${contest.title}` : 'Concours inconnu',
           meta: creator ? `Créateur : ${creator.display_name || creator.email}` : 'Créateur inconnu',
-          created_at: (row as any).created_at,
-          owner: (row as any).reviewed_by ?? null,
+          created_at: (row as UnsafeAny).created_at,
+          owner: (row as UnsafeAny).reviewed_by ?? null,
           owner_is_me: isMine,
           cta: canClaim
             ? { kind: 'claim', label: isMine ? 'Assigné à moi' : 'Assigner à moi', href: '/app/admin/moderation' }
@@ -287,7 +287,7 @@ export async function GET() {
 
       const rows = [...(mineRows ?? []), ...(unassignedRows ?? [])];
       for (const row of rows) {
-        const requester = (row as any).requester;
+        const requester = (row as UnsafeAny).requester;
         const isMine = row.assigned_to && row.assigned_to === user.id;
         const isUnassigned = !row.assigned_to;
         const canWrite = can('support.write');
@@ -413,7 +413,7 @@ export async function GET() {
         admin
           .from('admin_tasks')
           .select('id, task_type, title, description, priority, status, assigned_to, metadata, created_at')
-          .in('task_type', allowedTypes as any)
+          .in('task_type', allowedTypes as UnsafeAny)
           .in('status', openStatuses)
           .limit(60),
         can('moderation.read')
@@ -423,7 +423,7 @@ export async function GET() {
               .eq('task_type', 'moderation.queue')
               .in('status', openStatuses)
               .eq('assigned_to', user.id)
-          : Promise.resolve({ count: 0, error: null } as any),
+          : Promise.resolve({ count: 0, error: null } as UnsafeAny),
         can('moderation.read')
           ? admin
               .from('admin_tasks')
@@ -431,7 +431,7 @@ export async function GET() {
               .eq('task_type', 'moderation.queue')
               .in('status', openStatuses)
               .is('assigned_to', null)
-          : Promise.resolve({ count: 0, error: null } as any),
+          : Promise.resolve({ count: 0, error: null } as UnsafeAny),
         can('support.read')
           ? admin
               .from('admin_tasks')
@@ -439,7 +439,7 @@ export async function GET() {
               .eq('task_type', 'support.ticket')
               .in('status', openStatuses)
               .eq('assigned_to', user.id)
-          : Promise.resolve({ count: 0, error: null } as any),
+          : Promise.resolve({ count: 0, error: null } as UnsafeAny),
         can('support.read')
           ? admin
               .from('admin_tasks')
@@ -447,7 +447,7 @@ export async function GET() {
               .eq('task_type', 'support.ticket')
               .in('status', openStatuses)
               .is('assigned_to', null)
-          : Promise.resolve({ count: 0, error: null } as any),
+          : Promise.resolve({ count: 0, error: null } as UnsafeAny),
         can('crm.read')
           ? admin
               .from('admin_tasks')
@@ -455,7 +455,7 @@ export async function GET() {
               .eq('task_type', 'crm.lead')
               .in('status', openStatuses)
               .eq('assigned_to', user.id)
-          : Promise.resolve({ count: 0, error: null } as any),
+          : Promise.resolve({ count: 0, error: null } as UnsafeAny),
         can('crm.read')
           ? admin
               .from('admin_tasks')
@@ -463,7 +463,7 @@ export async function GET() {
               .eq('task_type', 'crm.lead')
               .in('status', openStatuses)
               .is('assigned_to', null)
-          : Promise.resolve({ count: 0, error: null } as any),
+          : Promise.resolve({ count: 0, error: null } as UnsafeAny),
       ]);
 
       if (tasksErr && !isMissingTable(tasksErr, 'admin_tasks')) {
@@ -478,7 +478,7 @@ export async function GET() {
         leadsMine?.error ||
         leadsUnassigned?.error;
       if (countErr && !isMissingTable(countErr, 'admin_tasks')) {
-        throw createError('DATABASE_ERROR', 'Failed to load admin task stats', 500, (countErr as any)?.message);
+        throw createError('DATABASE_ERROR', 'Failed to load admin task stats', 500, (countErr as UnsafeAny)?.message);
       }
 
       myWork.moderation_claimed = moderationMine?.count ?? 0;
@@ -489,26 +489,26 @@ export async function GET() {
       myWork.leads_unassigned = leadsUnassigned?.count ?? 0;
 
       for (const row of taskRows ?? []) {
-        const meta = ((row as any).metadata ?? {}) as any;
+        const meta = ((row as UnsafeAny).metadata ?? {}) as UnsafeAny;
         const countValue = typeof meta.count === 'number' ? meta.count : 1;
         if (!countValue) continue;
 
-        const perm = getTaskPermission((row as any).task_type);
-        const href = typeof meta.href === 'string' ? meta.href : taskHref((row as any).task_type);
-        const createdAt = typeof meta.oldest_at === 'string' ? meta.oldest_at : ((row as any).created_at ?? null);
-        const uiPriority = toUiPriority((row as any).priority);
-        const canAssignToMe = Boolean(can('tasks.write') && perm?.write && can(perm.write) && !(row as any).assigned_to);
+        const perm = getTaskPermission((row as UnsafeAny).task_type);
+        const href = typeof meta.href === 'string' ? meta.href : taskHref((row as UnsafeAny).task_type);
+        const createdAt = typeof meta.oldest_at === 'string' ? meta.oldest_at : ((row as UnsafeAny).created_at ?? null);
+        const uiPriority = toUiPriority((row as UnsafeAny).priority);
+        const canAssignToMe = Boolean(can('tasks.write') && perm?.write && can(perm.write) && !(row as UnsafeAny).assigned_to);
 
         tasks.push({
           type: 'admin.task',
-          id: (row as any).id,
+          id: (row as UnsafeAny).id,
           priority: uiPriority,
-          title: (row as any).title,
-          subtitle: (row as any).description ?? '',
+          title: (row as UnsafeAny).title,
+          subtitle: (row as UnsafeAny).description ?? '',
           meta: countValue > 1 ? `${countValue} élément(s)` : '',
           created_at: createdAt,
-          owner: (row as any).assigned_to ?? null,
-          owner_is_me: Boolean((row as any).assigned_to && (row as any).assigned_to === user.id),
+          owner: (row as UnsafeAny).assigned_to ?? null,
+          owner_is_me: Boolean((row as UnsafeAny).assigned_to && (row as UnsafeAny).assigned_to === user.id),
           cta: canAssignToMe ? { kind: 'assign_to_me', label: 'Assigner à moi', href } : { kind: 'open', label: 'Voir', href },
           href,
         });
@@ -528,7 +528,7 @@ export async function GET() {
     const top10 = tasks.slice(0, 10);
 
     // ---- System health
-    const health: any = {
+    const health: UnsafeAny = {
       webhooks_failed_1h: 0,
       webhooks_failed_24h: 0,
       ingestion_errors_1h: 0,
@@ -592,7 +592,7 @@ export async function GET() {
         .limit(250);
       if (error) throw createError('DATABASE_ERROR', 'Failed to load moderation times', 500, error.message);
       const durations = (data ?? [])
-        .map((r) => diffMs(r.created_at as any, r.reviewed_at as any))
+        .map((r) => diffMs(r.created_at as UnsafeAny, r.reviewed_at as UnsafeAny))
         .filter((v): v is number => typeof v === 'number' && v >= 0)
         .map((ms) => ms / 60_000);
       health.moderation_avg_review_minutes_7d = durations.length ? Math.round(avg(durations)) : null;
@@ -608,7 +608,7 @@ export async function GET() {
         .limit(250);
       if (error) throw createError('DATABASE_ERROR', 'Failed to load cashout times', 500, error.message);
       const durations = (data ?? [])
-        .map((r) => diffMs(r.requested_at as any, r.processed_at as any))
+        .map((r) => diffMs(r.requested_at as UnsafeAny, r.processed_at as UnsafeAny))
         .filter((v): v is number => typeof v === 'number' && v >= 0)
         .map((ms) => ms / 60_000);
       health.cashouts_avg_process_minutes_7d = durations.length ? Math.round(avg(durations)) : null;
@@ -623,14 +623,14 @@ export async function GET() {
         .limit(250);
       if (error) throw createError('DATABASE_ERROR', 'Failed to load support times', 500, error.message);
       const durations = (data ?? [])
-        .map((r) => diffMs(r.created_at as any, r.updated_at as any))
+        .map((r) => diffMs(r.created_at as UnsafeAny, r.updated_at as UnsafeAny))
         .filter((v): v is number => typeof v === 'number' && v >= 0)
         .map((ms) => ms / 3_600_000);
       health.support_avg_resolution_hours_7d = durations.length ? Math.round(avg(durations) * 10) / 10 : null;
     }
 
     // ---- Marketing & growth (top lists)
-    const marketing: any = { trending_contests: [], brands_to_relaunch: [], top_creators: [] };
+    const marketing: UnsafeAny = { trending_contests: [], brands_to_relaunch: [], top_creators: [] };
 
     const { data: contests, error: contestsErr } = await admin
       .from('contest_stats')
@@ -651,7 +651,7 @@ export async function GET() {
       if (fallback.error) {
         throw createError('DATABASE_ERROR', 'Failed to load contests', 500, fallback.error.message);
       }
-      marketing.trending_contests = (fallback.data ?? []).map((c: any) => ({
+      marketing.trending_contests = (fallback.data ?? []).map((c: UnsafeAny) => ({
         contest_id: c.id,
         title: c.title,
         status: c.status,
@@ -673,7 +673,7 @@ export async function GET() {
       // optional view may not exist; ignore
       marketing.brands_to_relaunch = [];
     } else {
-      const brandIds = (brands ?? []).map((b) => (b as any).brand_id).filter(Boolean);
+      const brandIds = (brands ?? []).map((b) => (b as UnsafeAny).brand_id).filter(Boolean);
       const { data: brandProfiles, error: profileErr } =
         brandIds.length === 0
           ? { data: [], error: null }
@@ -684,9 +684,9 @@ export async function GET() {
       if (profileErr) throw createError('DATABASE_ERROR', 'Failed to load brands', 500, profileErr.message);
       const brandMap = new Map((brandProfiles ?? []).map((b) => [b.user_id, b]));
       marketing.brands_to_relaunch = (brands ?? [])
-        .filter((b: any) => (b.active_contests ?? 0) === 0)
+        .filter((b: UnsafeAny) => (b.active_contests ?? 0) === 0)
         .slice(0, 5)
-        .map((b: any) => ({
+        .map((b: UnsafeAny) => ({
           brand_id: b.brand_id,
           company_name: brandMap.get(b.brand_id)?.company_name ?? b.brand_id,
           website: brandMap.get(b.brand_id)?.website ?? null,
@@ -705,14 +705,14 @@ export async function GET() {
       }
       marketing.top_creators = [];
     } else {
-      const creatorIds = (creators ?? []).map((c: any) => c.creator_id).filter(Boolean);
+      const creatorIds = (creators ?? []).map((c: UnsafeAny) => c.creator_id).filter(Boolean);
       const { data: profiles, error: profilesErr } =
         creatorIds.length === 0
           ? { data: [], error: null }
           : await admin.from('profiles').select('id, display_name, email').in('id', creatorIds);
       if (profilesErr) throw createError('DATABASE_ERROR', 'Failed to load creators', 500, profilesErr.message);
       const map = new Map((profiles ?? []).map((p) => [p.id, p]));
-      marketing.top_creators = (creators ?? []).map((c: any) => ({
+      marketing.top_creators = (creators ?? []).map((c: UnsafeAny) => ({
         creator_id: c.creator_id,
         label: map.get(c.creator_id)?.display_name || map.get(c.creator_id)?.email || c.creator_id,
         total_views: c.total_views ?? 0,
@@ -730,14 +730,14 @@ export async function GET() {
             .select('id, actor_id, action, table_name, row_pk, created_at, actor:profiles(id, display_name, email)')
             .order('created_at', { ascending: false })
             .limit(12)
-        : Promise.resolve({ data: [], error: null } as any),
+        : Promise.resolve({ data: [], error: null } as UnsafeAny),
       can('audit.read')
         ? admin
             .from('event_log')
             .select('id, event_name, user_id, org_id, created_at, user:profiles(id, display_name, email)')
             .order('created_at', { ascending: false })
             .limit(12)
-        : Promise.resolve({ data: [], error: null } as any),
+        : Promise.resolve({ data: [], error: null } as UnsafeAny),
     ]);
     if (auditRes.error) throw createError('DATABASE_ERROR', 'Failed to load audit', 500, auditRes.error.message);
     if (eventRes.error) throw createError('DATABASE_ERROR', 'Failed to load events', 500, eventRes.error.message);
@@ -754,7 +754,7 @@ export async function GET() {
         .limit(1)
         .maybeSingle();
       if (error) throw createError('DATABASE_ERROR', 'Failed to load cashouts', 500, error.message);
-      const oldestAt = (oldestCashout as any)?.requested_at ?? null;
+      const oldestAt = (oldestCashout as UnsafeAny)?.requested_at ?? null;
       if (oldestAt) {
         const ageHours = Math.floor((Date.now() - new Date(oldestAt).getTime()) / (60 * 60 * 1000));
         if (ageHours >= 48) {
@@ -778,7 +778,7 @@ export async function GET() {
         .limit(1)
         .maybeSingle();
       if (error) throw createError('DATABASE_ERROR', 'Failed to load moderation', 500, error.message);
-      const oldestAt = (oldestMod as any)?.created_at ?? null;
+      const oldestAt = (oldestMod as UnsafeAny)?.created_at ?? null;
       if (oldestAt) {
         const ageHours = Math.floor((Date.now() - new Date(oldestAt).getTime()) / (60 * 60 * 1000));
         if (ageHours >= 24) {
@@ -841,3 +841,4 @@ export async function GET() {
     return formatErrorResponse(error);
   }
 }
+

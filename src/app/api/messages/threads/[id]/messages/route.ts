@@ -81,7 +81,7 @@ export async function POST(
 ) {
   try {
     // Rate limit: 60 messages/min per user
-    const ip = req.headers.get('x-forwarded-for') || (req as any).ip || 'unknown';
+    const ip = req.headers.get('x-forwarded-for') || (req as UnsafeAny).ip || 'unknown';
     const rlKey = `messages:post:${ip}`;
     if (!(await rateLimit({ key: rlKey, route: 'messages:threads:post', windowMs: 60 * 1000, max: 60 }))) {
       return NextResponse.json({ ok: false, message: 'Trop de requêtes, réessayez plus tard.' }, { status: 429 });
@@ -171,3 +171,4 @@ export async function POST(
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }
+

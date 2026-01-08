@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -14,6 +14,7 @@ import { AdminActionPanel } from '@/components/admin/admin-action-panel';
 import { useToastContext } from '@/hooks/use-toast-context';
 import { formatDateTime } from '@/lib/formatters';
 import { cn } from '@/lib/utils';
+import { getCsrfToken } from '@/lib/csrf-client';
 
 type RuleType = 'content' | 'spam' | 'duplicate' | 'domain' | 'flood';
 type RuleStatus = 'draft' | 'published';
@@ -51,7 +52,7 @@ type VersionRow = {
   id: number;
   rule_id: string;
   version: number;
-  snapshot: any;
+  snapshot: UnsafeAny;
   created_at: string;
   created_by: string | null;
 };
@@ -72,41 +73,35 @@ function toList(value: unknown): string[] {
 
 function summarizeConfig(ruleType: RuleType, config: Record<string, unknown>) {
   if (ruleType === 'domain') {
-    const domains = toList((config as any).domains);
+    const domains = toList((config as UnsafeAny).domains);
     if (domains.length === 0) return 'Domaines non renseignés';
     return `Domaines: ${domains.slice(0, 3).join(', ')}${domains.length > 3 ? ` (+${domains.length - 3})` : ''}`;
   }
 
   if (ruleType === 'spam') {
-    const keywords = toList((config as any).keywords);
+    const keywords = toList((config as UnsafeAny).keywords);
     if (keywords.length === 0) return 'Mots-clés non renseignés';
     return `Mots-clés: ${keywords.slice(0, 3).join(', ')}${keywords.length > 3 ? ` (+${keywords.length - 3})` : ''}`;
   }
 
   if (ruleType === 'content') {
-    const contains = typeof (config as any).contains === 'string' ? (config as any).contains.trim() : '';
-    const field = (config as any).field === 'external_url' ? 'URL' : 'Titre';
+    const contains = typeof (config as UnsafeAny).contains === 'string' ? (config as UnsafeAny).contains.trim() : '';
+    const field = (config as UnsafeAny).field === 'external_url' ? 'URL' : 'Titre';
     if (!contains) return 'Motif non renseigné';
     return `Contient \"${contains}\" dans ${field}`;
   }
 
   if (ruleType === 'duplicate') {
-    const windowHours = Number((config as any).window_hours ?? 24);
+    const windowHours = Number((config as UnsafeAny).window_hours ?? 24);
     return `Fenêtre: ${Number.isFinite(windowHours) ? windowHours : 24}h`;
   }
 
   if (ruleType === 'flood') {
-    const maxPerHour = Number((config as any).max_per_hour ?? 10);
+    const maxPerHour = Number((config as UnsafeAny).max_per_hour ?? 10);
     return `Limite: ${Number.isFinite(maxPerHour) ? maxPerHour : 10}/h`;
   }
 
   return '—';
-}
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
 }
 
 function normalizeStatus(value: unknown): RuleStatus {
@@ -191,14 +186,14 @@ function WizardDialog({
       setStatus(normalizeStatus(rule.status));
       setIsActive(rule.status === 'draft' ? false : Boolean(rule.is_active));
 
-      if (rule.rule_type === 'domain') setDomainsText(toList((rule.config as any).domains).join(', '));
-      if (rule.rule_type === 'spam') setKeywordsText(toList((rule.config as any).keywords).join(', '));
+      if (rule.rule_type === 'domain') setDomainsText(toList((rule.config as UnsafeAny).domains).join(', '));
+      if (rule.rule_type === 'spam') setKeywordsText(toList((rule.config as UnsafeAny).keywords).join(', '));
       if (rule.rule_type === 'content') {
-        setContainsField((rule.config as any).field === 'external_url' ? 'external_url' : 'title');
-        setContainsText(typeof (rule.config as any).contains === 'string' ? (rule.config as any).contains : '');
+        setContainsField((rule.config as UnsafeAny).field === 'external_url' ? 'external_url' : 'title');
+        setContainsText(typeof (rule.config as UnsafeAny).contains === 'string' ? (rule.config as UnsafeAny).contains : '');
       }
-      if (rule.rule_type === 'duplicate') setWindowHours(Number((rule.config as any).window_hours ?? 24));
-      if (rule.rule_type === 'flood') setMaxPerHour(Number((rule.config as any).max_per_hour ?? 10));
+      if (rule.rule_type === 'duplicate') setWindowHours(Number((rule.config as UnsafeAny).window_hours ?? 24));
+      if (rule.rule_type === 'flood') setMaxPerHour(Number((rule.config as UnsafeAny).max_per_hour ?? 10));
       return;
     }
 
@@ -325,7 +320,7 @@ function WizardDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as any)}>
+        <Tabs value={tab} onValueChange={(v) => setTab(v as UnsafeAny)}>
           <TabsList>
             <TabsTrigger value="template">Template</TabsTrigger>
             <TabsTrigger value="config">Configuration</TabsTrigger>
@@ -351,7 +346,7 @@ function WizardDialog({
                         <div className="font-semibold">{RULE_TYPE_LABEL[t]}</div>
                         <div className="text-xs text-muted-foreground">
                           {t === 'content'
-                            ? 'Détecter un motif dans le titre ou l’URL.'
+                            ? "Détecter un motif dans le titre ou l’URL."
                             : t === 'spam'
                               ? 'Détecter des mots-clés de spam (titre/URL).'
                               : t === 'domain'
@@ -691,7 +686,7 @@ export function AdminModerationRules({ rules, canWrite = true }: AdminModeration
   const toggleActive = async (rule: ModerationRule, reason: string) => {
     if (!canWrite) return;
     if (normalizeStatus(rule.status) === 'draft') {
-      toast({ type: 'warning', title: 'Brouillon', message: 'Publie la règle avant de l’activer.' });
+      toast({ type: 'warning', title: 'Brouillon', message: "Publie la règle avant de l’activer." });
       return;
     }
     const token = await getCsrfToken();
@@ -926,8 +921,8 @@ export function AdminModerationRules({ rules, canWrite = true }: AdminModeration
                         title={rule.is_active ? 'Désactiver la règle' : 'Activer la règle'}
                         description={
                           st === 'draft'
-                            ? 'Publie la règle avant de l’activer.'
-                            : 'Cette action modifie l’application automatique.'
+                            ? "Publie la règle avant de l’activer."
+                            : "Cette action modifie l'application automatique."
                         }
                         requiresReason
                         confirmLabel={rule.is_active ? 'Désactiver' : 'Activer'}
@@ -959,3 +954,4 @@ export function AdminModerationRules({ rules, canWrite = true }: AdminModeration
     </div>
   );
 }
+

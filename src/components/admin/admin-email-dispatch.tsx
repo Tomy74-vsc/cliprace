@@ -3,6 +3,13 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import {
+  AdminKeyValueEditor,
+  type KeyValueEntry,
+  recordFromEntries,
+} from '@/components/admin/admin-key-value-editor';
+import { getCsrfToken } from '@/lib/csrf-client';
 
 type TemplateOption = {
   id: string;
@@ -18,12 +25,6 @@ interface AdminEmailDispatchProps {
 }
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
-}
 
 function parseRecipients(value: string) {
   const parts = value
@@ -46,15 +47,6 @@ function parseRecipients(value: string) {
   return { recipients, invalid };
 }
 
-function parseMetadata(value: string) {
-  if (!value.trim()) return { ok: true, value: {} as Record<string, unknown> };
-  try {
-    return { ok: true, value: JSON.parse(value) as Record<string, unknown> };
-  } catch (error) {
-    return { ok: false, error };
-  }
-}
-
 export function AdminEmailDispatch({ templates, canWrite }: AdminEmailDispatchProps) {
   const router = useRouter();
   const [mode, setMode] = useState<'manual' | 'segment'>('manual');
@@ -65,7 +57,7 @@ export function AdminEmailDispatch({ templates, canWrite }: AdminEmailDispatchPr
   const [recipients, setRecipients] = useState('');
   const [segmentRole, setSegmentRole] = useState<'all' | 'admin' | 'brand' | 'creator'>('all');
   const [segmentLimit, setSegmentLimit] = useState(100);
-  const [metadata, setMetadata] = useState('{}');
+  const [metadataEntries, setMetadataEntries] = useState<KeyValueEntry[]>([]);
   const [scheduleAt, setScheduleAt] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -79,18 +71,14 @@ export function AdminEmailDispatch({ templates, canWrite }: AdminEmailDispatchPr
     setLoading(true);
     try {
       const token = await getCsrfToken();
-      const parsedMetadata = parseMetadata(metadata);
-      if (!parsedMetadata.ok) {
-        window.alert('Invalid JSON metadata.');
-        return;
-      }
+      const metadata = recordFromEntries(metadataEntries);
 
       const payload: Record<string, unknown> = {
         template_id: templateId || undefined,
         subject: subject.trim() || undefined,
         body_html: bodyHtml.trim() || undefined,
         body_text: bodyText.trim() || undefined,
-        metadata: parsedMetadata.value,
+        metadata,
         schedule_at: scheduleAt ? new Date(scheduleAt).toISOString() : undefined,
       };
 
@@ -115,6 +103,7 @@ export function AdminEmailDispatch({ templates, canWrite }: AdminEmailDispatchPr
         return;
       }
       setRecipients('');
+      setMetadataEntries([]);
       router.refresh();
     } catch (error) {
       window.alert(error instanceof Error ? error.message : 'Dispatch failed');
@@ -125,25 +114,31 @@ export function AdminEmailDispatch({ templates, canWrite }: AdminEmailDispatchPr
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-soft space-y-3">
-      <div className="text-sm font-semibold">Manual send / campaign</div>
+      <div className="text-sm font-semibold">Manual send</div>
       {!canWrite ? (
-        <div className="text-xs text-muted-foreground">Lecture seule — permission requise : emails.write</div>
+        <div className="text-xs text-muted-foreground">Read only - requires emails.write</div>
       ) : null}
-      <div className="grid gap-3 lg:grid-cols-4">
+      <div className="grid gap-3 lg:grid-cols-3">
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-muted-foreground">Mode</label>
+          <Label htmlFor="dispatch-mode" className="text-xs font-medium text-muted-foreground">
+            Mode
+          </Label>
           <select
+            id="dispatch-mode"
             className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
             value={mode}
             onChange={(event) => setMode(event.target.value as 'manual' | 'segment')}
           >
             <option value="manual">Manual</option>
-            <option value="segment">Campaign</option>
+            <option value="segment">Segment</option>
           </select>
         </div>
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-muted-foreground">Template</label>
+          <Label htmlFor="dispatch-template" className="text-xs font-medium text-muted-foreground">
+            Template
+          </Label>
           <select
+            id="dispatch-template"
             className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
             value={templateId}
             onChange={(event) => setTemplateId(event.target.value)}
@@ -157,42 +152,52 @@ export function AdminEmailDispatch({ templates, canWrite }: AdminEmailDispatchPr
           </select>
         </div>
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-muted-foreground">Schedule</label>
+          <Label htmlFor="dispatch-schedule" className="text-xs font-medium text-muted-foreground">
+            Schedule
+          </Label>
           <input
+            id="dispatch-schedule"
             type="datetime-local"
             className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
             value={scheduleAt}
             onChange={(event) => setScheduleAt(event.target.value)}
           />
         </div>
-        <div className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-muted-foreground">Metadata (JSON)</label>
-          <input
-            className="h-10 rounded-xl border border-border bg-background px-3 text-sm font-mono"
-            value={metadata}
-            onChange={(event) => setMetadata(event.target.value)}
-          />
-        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <div className="text-xs font-medium text-muted-foreground">Metadata</div>
+        <AdminKeyValueEditor
+          entries={metadataEntries}
+          onChange={setMetadataEntries}
+          addLabel="Add metadata field"
+          emptyLabel="No metadata fields."
+        />
       </div>
 
       {mode === 'segment' ? (
         <div className="grid gap-3 lg:grid-cols-3">
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-medium text-muted-foreground">Rôle</label>
+            <Label htmlFor="segment-role" className="text-xs font-medium text-muted-foreground">
+              Role
+            </Label>
             <select
+              id="segment-role"
               className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
               value={segmentRole}
               onChange={(event) => setSegmentRole(event.target.value as typeof segmentRole)}
             >
-              <option value="all">Tous</option>
+              <option value="all">All</option>
               <option value="admin">Admin</option>
-              <option value="brand">Marque</option>
-              <option value="creator">Créateur</option>
+              <option value="brand">Brand</option>
+              <option value="creator">Creator</option>
             </select>
           </div>
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-medium text-muted-foreground">Limit</label>
+            <Label htmlFor="segment-limit" className="text-xs font-medium text-muted-foreground">
+              Limit
+            </Label>
             <input
+              id="segment-limit"
               type="number"
               min={1}
               max={500}
@@ -204,8 +209,11 @@ export function AdminEmailDispatch({ templates, canWrite }: AdminEmailDispatchPr
         </div>
       ) : (
         <div className="flex flex-col gap-2">
-          <label className="text-xs font-medium text-muted-foreground">Recipients</label>
+          <Label htmlFor="dispatch-recipients" className="text-xs font-medium text-muted-foreground">
+            Recipients
+          </Label>
           <textarea
+            id="dispatch-recipients"
             className="min-h-[80px] rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono"
             value={recipients}
             onChange={(event) => setRecipients(event.target.value)}
@@ -215,29 +223,47 @@ export function AdminEmailDispatch({ templates, canWrite }: AdminEmailDispatchPr
       )}
 
       <div className="grid gap-3 lg:grid-cols-2">
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Subject override"
-          value={subject}
-          onChange={(event) => setSubject(event.target.value)}
-        />
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="dispatch-subject" className="text-xs font-medium text-muted-foreground">
+            Subject override
+          </Label>
+          <input
+            id="dispatch-subject"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            value={subject}
+            onChange={(event) => setSubject(event.target.value)}
+            placeholder="Subject override"
+          />
+        </div>
         <div className="text-xs text-muted-foreground flex items-center">
-          Leave empty to use template subject.
+          Leave empty to use the template subject.
         </div>
       </div>
       <div className="grid gap-3 lg:grid-cols-2">
-        <textarea
-          className="min-h-[100px] rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono"
-          value={bodyText}
-          onChange={(event) => setBodyText(event.target.value)}
-          placeholder="Body text override"
-        />
-        <textarea
-          className="min-h-[100px] rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono"
-          value={bodyHtml}
-          onChange={(event) => setBodyHtml(event.target.value)}
-          placeholder="Body HTML override"
-        />
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="dispatch-body-text" className="text-xs font-medium text-muted-foreground">
+            Body text override
+          </Label>
+          <textarea
+            id="dispatch-body-text"
+            className="min-h-[100px] rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono"
+            value={bodyText}
+            onChange={(event) => setBodyText(event.target.value)}
+            placeholder="Body text override"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="dispatch-body-html" className="text-xs font-medium text-muted-foreground">
+            Body HTML override
+          </Label>
+          <textarea
+            id="dispatch-body-html"
+            className="min-h-[100px] rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono"
+            value={bodyHtml}
+            onChange={(event) => setBodyHtml(event.target.value)}
+            placeholder="Body HTML override"
+          />
+        </div>
       </div>
       <Button onClick={send} loading={loading} variant="primary" disabled={!canWrite || loading}>
         Dispatch

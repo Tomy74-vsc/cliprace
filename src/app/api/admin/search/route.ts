@@ -1,194 +1,189 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { z } from 'zod';
-import { hasAdminPermission, requireAdminAnyPermission } from '@/lib/admin/rbac';
+import { requireAdminAnyPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
-import { createError, formatErrorResponse } from '@/lib/errors';
-
-const QuerySchema = z.object({
-  q: z.string().min(1).max(120),
-  limit: z.coerce.number().min(1).max(20).default(10),
-});
+import { adminCache, cacheKey, CACHE_TTL } from '@/lib/admin/cache';
+import { formatErrorResponse } from '@/lib/errors';
 
 const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-type SearchItem = {
-  type: 'user' | 'brand' | 'org' | 'contest' | 'submission';
-  id: string;
-  title: string;
-  subtitle?: string | null;
-  href: string;
-};
-
 export async function GET(req: NextRequest) {
   try {
-    const { access } = await requireAdminAnyPermission([
+    const { user } = await requireAdminAnyPermission([
       'users.read',
       'brands.read',
       'contests.read',
       'submissions.read',
-      'invoices.read',
       'finance.read',
       'integrations.read',
       'support.read',
-      'crm.read',
-      'taxonomy.read',
-      'risk.read',
-      'ingestion.read',
-      'emails.read',
-      'audit.read',
-    ]);
-    await enforceAdminRateLimit(req, { route: 'admin:search', max: 120, windowMs: 60_000 });
-
-    const parsed = QuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams.entries()));
-    if (!parsed.success) {
-      throw createError('VALIDATION_ERROR', 'Paramètres invalides', 400, parsed.error.flatten());
-    }
-
-    const admin = getAdminClient();
-    const q = parsed.data.q.trim();
-    const like = `%${q}%`;
-    const limit = parsed.data.limit;
-    const qIsUuid = uuidPattern.test(q);
-
-    const results: SearchItem[] = [];
-
-    const canUsers = hasAdminPermission(access, 'users.read');
-    const canBrands = hasAdminPermission(access, 'brands.read');
-    const canContests = hasAdminPermission(access, 'contests.read');
-    const canSubmissions = hasAdminPermission(access, 'submissions.read');
-    const canOrgs = [
-      'invoices.read',
-      'finance.read',
-      'integrations.read',
-      'brands.read',
-      'support.read',
-      'crm.read',
-      'audit.read',
-    ].some((permission) => hasAdminPermission(access, permission));
-
-    const empty = Promise.resolve({ data: [], error: null } as any);
-
-    const [
-      usersRes,
-      brandsRes,
-      orgsRes,
-      contestsRes,
-      submissionsRes,
-    ] = await Promise.all([
-      canUsers
-        ? admin
-            .from('profiles')
-            .select('id, email, display_name, role')
-            .or(`email.ilike.${like},display_name.ilike.${like}`)
-            .limit(limit)
-        : empty,
-      canBrands
-        ? admin
-            .from('profile_brands')
-            .select('user_id, company_name, profiles!inner(id, email, display_name)')
-            .ilike('company_name', like)
-            .limit(limit)
-        : empty,
-      canOrgs
-        ? admin
-            .from('orgs')
-            .select('id, name, billing_email')
-            .or(`name.ilike.${like},billing_email.ilike.${like}`)
-            .limit(limit)
-        : empty,
-      canContests
-        ? admin
-            .from('contests')
-            .select('id, title, slug, status, brand_id')
-            .or(`title.ilike.${like},slug.ilike.${like}`)
-            .order('created_at', { ascending: false })
-            .limit(limit)
-        : empty,
-      canSubmissions
-        ? (() => {
-            let s = admin
-              .from('submissions')
-              .select('id, contest_id, creator_id, status, created_at')
-              .order('created_at', { ascending: false })
-              .limit(limit);
-            if (qIsUuid) {
-              s = s.or(`id.eq.${q},contest_id.eq.${q},creator_id.eq.${q}`);
-            }
-            return s;
-          })()
-        : empty,
     ]);
 
-    if (canUsers && usersRes.error) {
-      throw createError('DATABASE_ERROR', 'Recherche utilisateurs impossible', 500, usersRes.error.message);
-    }
-    if (canBrands && brandsRes.error) {
-      throw createError('DATABASE_ERROR', 'Recherche marques impossible', 500, brandsRes.error.message);
-    }
-    if (canOrgs && orgsRes.error) {
-      throw createError('DATABASE_ERROR', 'Recherche organisations impossible', 500, orgsRes.error.message);
-    }
-    if (canContests && contestsRes.error) {
-      throw createError('DATABASE_ERROR', 'Recherche concours impossible', 500, contestsRes.error.message);
-    }
-    if (canSubmissions && submissionsRes.error) {
-      throw createError('DATABASE_ERROR', 'Recherche soumissions impossible', 500, submissionsRes.error.message);
+    await enforceAdminRateLimit(req, { route: 'admin:search', max: 60, windowMs: 60_000 }, user.id);
+
+    const searchParams = req.nextUrl.searchParams;
+    const q = searchParams.get('q') || '';
+    const typesParam = searchParams.get('types') || 'users,orgs,contests,submissions,cashouts,webhooks,tickets';
+    const types = typesParam.split(',').filter(Boolean);
+
+    if (q.length < 2) {
+      return NextResponse.json({ ok: true, groups: [] });
     }
 
-    for (const row of (canUsers ? usersRes.data ?? [] : [])) {
-      results.push({
-        type: 'user',
-        id: row.id,
-        title: row.display_name || row.email,
-        subtitle: `${row.email} • ${row.role}`,
-        href: `/app/admin/users/${row.id}`,
-      });
-    }
+    const term = q.trim();
+    const key = cacheKey('admin:search', { user_id: user.id, q: term, types: types.join(',') });
+    const groups = await adminCache.getOrSet(
+      key,
+      async () => {
+        const admin = getAdminClient();
+        const like = `%${term}%`;
+        const termIsUuid = uuidPattern.test(term);
 
-    for (const row of (canBrands ? brandsRes.data ?? [] : [])) {
-      const profile = Array.isArray((row as any).profiles) ? (row as any).profiles[0] : (row as any).profiles;
-      const title = row.company_name || profile?.display_name || profile?.email || row.user_id;
-      results.push({
-        type: 'brand',
-        id: row.user_id,
-        title,
-        subtitle: profile?.email ?? null,
-        href: `/app/admin/brands?q=${encodeURIComponent(title)}`,
-      });
-    }
+        const out: Array<{ type: string; items: Array<{ id: string; label: string; subtitle?: string; href: string }> }> = [];
 
-    for (const row of (canOrgs ? orgsRes.data ?? [] : [])) {
-      results.push({
-        type: 'org',
-        id: row.id,
-        title: row.name || row.id,
-        subtitle: row.billing_email,
-        href: `/app/admin/invoices?org_id=${encodeURIComponent(row.id)}`,
-      });
-    }
+        // Users
+        if (types.includes('users')) {
+          let usersQuery = admin.from('profiles').select('id, display_name, email, role').limit(5);
+          usersQuery = termIsUuid ? usersQuery.eq('id', term) : usersQuery.or(`display_name.ilike.${like},email.ilike.${like}`);
+          const { data: users } = await usersQuery;
+          if (users && users.length > 0) {
+            out.push({
+              type: 'users',
+              items: users.map((u) => ({
+                id: u.id,
+                label: u.display_name || u.email || u.id,
+                subtitle: u.email || u.role,
+                href: `/app/admin/users/${u.id}`,
+              })),
+            });
+          }
+        }
 
-    for (const row of (canContests ? contestsRes.data ?? [] : [])) {
-      results.push({
-        type: 'contest',
-        id: row.id,
-        title: row.title,
-        subtitle: `${row.status} • ${row.slug ?? ''}`.trim(),
-        href: `/app/admin/contests?q=${encodeURIComponent(row.title)}`,
-      });
-    }
+        // Orgs
+        if (types.includes('orgs')) {
+          let orgsQuery = admin.from('orgs').select('id, name, email').limit(5);
+          orgsQuery = termIsUuid ? orgsQuery.eq('id', term) : orgsQuery.or(`name.ilike.${like},email.ilike.${like}`);
+          const { data: orgs } = await orgsQuery;
+          if (orgs && orgs.length > 0) {
+            out.push({
+              type: 'orgs',
+              items: orgs.map((o) => ({
+                id: o.id,
+                label: o.name || o.email || o.id,
+                subtitle: o.email,
+                href: `/app/admin/brands?org_id=${o.id}`,
+              })),
+            });
+          }
+        }
 
-    for (const row of (canSubmissions ? submissionsRes.data ?? [] : [])) {
-      results.push({
-        type: 'submission',
-        id: row.id,
-        title: `Soumission ${row.id.slice(0, 8)}`,
-        subtitle: `${row.status} • concours ${row.contest_id.slice(0, 8)}`,
-        href: `/app/admin/submissions?submission_id=${encodeURIComponent(row.id)}`,
-      });
-    }
+        // Contests
+        if (types.includes('contests')) {
+          let contestsQuery = admin.from('contests').select('id, title, slug, status').limit(5);
+          contestsQuery = termIsUuid ? contestsQuery.eq('id', term) : contestsQuery.or(`title.ilike.${like},slug.ilike.${like}`);
+          const { data: contests } = await contestsQuery;
+          if (contests && contests.length > 0) {
+            out.push({
+              type: 'contests',
+              items: contests.map((c) => ({
+                id: c.id,
+                label: c.title || c.slug || c.id,
+                subtitle: c.status,
+                href: `/app/admin/contests/${c.id}`,
+              })),
+            });
+          }
+        }
 
-    return NextResponse.json({ ok: true, items: results.slice(0, limit) });
+        // Submissions
+        if (types.includes('submissions')) {
+          let submissionsQuery = admin.from('submissions').select('id, title, status, contest:contests(title)').limit(5);
+          submissionsQuery = termIsUuid
+            ? submissionsQuery.eq('id', term)
+            : submissionsQuery.or(`title.ilike.${like},external_url.ilike.${like}`);
+          const { data: submissions } = await submissionsQuery;
+          if (submissions && submissions.length > 0) {
+            out.push({
+              type: 'submissions',
+              items: submissions.map((s) => {
+                const contest = Array.isArray(s.contest) ? s.contest[0] : s.contest;
+                return {
+                  id: s.id,
+                  label: s.title || s.id,
+                  subtitle: contest && 'title' in contest ? String(contest.title) : s.status,
+                  href: `/app/admin/submissions?submission_id=${s.id}`,
+                };
+              }),
+            });
+          }
+        }
+
+        // Cashouts
+        if (types.includes('cashouts')) {
+          let cashoutsQuery = admin
+            .from('cashouts')
+            .select('id, amount_cents, status, creator:profiles(display_name, email)')
+            .limit(5);
+          cashoutsQuery = cashoutsQuery.eq('id', term);
+          const { data: cashouts } = await cashoutsQuery;
+          if (cashouts && cashouts.length > 0) {
+            out.push({
+              type: 'cashouts',
+              items: cashouts.map((c) => {
+                const creator = Array.isArray(c.creator) ? c.creator[0] : c.creator;
+                return {
+                  id: c.id,
+                  label: `Cashout ${(c.amount_cents as number) / 100}€`,
+                  subtitle: creator && 'display_name' in creator ? String(creator.display_name || creator.email) : c.status,
+                  href: `/app/admin/finance?cashout_id=${c.id}`,
+                };
+              }),
+            });
+          }
+        }
+
+        // Webhooks
+        if (types.includes('webhooks')) {
+          let webhooksQuery = admin.from('webhooks_stripe').select('id, event_type, status, created_at').limit(5);
+          webhooksQuery = termIsUuid ? webhooksQuery.eq('id', term) : webhooksQuery.ilike('event_type', like);
+          const { data: webhooks } = await webhooksQuery;
+          if (webhooks && webhooks.length > 0) {
+            out.push({
+              type: 'webhooks',
+              items: webhooks.map((w) => ({
+                id: w.id,
+                label: w.event_type || w.id,
+                subtitle: w.status,
+                href: `/app/admin/integrations?webhook_id=${w.id}`,
+              })),
+            });
+          }
+        }
+
+        // Tickets
+        if (types.includes('tickets')) {
+          let ticketsQuery = admin.from('support_tickets').select('id, subject, status, priority').limit(5);
+          ticketsQuery = termIsUuid ? ticketsQuery.eq('id', term) : ticketsQuery.ilike('subject', like);
+          const { data: tickets } = await ticketsQuery;
+          if (tickets && tickets.length > 0) {
+            out.push({
+              type: 'tickets',
+              items: tickets.map((t) => ({
+                id: t.id,
+                label: t.subject || t.id,
+                subtitle: `${t.status} • ${t.priority}`,
+                href: `/app/admin/support?ticket_id=${t.id}`,
+              })),
+            });
+          }
+        }
+
+        return out;
+      },
+      CACHE_TTL.SHORT
+    );
+
+    return NextResponse.json({ ok: true, groups });
   } catch (error) {
     return formatErrorResponse(error);
   }

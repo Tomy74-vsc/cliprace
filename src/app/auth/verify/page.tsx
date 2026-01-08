@@ -1,15 +1,15 @@
-'use client';
+﻿'use client';
 
 /*
 Page: /auth/verify
 Purpose: Écran de vérification d'email.
-- Après signup : affichage "vérifiez vos emails" + bouton renvoi de l'email.
-- Ensuite : toutes les 2s, vérifie côté serveur si l'email est confirmé dans Supabase;
+- Après signup : affichage "vérifiez vos emails" + bouton renvoi de l&apos;email.
+- Ensuite : toutes les 2s, vérifie côté serveur si l&apos;email est confirmé dans Supabase;
   dès que c'est le cas, redirige vers /auth/login avec un message de succès et
   un redirect vers l'onboarding.
 */
 
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
@@ -30,7 +30,7 @@ type VerifyStatus = {
   verified: boolean;
 };
 
-export default function VerifyPage() {
+function VerifyInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const csrfToken = useCsrfToken();
@@ -90,8 +90,8 @@ export default function VerifyPage() {
           if (!resent) {
             setInfo(
               email
-                ? `Un email de vérification a été envoyé à ${email}. Cliquez sur le lien dans l'email, puis revenez sur cette page.`
-                : "Un email de vérification vous a été envoyé. Cliquez sur le lien dans l'email, puis revenez sur cette page."
+                ? `Un email de vérification a été envoyé à ${email}. Cliquez sur le lien dans l&apos;email, puis revenez sur cette page.`
+                : "Un email de vérification vous a été envoyé. Cliquez sur le lien dans l&apos;email, puis revenez sur cette page."
             );
           }
           setLoading(false);
@@ -124,7 +124,7 @@ export default function VerifyPage() {
         window.clearInterval(intervalId);
       }
     };
-  }, [email, router]);
+  }, [email, resent, router]);
 
   const onResend = async () => {
     if (!email) {
@@ -137,7 +137,7 @@ export default function VerifyPage() {
     }
     setLoading(true);
     setError(null);
-    setInfo("Renvoi de l'email de vérification...");
+    setInfo("Renvoi de l&apos;email de vérification...");
     try {
       const resp = await fetch('/api/auth/resend-verification', {
         method: 'POST',
@@ -146,7 +146,7 @@ export default function VerifyPage() {
       });
       const data = await resp.json();
       if (!resp.ok || !data?.ok) {
-        throw new Error(data?.message || "Impossible de renvoyer l'email");
+        throw new Error(data?.message || "Impossible de renvoyer l&apos;email");
       }
       setResent(true);
       setInfo("Un nouvel email de vérification vient d'être envoyé.");
@@ -173,13 +173,13 @@ export default function VerifyPage() {
             </div>
             <div>
               <CardTitle className="text-2xl font-bold bg-gradient-to-r from-[#635BFF] to-[#7C3AED] bg-clip-text text-transparent">
-                Vérification de l'email
+                Vérification de l&apos;email
               </CardTitle>
               <CardDescription className="mt-1">
                 {loading
                   ? 'Vérification en cours...'
                   : error
-                  ? "Nous n'avons pas pu vérifier votre email"
+                  ? "Nous n&apos;avons pas pu vérifier votre email"
                   : "Vérifiez votre boîte mail puis revenez sur cette page."}
               </CardDescription>
             </div>
@@ -202,11 +202,11 @@ export default function VerifyPage() {
           {!loading && !error && (
             <div className="space-y-3">
               <p className="text-sm text-muted-foreground">
-                Si vous n'avez pas reçu l'email, vous pouvez le renvoyer.
+                Si vous n&apos;avez pas reçu l&apos;email, vous pouvez le renvoyer.
               </p>
               <Button onClick={onResend} disabled={loading || resent} className="w-full">
                 <Mail className="w-4 h-4 mr-2" />
-                {resent ? 'Email renvoyé' : "Renvoyer l'email"}
+                {resent ? 'Email renvoyé' : "Renvoyer l&apos;email"}
               </Button>
               <p className="text-xs text-center text-muted-foreground">
                 Adresse cible: <span className="font-medium">{email || 'inconnue'}</span>
@@ -225,3 +225,16 @@ export default function VerifyPage() {
   );
 }
 
+export default function VerifyPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-zinc-50 via-indigo-50/30 to-purple-50/30 dark:from-zinc-950 dark:via-indigo-950/30 dark:to-purple-950/30 px-4 py-12">
+          <div className="text-sm text-muted-foreground">Chargement...</div>
+        </div>
+      }
+    >
+      <VerifyInner />
+    </Suspense>
+  );
+}

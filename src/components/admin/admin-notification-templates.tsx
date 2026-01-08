@@ -4,6 +4,13 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminTable } from '@/components/admin/admin-table';
 import { Button } from '@/components/ui/button';
+import {
+  AdminKeyValueEditor,
+  type KeyValueEntry,
+  entriesFromRecord,
+  recordFromEntries,
+} from '@/components/admin/admin-key-value-editor';
+import { getCsrfToken } from '@/lib/csrf-client';
 
 type Template = {
   id: string;
@@ -25,20 +32,6 @@ interface AdminNotificationTemplatesProps {
 
 const CHANNELS = ['email', 'push', 'inapp', 'sms'];
 
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
-}
-
-function toJsonString(value: Record<string, unknown>) {
-  try {
-    return JSON.stringify(value ?? {}, null, 2);
-  } catch {
-    return '{}';
-  }
-}
-
 function truncate(value: string | null, length = 120) {
   if (!value) return '-';
   if (value.length <= length) return value;
@@ -55,7 +48,7 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
   const [subject, setSubject] = useState('');
   const [bodyHtml, setBodyHtml] = useState('');
   const [bodyText, setBodyText] = useState('');
-  const [variables, setVariables] = useState('{}');
+  const [variablesEntries, setVariablesEntries] = useState<KeyValueEntry[]>([]);
   const [isActive, setIsActive] = useState(true);
 
   const editingTemplate = useMemo(
@@ -67,7 +60,7 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
   const [editSubject, setEditSubject] = useState('');
   const [editBodyHtml, setEditBodyHtml] = useState('');
   const [editBodyText, setEditBodyText] = useState('');
-  const [editVariables, setEditVariables] = useState('{}');
+  const [editVariablesEntries, setEditVariablesEntries] = useState<KeyValueEntry[]>([]);
   const [editIsActive, setEditIsActive] = useState(true);
 
   const resetCreate = () => {
@@ -76,7 +69,7 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
     setSubject('');
     setBodyHtml('');
     setBodyText('');
-    setVariables('{}');
+    setVariablesEntries([]);
     setIsActive(true);
   };
 
@@ -88,7 +81,7 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
     setEditSubject(template.subject ?? '');
     setEditBodyHtml(template.body_html ?? '');
     setEditBodyText(template.body_text ?? '');
-    setEditVariables(toJsonString(template.variables));
+    setEditVariablesEntries(entriesFromRecord(template.variables));
     setEditIsActive(template.is_active);
   };
 
@@ -96,32 +89,19 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
     setEditingId(null);
   };
 
-  const parseVariables = (value: string) => {
-    if (!value.trim()) return { ok: true, value: {} as Record<string, unknown> };
-    try {
-      return { ok: true, value: JSON.parse(value) as Record<string, unknown> };
-    } catch (error) {
-      return { ok: false, error };
-    }
-  };
-
   const createTemplate = async () => {
     if (!canWrite) return;
     setLoading(true);
     try {
       const token = await getCsrfToken();
-      const parsedVars = parseVariables(variables);
-      if (!parsedVars.ok) {
-        window.alert('Invalid JSON variables.');
-        return;
-      }
+      const variables = recordFromEntries(variablesEntries);
       const payload = {
         event_type: eventType.trim(),
         channel,
         subject: subject.trim() || null,
         body_html: bodyHtml.trim() || null,
         body_text: bodyText.trim() || null,
-        variables: parsedVars.value,
+        variables,
         is_active: isActive,
       };
       const res = await fetch('/api/admin/notification-templates', {
@@ -149,18 +129,14 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
     setLoading(true);
     try {
       const token = await getCsrfToken();
-      const parsedVars = parseVariables(editVariables);
-      if (!parsedVars.ok) {
-        window.alert('Invalid JSON variables.');
-        return;
-      }
+      const variables = recordFromEntries(editVariablesEntries);
       const payload = {
         event_type: editEventType.trim(),
         channel: editChannel,
         subject: editSubject.trim() || null,
         body_html: editBodyHtml.trim() || null,
         body_text: editBodyText.trim() || null,
-        variables: parsedVars.value,
+        variables,
         is_active: editIsActive,
       };
       const res = await fetch(`/api/admin/notification-templates/${editingTemplate.id}`, {
@@ -231,7 +207,7 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
 
   return (
     <div className="space-y-4">
-      {!canWrite ? <div className="text-xs text-muted-foreground">Lecture seule — permission requise : emails.write</div> : null}
+      {!canWrite ? <div className="text-xs text-muted-foreground">Read only - requires emails.write</div> : null}
       <div className="rounded-2xl border border-border bg-card p-4 shadow-soft space-y-3">
         <div className="text-sm font-semibold">Create template</div>
         <div className="grid gap-3 lg:grid-cols-4">
@@ -264,7 +240,7 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
               checked={isActive}
               onChange={(event) => setIsActive(event.target.checked)}
             />
-            Actif
+            Active
           </label>
         </div>
         <div className="grid gap-3 lg:grid-cols-2">
@@ -281,13 +257,21 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
             placeholder="Body HTML"
           />
         </div>
-        <textarea
-          className="min-h-[100px] rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono"
-          value={variables}
-          onChange={(event) => setVariables(event.target.value)}
-          placeholder='{"variable":"description"}'
-        />
-        <Button onClick={createTemplate} loading={loading} variant="primary" disabled={!canWrite || loading}>
+        <div className="space-y-2">
+          <div className="text-xs font-medium text-muted-foreground">Variables</div>
+          <AdminKeyValueEditor
+            entries={variablesEntries}
+            onChange={setVariablesEntries}
+            addLabel="Add variable"
+            emptyLabel="No variables."
+          />
+        </div>
+        <Button
+          onClick={createTemplate}
+          loading={loading}
+          variant="primary"
+          disabled={!canWrite || loading}
+        >
           Create template
         </Button>
       </div>
@@ -299,7 +283,7 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
             <th className="px-4 py-3">Channel</th>
             <th className="px-4 py-3">Subject</th>
             <th className="px-4 py-3">Body</th>
-            <th className="px-4 py-3">Actif</th>
+            <th className="px-4 py-3">Active</th>
             <th className="px-4 py-3">Actions</th>
           </tr>
         </thead>
@@ -307,7 +291,7 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
           {templates.length === 0 ? (
             <tr>
               <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">
-                Aucun template configuré
+                No templates configured yet.
               </td>
             </tr>
           ) : (
@@ -368,16 +352,21 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
                         value={editBodyHtml}
                         onChange={(event) => setEditBodyHtml(event.target.value)}
                       />
-                      <textarea
-                        className="min-h-[70px] w-full rounded-lg border border-border bg-background px-2 py-1 text-xs font-mono"
-                        value={editVariables}
-                        onChange={(event) => setEditVariables(event.target.value)}
+                      <AdminKeyValueEditor
+                        entries={editVariablesEntries}
+                        onChange={setEditVariablesEntries}
+                        addLabel="Add variable"
+                        emptyLabel="No variables."
                       />
                     </div>
                   ) : (
                     <div className="text-xs text-muted-foreground space-y-1">
                       <div>{truncate(template.body_text || template.body_html)}</div>
-                      <div className="text-[11px]">{truncate(toJsonString(template.variables), 80)}</div>
+                      <div className="text-[11px]">
+                        {Object.keys(template.variables || {}).length > 0
+                          ? `Vars: ${Object.keys(template.variables || {}).join(', ')}`
+                          : 'Vars: none'}
+                      </div>
                     </div>
                   )}
                 </td>
@@ -389,16 +378,24 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
                         checked={editIsActive}
                         onChange={(event) => setEditIsActive(event.target.checked)}
                       />
-                      Actif
+                      Active
                     </label>
                   ) : (
-                    <span className="text-xs text-muted-foreground">{template.is_active ? 'yes' : 'no'}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {template.is_active ? 'yes' : 'no'}
+                    </span>
                   )}
                 </td>
                 <td className="px-4 py-4 space-y-2">
                   {editingId === template.id ? (
                     <>
-                      <Button onClick={saveTemplate} loading={loading} size="sm" variant="primary" disabled={!canWrite || loading}>
+                      <Button
+                        onClick={saveTemplate}
+                        loading={loading}
+                        size="sm"
+                        variant="primary"
+                        disabled={!canWrite || loading}
+                      >
                         Save
                       </Button>
                       <Button onClick={cancelEdit} size="sm" variant="secondary">
@@ -407,13 +404,28 @@ export function AdminNotificationTemplates({ templates, canWrite }: AdminNotific
                     </>
                   ) : (
                     <>
-                      <Button onClick={() => startEdit(template)} size="sm" variant="secondary" disabled={!canWrite || loading}>
+                      <Button
+                        onClick={() => startEdit(template)}
+                        size="sm"
+                        variant="secondary"
+                        disabled={!canWrite || loading}
+                      >
                         Edit
                       </Button>
-                      <Button onClick={() => toggleTemplate(template)} size="sm" variant="secondary" disabled={!canWrite || loading}>
+                      <Button
+                        onClick={() => toggleTemplate(template)}
+                        size="sm"
+                        variant="secondary"
+                        disabled={!canWrite || loading}
+                      >
                         {template.is_active ? 'Disable' : 'Enable'}
                       </Button>
-                      <Button onClick={() => deleteTemplate(template)} size="sm" variant="destructive" disabled={!canWrite || loading}>
+                      <Button
+                        onClick={() => deleteTemplate(template)}
+                        size="sm"
+                        variant="destructive"
+                        disabled={!canWrite || loading}
+                      >
                         Delete
                       </Button>
                     </>

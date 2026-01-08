@@ -1,12 +1,12 @@
-/*
+﻿/*
 Source: Page onboarding
-Purpose: Page onboarding avec formulaire multi-étapes
+Purpose: Page onboarding avec formulaire multi-Ã©tapes
 */
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { OnboardingForm } from '@/components/onboarding/onboarding-form';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { User, Building2 } from 'lucide-react';
 
 export default async function OnboardingPage() {
@@ -18,8 +18,8 @@ export default async function OnboardingPage() {
 
   const admin = getSupabaseAdmin();
 
-  // Récupérer les données existantes pour pré-remplir le formulaire
-  let initialData: any = {};
+  // RÃ©cupÃ©rer les donnÃ©es existantes pour prÃ©-remplir le formulaire
+  let initialData: UnsafeAny = {};
 
   if (user.role === 'creator') {
     const { data: creator } = await admin
@@ -73,7 +73,7 @@ export default async function OnboardingPage() {
     }
   }
 
-  // Récupérer bio depuis profiles
+  // RÃ©cupÃ©rer bio depuis profiles
   const { data: profile } = await admin
     .from('profiles')
     .select('bio, onboarding_complete')
@@ -86,7 +86,7 @@ export default async function OnboardingPage() {
 
   const onboardingComplete = !!profile?.onboarding_complete;
 
-  // Si onboarding déjà complet, rediriger vers dashboard
+  // Si onboarding dÃ©jÃ  complet, rediriger vers dashboard
   if (onboardingComplete) {
     if (user.role === 'creator') {
       redirect('/app/creator/dashboard');
@@ -114,8 +114,8 @@ export default async function OnboardingPage() {
             </h1>
             <p className="text-muted-foreground mt-1">
               {user.role === 'creator'
-                ? 'Complétez votre profil créateur pour commencer à participer aux concours'
-                : 'Complétez votre profil marque pour lancer vos premiers concours'}
+                ? 'ComplÃ©tez votre profil crÃ©ateur pour commencer Ã  participer aux concours'
+                : 'ComplÃ©tez votre profil marque pour lancer vos premiers concours'}
             </p>
           </div>
         </div>
@@ -128,7 +128,7 @@ export default async function OnboardingPage() {
               {user.role === 'creator' ? (
                 <>
                   <User className="w-5 h-5 text-[#635BFF]" />
-                  Onboarding Créateur
+                  Onboarding CrÃ©ateur
                 </>
               ) : (
                 <>
@@ -139,8 +139,8 @@ export default async function OnboardingPage() {
             </CardTitle>
             <CardDescription>
               {user.role === 'creator'
-                ? 'Remplissez les informations suivantes pour compléter votre profil'
-                : 'Remplissez les informations suivantes pour compléter votre profil entreprise'}
+                ? 'Remplissez les informations suivantes pour complÃ©ter votre profil'
+                : 'Remplissez les informations suivantes pour complÃ©ter votre profil entreprise'}
             </CardDescription>
           </CardHeader>
           <OnboardingForm role={user.role} initialData={initialData} />
@@ -152,4 +152,5 @@ export default async function OnboardingPage() {
     </main>
   );
 }
+
 

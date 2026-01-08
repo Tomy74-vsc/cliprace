@@ -1,7 +1,7 @@
-// Source: Page login
+﻿// Source: Page login
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -18,7 +18,7 @@ import { loginSchema, type LoginInput } from '@/lib/validators/auth';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 
-export default function LoginPage() {
+function LoginInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get('redirect') || undefined;
@@ -165,7 +165,7 @@ export default function LoginPage() {
           <CardContent className="space-y-4">
             {verified && (
               <div className="p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 text-sm text-green-700 dark:text-green-400">
-                Votre email a bien été vérifié. Connectez-vous pour accéder à l'application.
+                Votre email a bien été vérifié. Connectez-vous pour accéder à l&apos;application.
               </div>
             )}
 
@@ -214,4 +214,19 @@ export default function LoginPage() {
     </div>
   );
 }
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen flex items-center justify-center bg-zinc-50 dark:bg-zinc-950 px-4">
+          <div className="text-sm text-muted-foreground">Chargement...</div>
+        </div>
+      }
+    >
+      <LoginInner />
+    </Suspense>
+  );
+}
+
 

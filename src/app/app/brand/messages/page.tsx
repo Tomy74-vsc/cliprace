@@ -4,15 +4,9 @@ Objectifs: liste des threads avec créateurs, conversations, envoi de messages
 */
 import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { BrandEmptyState } from '@/components/brand/empty-state-enhanced';
-import { formatDate } from '@/lib/formatters';
-import { MessageSquare, Send, ArrowLeft } from 'lucide-react';
 import { TrackOnView } from '@/components/analytics/track-once';
 import { BrandMessagesClient } from '@/components/brand/brand-messages-client';
-import Link from 'next/link';
 
 export const revalidate = 30;
 

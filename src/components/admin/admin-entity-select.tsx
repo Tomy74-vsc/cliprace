@@ -120,6 +120,9 @@ export function AdminEntitySelect({
         <button
           type="button"
           onClick={() => setOpen((v) => !v)}
+          aria-label={hasSelection ? `${label}: ${selected?.label}` : `${label}: ${placeholder}`}
+          aria-expanded={open}
+          aria-haspopup="listbox"
           className={cn(
             'flex h-10 w-full items-center justify-between gap-2 rounded-xl border border-border bg-background px-3 text-sm',
             'hover:bg-muted/20 transition-colors',
@@ -158,7 +161,6 @@ export function AdminEntitySelect({
               onChange={(e) => setText(e.target.value)}
               placeholder={placeholder}
               className="h-10 w-full rounded-xl border border-border bg-background px-3 text-sm"
-              autoFocus
             />
             <div className="mt-2 max-h-64 overflow-auto">
               {loading ? (
@@ -197,4 +199,3 @@ export function AdminEntitySelect({
     </div>
   );
 }
-

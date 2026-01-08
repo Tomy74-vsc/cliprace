@@ -5,6 +5,7 @@ export type AppErrorCode =
   | 'FORBIDDEN'
   | 'NOT_FOUND'
   | 'RATE_LIMIT'
+  | 'CONFIG_ERROR'
   | 'DATABASE_ERROR'
   | 'STORAGE_ERROR'
   | 'GENERATION_ERROR'

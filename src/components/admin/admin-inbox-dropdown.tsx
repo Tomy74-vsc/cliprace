@@ -34,7 +34,7 @@ export function AdminInboxDropdown() {
   const [loading, setLoading] = useState(false);
 
   const badgeCount = summary?.badge_count ?? 0;
-  const signals = summary?.signals?.items ?? [];
+  const signals = useMemo(() => summary?.signals?.items ?? [], [summary?.signals?.items]);
 
   useEffect(() => {
     if (!open) return;
@@ -147,4 +147,3 @@ export function AdminInboxDropdown() {
     </DropdownMenu>
   );
 }
-

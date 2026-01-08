@@ -14,10 +14,11 @@ export function Avatar({ className, ...props }: AvatarProps) {
 
 export interface AvatarImageProps extends React.ImgHTMLAttributes<HTMLImageElement> {}
 
-export function AvatarImage({ className, src, ...props }: AvatarImageProps) {
+export function AvatarImage({ className, src, alt = '', ...props }: AvatarImageProps) {
   if (!src) return null;
 
-  return <img src={src} className={cn('aspect-square h-full w-full', className)} {...props} />;
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={src} alt={alt} className={cn('aspect-square h-full w-full', className)} {...props} />;
 }
 
 export function AvatarFallback({

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
 import { createError, formatErrorResponse } from '@/lib/errors';
@@ -70,7 +71,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { user } = await requireAdminPermission('emails.write');
-    await enforceAdminRateLimit(req, { route: 'admin:notification-templates:create', max: 20, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:notification-templates:create', max: 20, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {

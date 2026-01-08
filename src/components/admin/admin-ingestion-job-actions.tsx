@@ -4,13 +4,8 @@ import { useRouter } from 'next/navigation';
 import { RotateCcw } from 'lucide-react';
 import { AdminActionPanel } from '@/components/admin/admin-action-panel';
 import { Button } from '@/components/ui/button';
+import { getCsrfToken } from '@/lib/csrf-client';
 import { useToastContext } from '@/hooks/use-toast-context';
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
-}
 
 export function AdminIngestionJobActions({
   jobId,
@@ -32,13 +27,13 @@ export function AdminIngestionJobActions({
       trigger={
         <Button size="sm" variant="secondary">
           <RotateCcw className="h-4 w-4 mr-2" />
-          Relancer
+          Rerun
         </Button>
       }
-      title="Relancer ce job d’ingestion"
-      description="Repasse le job en “queued” pour qu’il soit repris par l’ingestion."
+      title="Rerun ingestion job"
+      description="Queues the job again so ingestion can retry it."
       requiresReason
-      confirmLabel="Relancer"
+      confirmLabel="Rerun"
       onConfirm={async ({ reason }) => {
         try {
           const token = await getCsrfToken();
@@ -49,19 +44,18 @@ export function AdminIngestionJobActions({
           });
           if (!res.ok) {
             const payload = await res.json().catch(() => ({}));
-            throw new Error(payload?.message || 'Relance impossible.');
+            throw new Error(payload?.message || 'Rerun failed.');
           }
-          toast({ type: 'success', title: 'OK', message: 'Job relancé.' });
+          toast({ type: 'success', title: 'OK', message: 'Job rerun.' });
           router.refresh();
         } catch (error) {
           toast({
             type: 'error',
-            title: 'Erreur',
-            message: error instanceof Error ? error.message : 'Relance impossible.',
+            title: 'Error',
+            message: error instanceof Error ? error.message : 'Rerun failed.',
           });
         }
       }}
     />
   );
 }
-

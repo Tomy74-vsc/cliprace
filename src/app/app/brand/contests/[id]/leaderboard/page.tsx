@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
-import { fetchContestLeaderboard, type LeaderboardEntry } from '@/lib/queries/contest-leaderboard';
+import { fetchContestLeaderboard } from '@/lib/queries/contest-leaderboard';
 import { BrandEmptyState } from '@/components/brand/empty-state-enhanced';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -51,7 +51,6 @@ export default async function BrandContestLeaderboardPage({
   const mode: Mode = modeParam === 'score' ? 'score' : 'views';
 
   const leaderboard = await fetchContestLeaderboard(contest.id, 50);
-  const top1 = leaderboard[0];
 
   // Récupérer les prix pour calculer les gains estimés
   const { data: prizes } = await supabase

@@ -1,5 +1,5 @@
-/*
-Source: Creator settings form (phase 2, réécrit UTF-8)
+﻿/*
+Source: Creator settings form (phase 2, rÃ©Ã©crit UTF-8)
 */
 'use client';
 
@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToastContext } from '@/hooks/use-toast-context';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
@@ -111,8 +112,8 @@ export function CreatorSettingsForm({
       }
       toast({
         type: 'success',
-        title: 'Profil mis à jour',
-        message: 'Vos informations ont été sauvegardées.',
+        title: 'Profil mis Ã  jour',
+        message: 'Vos informations ont Ã©tÃ© sauvegardÃ©es.',
       });
       router.refresh();
     } catch (error) {
@@ -136,7 +137,7 @@ export function CreatorSettingsForm({
   const handleAccountDeletion = async () => {
     if (requestingDeletion) return;
     const confirmed = window.confirm(
-      'Êtes-vous sûr de vouloir demander la suppression de votre compte ? Cette action est irréversible.',
+      'ÃŠtes-vous sÃ»r de vouloir demander la suppression de votre compte ? Cette action est irrÃ©versible.',
     );
     if (!confirmed) return;
     setRequestingDeletion(true);
@@ -154,8 +155,8 @@ export function CreatorSettingsForm({
       }
       toast({
         type: 'success',
-        title: 'Demande enregistrée',
-        message: 'Votre compte sera désactivé très prochainement.',
+        title: 'Demande enregistrÃ©e',
+        message: 'Votre compte sera dÃ©sactivÃ© trÃ¨s prochainement.',
       });
       router.push('/auth/login?deleted=1');
     } catch (error) {
@@ -175,12 +176,12 @@ export function CreatorSettingsForm({
       <Card>
         <CardHeader>
           <CardTitle>Profil public</CardTitle>
-          <CardDescription>Nom, bio et avatar affichés aux marques.</CardDescription>
+          <CardDescription>Nom, bio et avatar affichÃ©s aux marques.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>
-            <label className="text-sm font-medium text-foreground">Nom affiché</label>
-            <Input {...register('display_name')} placeholder="Votre nom ou pseudo" />
+            <Label htmlFor="creator-display-name" className="text-sm font-medium text-foreground">Nom affiche</Label>
+            <Input id="creator-display-name" {...register('display_name')} placeholder="Votre nom ou pseudo" />
             <p className="text-xs text-muted-foreground mt-1">
               Ce nom sera visible sur les concours et les classements.
             </p>
@@ -189,52 +190,52 @@ export function CreatorSettingsForm({
             )}
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">Bio</label>
-            <Textarea rows={4} {...register('bio')} placeholder="Décrivez votre univers en quelques lignes" />
+            <Label htmlFor="creator-bio" className="text-sm font-medium text-foreground">Bio</Label>
+            <Textarea id="creator-bio" rows={4} {...register('bio')} placeholder="Decrivez votre univers en quelques lignes" />
             <p className="text-xs text-muted-foreground mt-1">
-              Aide les marques à comprendre ton contenu et ton audience.
+              Aide les marques a comprendre ton contenu et ton audience.
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">Avatar (URL)</label>
-            <Input {...register('avatar_url')} placeholder="https://..." />
+            <Label htmlFor="creator-avatar-url" className="text-sm font-medium text-foreground">Avatar (URL)</Label>
+            <Input id="creator-avatar-url" {...register('avatar_url')} placeholder="https://..." />
             <p className="text-xs text-muted-foreground mt-1">
-              Utilise une image carrée et reconnaissable (par exemple ta PP TikTok).
+              Utilise une image carree et reconnaissable (par exemple ta PP TikTok).
             </p>
           </div>
         </CardContent>
       </Card>
 
-      {/* Informations créateur / stats */}
+      {/* Informations crÃ©ateur / stats */}
       <Card>
         <CardHeader>
-          <CardTitle>Profil créateur & stats</CardTitle>
-          <CardDescription>Plateforme principale et métriques clés utilisées pour l’éligibilité.</CardDescription>
+          <CardTitle>Profil crÃ©ateur & stats</CardTitle>
+          <CardDescription>Plateforme principale et mÃ©triques clÃ©s utilisÃ©es pour lâ€™Ã©ligibilitÃ©.</CardDescription>
         </CardHeader>
         <CardContent className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
-            <label className="text-sm font-medium text-foreground">Prénom</label>
-            <Input {...register('first_name')} placeholder="Prénom" />
+            <Label htmlFor="creator-first-name" className="text-sm font-medium text-foreground">Prenom</Label>
+            <Input id="creator-first-name" {...register('first_name')} placeholder="Prenom" />
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">Nom</label>
-            <Input {...register('last_name')} placeholder="Nom" />
+            <Label htmlFor="creator-last-name" className="text-sm font-medium text-foreground">Nom</Label>
+            <Input id="creator-last-name" {...register('last_name')} placeholder="Nom" />
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">Handle</label>
-            <Input {...register('handle')} placeholder="@monpseudo" />
+            <Label htmlFor="creator-handle" className="text-sm font-medium text-foreground">Handle</Label>
+            <Input id="creator-handle" {...register('handle')} placeholder="@monpseudo" />
             <p className="text-xs text-muted-foreground mt-1">
-              Sans URL complète, uniquement ton identifiant sur la plateforme (ex. @moncompte).
+              Sans URL complete, uniquement ton identifiant sur la plateforme (ex. @moncompte).
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">Plateforme principale</label>
+            <Label htmlFor="creator-platform" className="text-sm font-medium text-foreground">Plateforme principale</Label>
             <Select
               value={watch('primary_platform')}
-              onValueChange={(value) => setValue('primary_platform', value as any)}
+              onValueChange={(value) => setValue('primary_platform', value as ProfileUpdateInput['primary_platform'])}
             >
-              <SelectTrigger>
-                <SelectValue placeholder="Sélectionner" />
+              <SelectTrigger id="creator-platform">
+                <SelectValue placeholder="Selectionner" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="tiktok">TikTok</SelectItem>
@@ -243,22 +244,21 @@ export function CreatorSettingsForm({
               </SelectContent>
             </Select>
             <p className="text-xs text-muted-foreground mt-1">
-              ClipRace utilise cette plateforme pour calculer ton éligibilité principale.
+              ClipRace utilise cette plateforme pour calculer ton eligibilite principale.
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">Followers</label>
-            <Input type="number" min={0} {...register('followers', { valueAsNumber: true })} />
+            <Label htmlFor="creator-followers" className="text-sm font-medium text-foreground">Followers</Label>
+            <Input id="creator-followers" type="number" min={0} {...register('followers', { valueAsNumber: true })} />
             <p className="text-xs text-muted-foreground mt-1">
               Nombre approximatif de followers sur ta plateforme principale (arrondi).
             </p>
           </div>
           <div>
-            <label className="text-sm font-medium text-foreground">Vues moyennes</label>
-            <Input type="number" min={0} {...register('avg_views', { valueAsNumber: true })} />
+            <Label htmlFor="creator-avg-views" className="text-sm font-medium text-foreground">Vues moyennes</Label>
+            <Input id="creator-avg-views" type="number" min={0} {...register('avg_views', { valueAsNumber: true })} />
             <p className="text-xs text-muted-foreground mt-1">
-              Moyenne des vues sur tes dernières vidéos. Un profil sans stats complètes peut être exclu de certains
-              concours.
+              Moyenne des vues sur tes dernieres videos. Un profil sans stats completes peut etre exclu de certains concours.
             </p>
           </div>
         </CardContent>
@@ -268,7 +268,7 @@ export function CreatorSettingsForm({
       <Card>
         <CardHeader>
           <CardTitle>Notifications</CardTitle>
-          <CardDescription>Choisissez comment vous souhaitez être alerté.</CardDescription>
+          <CardDescription>Choisissez comment vous souhaitez Ãªtre alertÃ©.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {notificationEventOptions.map((event) => (
@@ -294,15 +294,15 @@ export function CreatorSettingsForm({
         </CardContent>
       </Card>
 
-      {/* Sécurité / suppression compte */}
+      {/* SÃ©curitÃ© / suppression compte */}
       <Card>
         <CardHeader>
           <CardTitle>Zone sensible</CardTitle>
-          <CardDescription>Suppression définitive de votre compte.</CardDescription>
+          <CardDescription>Suppression dÃ©finitive de votre compte.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           <p className="text-sm text-muted-foreground">
-            La désactivation supprimera l&apos;accès à ClipRace et informera les marques avec lesquelles vous
+            La dÃ©sactivation supprimera l&apos;accÃ¨s Ã  ClipRace et informera les marques avec lesquelles vous
             collaborez.
           </p>
           <Button type="button" variant="destructive" onClick={handleAccountDeletion} disabled={requestingDeletion}>
@@ -323,13 +323,14 @@ export function CreatorSettingsForm({
 function notificationLabel(event: (typeof notificationEventOptions)[number]): string {
   switch (event) {
     case 'submission_approved':
-      return 'Soumission approuvée';
+      return 'Soumission approuvÃ©e';
     case 'submission_rejected':
-      return 'Soumission refusée';
+      return 'Soumission refusÃ©e';
     case 'message_new':
       return 'Nouveau message';
     default:
       return event;
   }
 }
+
 

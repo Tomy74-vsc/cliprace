@@ -26,10 +26,10 @@ function roleVariant(role: string): BadgeProps['variant'] {
 }
 
 export function AdminUsersTableClient({ items }: { items: AdminUserRow[] }) {
-  const columns: Array<ColumnDef<AdminUserRow, any>> = [
+  const columns: Array<ColumnDef<AdminUserRow, UnsafeAny>> = [
     {
       id: 'user',
-      header: 'Utilisateur',
+      header: 'User',
       accessorFn: (row) => row.display_name || row.email,
       cell: ({ row }) => {
         const user = row.original;
@@ -44,15 +44,15 @@ export function AdminUsersTableClient({ items }: { items: AdminUserRow[] }) {
     },
     {
       accessorKey: 'role',
-      header: 'Rôle',
+      header: 'Role',
       cell: ({ row }) => <Badge variant={roleVariant(row.original.role)}>{row.original.role}</Badge>,
     },
     {
       accessorKey: 'is_active',
-      header: 'Statut',
+      header: 'Status',
       cell: ({ row }) => (
         <Badge variant={row.original.is_active ? 'success' : 'danger'}>
-          {row.original.is_active ? 'actif' : 'inactif'}
+          {row.original.is_active ? 'active' : 'inactive'}
         </Badge>
       ),
     },
@@ -61,13 +61,13 @@ export function AdminUsersTableClient({ items }: { items: AdminUserRow[] }) {
       header: 'Onboarding',
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground">
-          {row.original.onboarding_complete ? 'terminé' : 'en attente'}
+          {row.original.onboarding_complete ? 'complete' : 'pending'}
         </span>
       ),
     },
     {
       accessorKey: 'created_at',
-      header: 'Créé',
+      header: 'Created',
       cell: ({ row }) => (
         <span className="text-xs text-muted-foreground">{formatDateTime(row.original.created_at)}</span>
       ),
@@ -79,7 +79,7 @@ export function AdminUsersTableClient({ items }: { items: AdminUserRow[] }) {
       enableHiding: false,
       cell: ({ row }) => (
         <Button asChild variant="secondary" size="sm">
-          <Link href={`/app/admin/users/${row.original.id}`}>Détails</Link>
+          <Link href={`/app/admin/users/${row.original.id}`}>Details</Link>
         </Button>
       ),
     },
@@ -90,9 +90,8 @@ export function AdminUsersTableClient({ items }: { items: AdminUserRow[] }) {
       data={items}
       columns={columns}
       getRowId={(row) => row.id}
-      emptyTitle="Aucun utilisateur"
-      emptyDescription="Aucun utilisateur ne correspond à vos filtres."
+      emptyTitle="No users found"
+      emptyDescription="No users match the current filters."
     />
   );
 }
-

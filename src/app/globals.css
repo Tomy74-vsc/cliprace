@@ -1,0 +1,101 @@
+/* Ajouter ces animations au fichier globals.css existant */
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(4);
+    opacity: 0;
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite;
+}
+
+.animate-fadeInUp {
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.animate-slideInRight {
+  animation: slideInRight 0.3s ease-out;
+}
+
+/* Améliorations visuelles globales */
+.admin-table {
+  @apply rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm;
+}
+
+.admin-table__table {
+  @apply border-collapse;
+}
+
+.admin-table__table thead {
+  @apply bg-muted/30;
+}
+
+.admin-table__table tbody tr {
+  @apply border-b border-border/30 transition-colors hover:bg-muted/20;
+}
+
+.admin-table__table tbody tr:last-child {
+  @apply border-b-0;
+}
+
+/* Glassmorphism utilities */
+.glass-card {
+  @apply bg-card/80 backdrop-blur-xl border border-border/50;
+}
+
+.glass-header {
+  @apply bg-background/80 backdrop-blur-xl border-b border-border/50;
+}
+
+/* Smooth transitions */
+* {
+  @apply transition-colors duration-200;
+}
+
+/* Focus states améliorés */
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  @apply outline-none ring-2 ring-primary/50 ring-offset-2 ring-offset-background;
+}
+
+

@@ -3,6 +3,9 @@ import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
+import { invoiceValidators } from '@/lib/admin/validators';
+import { notifyAdminAction } from '@/lib/admin/notifications';
 import { createError, formatErrorResponse } from '@/lib/errors';
 import { pdf, type DocumentProps } from '@react-pdf/renderer';
 import { AdminInvoicePDF } from '@/components/pdf/admin-invoice-pdf';
@@ -27,11 +30,23 @@ export async function POST(
   try {
     const { id } = await context.params;
     const { user } = await requireAdminPermission('invoices.write');
-    await enforceAdminRateLimit(req, { route: 'admin:invoices:generate', max: 10, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:invoices:generate', max: 10, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
       throw createError('FORBIDDEN', 'Invalid CSRF token', 403, csrfError);
+    }
+
+    // Validation métier
+    const validation = await invoiceValidators.canGenerate(id);
+    if (!validation.valid) {
+      throw createError(
+        'VALIDATION_ERROR',
+        'Cannot generate invoice PDF',
+        400,
+        { errors: validation.errors }
+      );
     }
 
     const admin = getAdminClient();
@@ -122,12 +137,12 @@ export async function POST(
       throw createError('STORAGE_ERROR', 'Failed to store invoice PDF', 500, uploadError.message);
     }
 
-    const { data: urlData } = admin.storage.from('invoices').getPublicUrl(filePath);
+    const pdfPath = filePath;
 
     const now = new Date().toISOString();
     const { error: updateError } = await admin
       .from('invoices')
-      .update({ pdf_url: urlData.publicUrl, updated_at: now })
+      .update({ pdf_url: pdfPath, updated_at: now })
       .eq('id', invoice.id);
 
     if (updateError) {
@@ -139,14 +154,48 @@ export async function POST(
       action: 'invoice_generate',
       table_name: 'invoices',
       row_pk: invoice.id,
-      new_values: { pdf_url: urlData.publicUrl },
+      new_values: { pdf_path: pdfPath },
       ip: req.headers.get('x-forwarded-for') ?? undefined,
       user_agent: req.headers.get('user-agent') ?? undefined,
     });
 
+    // Notifier l'org owner (via billing_email ou org owner)
+    if (invoice.org_id) {
+      const { data: org } = await admin
+        .from('orgs')
+        .select('id, billing_email, owner_id')
+        .eq('id', invoice.org_id)
+        .single();
+
+      if (org) {
+        // Trouver le user_id du billing_email ou utiliser owner_id
+        let notifyUserId: string | null = org.owner_id || null;
+        if (!notifyUserId && org.billing_email) {
+          const { data: profile } = await admin
+            .from('profiles')
+            .select('id')
+            .eq('email', org.billing_email)
+            .single();
+          notifyUserId = profile?.id || null;
+        }
+
+        if (notifyUserId) {
+          await notifyAdminAction({
+            userId: notifyUserId,
+            type: 'invoice_generated',
+            data: {
+              invoice_id: invoice.id,
+              org_id: invoice.org_id,
+            },
+          });
+        }
+      }
+    }
+
     return NextResponse.json({
       ok: true,
-      pdf_url: urlData.publicUrl,
+      pdf_path: pdfPath,
+      download_url: `/api/admin/invoices/${invoice.id}/download`,
       invoice_number: invoiceNumber,
     });
   } catch (error) {

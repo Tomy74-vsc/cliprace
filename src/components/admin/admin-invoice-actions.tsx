@@ -6,18 +6,13 @@ import { useRouter } from 'next/navigation';
 import { AdminActionPanel } from '@/components/admin/admin-action-panel';
 import { Button } from '@/components/ui/button';
 import { useToastContext } from '@/hooks/use-toast-context';
+import { getCsrfToken } from '@/lib/csrf-client';
 
 interface AdminInvoiceActionsProps {
   invoiceId: string;
   status: string;
   hasPdf: boolean;
   canWrite?: boolean;
-}
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
 }
 
 export function AdminInvoiceActions({ invoiceId, status, hasPdf, canWrite = true }: AdminInvoiceActionsProps) {
@@ -30,7 +25,7 @@ export function AdminInvoiceActions({ invoiceId, status, hasPdf, canWrite = true
       toast({
         type: 'warning',
         title: 'Lecture seule',
-        message: "Vous n'avez pas les droits pour modifier les factures.",
+        message: "Vous n'avez pas la permission de modifier les factures.",
       });
       return;
     }
@@ -43,13 +38,13 @@ export function AdminInvoiceActions({ invoiceId, status, hasPdf, canWrite = true
     });
     if (!res.ok) {
       const payload = await res.json().catch(() => ({}));
-      throw new Error(payload?.message || "L'action a échoué.");
+      throw new Error(payload?.message || 'Action failed.');
     }
 
     toast({
       type: 'success',
       title: 'OK',
-      message: action === 'generate' ? 'PDF généré.' : 'Avoir (credit note) créé.',
+      message: action === 'generate' ? 'PDF généré.' : "Avoir créé.",
     });
     router.refresh();
   };
@@ -70,8 +65,8 @@ export function AdminInvoiceActions({ invoiceId, status, hasPdf, canWrite = true
           } catch (error) {
             toast({
               type: 'error',
-              title: 'Erreur',
-              message: error instanceof Error ? error.message : "L'action a échoué.",
+              title: 'Error',
+              message: error instanceof Error ? error.message : 'Action failed.',
             });
           } finally {
             setLoadingGenerate(false);
@@ -88,11 +83,11 @@ export function AdminInvoiceActions({ invoiceId, status, hasPdf, canWrite = true
               Créer un avoir
             </Button>
           }
-          title="Créer un avoir (credit note)"
-          description="Cette action annule la facture et génère un document d'avoir."
+          title="Créer un avoir"
+          description="Annule la facture et génère un document d'avoir."
           requiresReason
           reasonLabel="Raison"
-          reasonPlaceholder="Pourquoi cette facture est-elle annulée ?"
+          reasonPlaceholder="Pourquoi annuler cette facture ?"
           confirmLabel="Créer l'avoir"
           confirmVariant="destructive"
           onConfirm={async ({ reason }) => {
@@ -103,4 +98,3 @@ export function AdminInvoiceActions({ invoiceId, status, hasPdf, canWrite = true
     </div>
   );
 }
-

@@ -1,4 +1,4 @@
-/*
+﻿/*
 Source: POST /api/uploads/contest-asset/sign
 Effects: return bucket+path to upload under storage RLS (no presigned upload URL). Client will use Supabase Storage with anon.
 Tables: contests (ownership), audit_logs
@@ -18,10 +18,10 @@ const BodySchema = z.object({ contest_id: z.string().uuid(), filename: z.string(
 export async function POST(req: NextRequest) {
   try {
     // Rate limit: 10/min per IP
-    const ip = req.headers.get('x-forwarded-for') || (req as any).ip || 'unknown';
+    const ip = req.headers.get('x-forwarded-for') || (req as UnsafeAny).ip || 'unknown';
     const rlKey = `uploads:contest-asset:sign:${ip}`;
     if (!(await rateLimit({ key: rlKey, route: 'uploads:contest-asset:sign', windowMs: 60 * 1000, max: 10 }))) {
-      return NextResponse.json({ ok: false, message: 'Trop de requêtes, réessayez plus tard.' }, { status: 429 });
+      return NextResponse.json({ ok: false, message: 'Trop de requÃªtes, rÃ©essayez plus tard.' }, { status: 429 });
     }
 
     // CSRF check
@@ -66,3 +66,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }
+

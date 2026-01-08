@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
           row.id,
           row.created_at,
           row.actor_id,
-          (Array.isArray((row as any).actor) ? (row as any).actor[0]?.email : (row as any).actor?.email) ??
+          (Array.isArray((row as UnsafeAny).actor) ? (row as UnsafeAny).actor[0]?.email : (row as UnsafeAny).actor?.email) ??
             '',
           row.action,
           row.table_name,
@@ -172,7 +172,7 @@ export async function GET(req: NextRequest) {
           row.old_status,
           row.new_status,
           row.changed_by,
-          (Array.isArray((row as any).actor) ? (row as any).actor[0]?.email : (row as any).actor?.email) ??
+          (Array.isArray((row as UnsafeAny).actor) ? (row as UnsafeAny).actor[0]?.email : (row as UnsafeAny).actor?.email) ??
             '',
           row.reason,
           row.metadata,
@@ -229,10 +229,10 @@ export async function GET(req: NextRequest) {
           row.created_at,
           row.event_name,
           row.user_id,
-          (Array.isArray((row as any).user) ? (row as any).user[0]?.email : (row as any).user?.email) ??
+          (Array.isArray((row as UnsafeAny).user) ? (row as UnsafeAny).user[0]?.email : (row as UnsafeAny).user?.email) ??
             '',
           row.org_id,
-          (Array.isArray((row as any).org) ? (row as any).org[0]?.name : (row as any).org?.name) ??
+          (Array.isArray((row as UnsafeAny).org) ? (row as UnsafeAny).org[0]?.name : (row as UnsafeAny).org?.name) ??
             '',
           row.properties,
         ])
@@ -294,3 +294,4 @@ export async function GET(req: NextRequest) {
     return formatErrorResponse(error);
   }
 }
+

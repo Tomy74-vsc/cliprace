@@ -9,12 +9,18 @@ const buttonVariants = cva(
   {
     variants: {
       variant: {
+        default:
+          'bg-primary text-primary-foreground shadow-card hover:bg-primary/90 focus-visible:ring-primary',
         primary:
           'bg-primary text-primary-foreground shadow-card hover:bg-primary/90 focus-visible:ring-primary',
+        outline:
+          'border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 focus-visible:ring-primary',
         secondary:
           'border border-border bg-secondary text-secondary-foreground hover:bg-secondary/80 focus-visible:ring-primary',
         ghost:
           'hover:bg-muted text-foreground focus-visible:ring-primary/60',
+        warning:
+          'bg-warning text-warning-foreground shadow-[0_10px_25px_-10px_rgba(245,158,11,0.35)] hover:bg-warning/90 focus-visible:ring-warning',
         destructive:
           'bg-destructive text-destructive-foreground shadow-[0_10px_25px_-10px_rgba(244,63,94,0.35)] hover:bg-destructive/90 focus-visible:ring-destructive',
       },
@@ -51,7 +57,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       // When using asChild, we delegate element type to the child.
       // We ne gérons pas l'état `loading` ici pour éviter de passer des props à un Fragment.
       return (
-        <Comp {...sharedProps} ref={ref as any}>
+        <Comp {...sharedProps} ref={ref as UnsafeAny}>
           {children}
         </Comp>
       );
@@ -95,4 +101,5 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = 'Button';
 
 export { Button, buttonVariants };
+
 

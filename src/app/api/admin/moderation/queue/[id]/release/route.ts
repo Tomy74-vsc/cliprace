@@ -3,6 +3,8 @@ import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
+import { moderationValidators } from '@/lib/admin/validators';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 export async function POST(
@@ -12,11 +14,23 @@ export async function POST(
   try {
     const { id } = await context.params;
     const { user } = await requireAdminPermission('moderation.write');
-    await enforceAdminRateLimit(req, { route: 'admin:moderation:queue:release', max: 30, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:moderation:queue:release', max: 30, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
       throw createError('FORBIDDEN', 'Invalid CSRF token', 403, csrfError);
+    }
+
+    // Validation métier
+    const validation = await moderationValidators.canRelease(id, user.id);
+    if (!validation.valid) {
+      throw createError(
+        'VALIDATION_ERROR',
+        'Cannot release queue item',
+        400,
+        { errors: validation.errors }
+      );
     }
 
     const admin = getAdminClient();
@@ -28,10 +42,6 @@ export async function POST(
 
     if (error || !queueItem) {
       throw createError('NOT_FOUND', 'Queue item not found', 404, error?.message);
-    }
-
-    if (queueItem.status !== 'processing' || queueItem.reviewed_by !== user.id) {
-      throw createError('CONFLICT', 'Queue item cannot be released', 409);
     }
 
     const now = new Date().toISOString();

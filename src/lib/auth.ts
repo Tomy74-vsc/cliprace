@@ -2,7 +2,6 @@
 // Effects: getSession returns full profile (id, role) with error handling and session cleanup
 import { getSupabaseSSR } from './supabase/ssr';
 import { getSupabaseAdmin } from './supabase/server';
-import { cookies } from 'next/headers';
 
 export type UserRole = 'creator' | 'brand' | 'admin';
 

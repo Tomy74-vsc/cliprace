@@ -4,6 +4,11 @@ import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
+import { assertReason } from '@/lib/admin/reason';
+import { auditAdminAction } from '@/lib/admin/audit-enhanced';
+import { userValidators } from '@/lib/admin/validators';
+import { notifyAdminAction } from '@/lib/admin/notifications';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 const UpdateSchema = z.object({
@@ -89,7 +94,8 @@ export async function PATCH(
   try {
     const { id } = await context.params;
     const { user } = await requireAdminPermission('users.write');
-    await enforceAdminRateLimit(req, { route: 'admin:users:update', max: 10, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:users:update', max: 10, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
@@ -102,6 +108,9 @@ export async function PATCH(
       throw createError('VALIDATION_ERROR', 'Invalid payload', 400, parsed.error.flatten());
     }
 
+    // Reason obligatoire pour mutations
+    const { reason, reason_code } = assertReason(body);
+
     const admin = getAdminClient();
     const { data: current, error: currentError } = await admin
       .from('profiles')
@@ -111,6 +120,19 @@ export async function PATCH(
 
     if (currentError || !current) {
       throw createError('NOT_FOUND', 'User not found', 404, currentError?.message);
+    }
+
+    // Validation métier pour changement de rôle
+    if (parsed.data.role && parsed.data.role !== current.role) {
+      const validation = await userValidators.canChangeRole(id, parsed.data.role, user.id);
+      if (!validation.valid) {
+        throw createError(
+          'VALIDATION_ERROR',
+          'Cannot change user role',
+          400,
+          { errors: validation.errors }
+        );
+      }
     }
 
     const updatePayload: Record<string, unknown> = {};
@@ -136,26 +158,28 @@ export async function PATCH(
       throw createError('DATABASE_ERROR', 'Failed to update user', 500, updateError.message);
     }
 
-    await admin.from('audit_logs').insert({
-      actor_id: user.id,
+    // Audit avec helper standardisé
+    await auditAdminAction({
+      actorId: user.id,
       action: 'admin_user_update',
-      table_name: 'profiles',
-      row_pk: id,
-      old_values: { role: current.role, is_active: current.is_active },
-      new_values: updatePayload,
+      entity: 'profiles',
+      entityId: id,
+      before: { role: current.role, is_active: current.is_active },
+      after: updatePayload,
+      reason,
+      reasonCode: reason_code,
       ip: req.headers.get('x-forwarded-for') ?? undefined,
-      user_agent: req.headers.get('user-agent') ?? undefined,
+      userAgent: req.headers.get('user-agent') ?? undefined,
     });
 
-    if (typeof parsed.data.is_active === 'boolean' && parsed.data.is_active !== current.is_active) {
-      await admin.from('status_history').insert({
-        table_name: 'profiles',
-        row_id: id,
-        old_status: current.is_active ? 'active' : 'inactive',
-        new_status: parsed.data.is_active ? 'active' : 'inactive',
-        changed_by: user.id,
-      });
-    }
+    // Notifier l'utilisateur
+    await notifyAdminAction({
+      userId: id,
+      type: parsed.data.is_active ? 'user_activated' : 'user_deactivated',
+      data: {
+        user_id: id,
+      },
+    });
 
     return NextResponse.json({ ok: true, user: updated });
   } catch (error) {

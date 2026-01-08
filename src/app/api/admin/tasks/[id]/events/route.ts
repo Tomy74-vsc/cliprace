@@ -13,8 +13,8 @@ const QuerySchema = z.object({
 export async function GET(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { id } = await context.params;
-    await requireAdminPermission('tasks.read');
-    await enforceAdminRateLimit(req, { route: 'admin:tasks:events', max: 120, windowMs: 60_000 });
+    const { user } = await requireAdminPermission('tasks.read');
+    await enforceAdminRateLimit(req, { route: 'admin:tasks:events', max: 120, windowMs: 60_000 }, user.id);
 
     const parsed = QuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams.entries()));
     const query = parsed.success ? parsed.data : QuerySchema.parse({});

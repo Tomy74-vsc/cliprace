@@ -10,8 +10,28 @@ import { assertCsrf } from '@/lib/csrf';
 import { createError, formatErrorResponse } from '@/lib/errors';
 import { pdf, type DocumentProps } from '@react-pdf/renderer';
 import { InvoicePDF } from '@/components/pdf/invoice-pdf';
-import crypto from 'crypto';
 import { createElement, type ReactElement } from 'react';
+
+type SupabaseErrorLike = { message?: string; code?: string } | null | undefined;
+
+function isMissingTable(error: SupabaseErrorLike) {
+  return String((error as UnsafeAny)?.code || '').toUpperCase() === '42P01';
+}
+
+async function isOrgMember(admin: ReturnType<typeof getSupabaseAdmin>, orgId: string, userId: string) {
+  const { data, error } = await admin
+    .from('org_members')
+    .select('org_id')
+    .eq('org_id', orgId)
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingTable(error)) return false;
+    throw createError('DATABASE_ERROR', 'Failed to check organization membership', 500, error.message);
+  }
+  return Boolean(data);
+}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ payment_id: string }> }) {
   try {
@@ -48,11 +68,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
         `
         id,
         brand_id,
+        org_id,
         contest_id,
         amount_cents,
         currency,
         status,
         stripe_payment_intent_id,
+        metadata,
         created_at,
         contest:contest_id (
           title,
@@ -79,9 +101,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
       throw createError('NOT_FOUND', 'Paiement introuvable', 404);
     }
 
-    // Vérifier ownership
-    if (payment.brand_id !== user.id && role !== 'admin') {
-      throw createError('FORBIDDEN', 'Tu n\'as pas les droits pour générer cette facture', 403);
+    const orgId = (payment as UnsafeAny).org_id as string | null;
+    const canAccess =
+      role === 'admin' ||
+      payment.brand_id === user.id ||
+      (orgId ? await isOrgMember(admin, orgId, user.id) : false);
+    if (!canAccess) {
+      throw createError('FORBIDDEN', "Tu n'as pas les droits pour générer cette facture", 403);
     }
 
     // Vérifier que le paiement est réussi
@@ -89,13 +115,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
       throw createError('VALIDATION_ERROR', 'Le paiement doit être réussi pour générer une facture', 400);
     }
 
-    const contest = (Array.isArray((payment as any).contest)
-      ? (payment as any).contest[0]
-      : (payment as any).contest) as { title: string; prize_pool_cents: number } | null;
+    const contest = (Array.isArray((payment as UnsafeAny).contest)
+      ? (payment as UnsafeAny).contest[0]
+      : (payment as UnsafeAny).contest) as { title: string; prize_pool_cents: number } | null;
 
-    const brand = (Array.isArray((payment as any).brand)
-      ? (payment as any).brand[0]
-      : (payment as any).brand) as {
+    const brand = (Array.isArray((payment as UnsafeAny).brand)
+      ? (payment as UnsafeAny).brand[0]
+      : (payment as UnsafeAny).brand) as {
       display_name?: string | null;
       profile_brands?: {
         company_name: string;
@@ -187,7 +213,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
     const fileName = `invoice-${payment_id}-${Date.now()}.pdf`;
     const filePath = `${payment.brand_id}/invoices/${fileName}`;
 
-    const { data: uploadData, error: uploadError } = await admin.storage
+    const { error: uploadError } = await admin.storage
       .from('invoices')
       .upload(filePath, pdfBuffer, {
         contentType: 'application/pdf',
@@ -199,19 +225,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
       throw createError('STORAGE_ERROR', 'Impossible de stocker la facture', 500, uploadError.message);
     }
 
-    // Récupérer l'URL publique
-    const { data: urlData } = admin.storage.from('invoices').getPublicUrl(filePath);
+    const invoicePdfPath = filePath;
+    const now = new Date().toISOString();
 
-    // Créer ou mettre à jour l'enregistrement dans la table invoices (si elle existe)
-    // Note: La table invoices nécessite org_id, donc on peut stocker l'URL dans payments_brand.metadata
+    // Note: La table invoices nécessite org_id. En attendant, on garde le lien sur payments_brand.metadata.
     const { error: updateError } = await admin
       .from('payments_brand')
       .update({
         metadata: {
-          ...((payment as any).metadata || {}),
-          invoice_pdf_url: urlData.publicUrl,
+          ...((payment as UnsafeAny).metadata || {}),
+          invoice_pdf_path: invoicePdfPath,
           invoice_number: invoiceNumber,
-          invoice_generated_at: new Date().toISOString(),
+          invoice_generated_at: now,
         },
       })
       .eq('id', payment_id);
@@ -227,16 +252,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
       action: 'invoice_generate',
       table_name: 'payments_brand',
       row_pk: payment_id,
-      new_values: { invoice_number: invoiceNumber, invoice_pdf_url: urlData.publicUrl },
+      new_values: { invoice_number: invoiceNumber, invoice_pdf_path: invoicePdfPath },
     });
     if (auditError) {
       console.error('Audit log failed for invoice_generate', auditError);
     }
 
-    // Retourner l'URL du PDF
+    // Retourner le chemin du PDF (storage)
     return NextResponse.json({
       ok: true,
-      invoice_url: urlData.publicUrl,
+      invoice_path: invoicePdfPath,
       invoice_number: invoiceNumber,
       download_url: `/api/invoices/${payment_id}/download`,
     });
@@ -244,4 +269,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ pay
     return formatErrorResponse(error);
   }
 }
+
 

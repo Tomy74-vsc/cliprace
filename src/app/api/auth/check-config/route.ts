@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { env } from '@/lib/env';
 import { createClient } from '@supabase/supabase-js';
 
-export async function GET(req: NextRequest) {
+export async function GET(_req: NextRequest) {
   try {
     const checks: Record<string, { status: 'ok' | 'error' | 'warning'; message: string; value?: string }> = {};
 
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
         });
 
         // Test simple connection
-        const { data: healthCheck, error: healthError } = await testClient.from('profiles').select('count').limit(1);
+        const { data: _healthCheck, error: healthError } = await testClient.from('profiles').select('count').limit(1);
 
         checks.supabaseConnection = {
           status: healthError ? 'error' : 'ok',

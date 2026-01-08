@@ -5,6 +5,8 @@ import { getAdminClient } from '@/lib/admin/supabase';
 import { assertAdminBreakGlass } from '@/lib/admin/break-glass';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
+import { teamValidators } from '@/lib/admin/validators';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 const PatchSchema = z.object({
@@ -16,14 +18,15 @@ const PatchSchema = z.object({
 export async function PATCH(req: NextRequest, context: { params: Promise<{ id: string }> }) {
   try {
     const { user } = await requireAdminPermission('admin.team.write');
-    await enforceAdminRateLimit(req, { route: 'admin:team:update', max: 60, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:team:update', max: 60, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
       throw createError('FORBIDDEN', 'Jeton CSRF invalide', 403, csrfError);
     }
 
-    const breakGlass = assertAdminBreakGlass(req, 'admin.team.write');
+    const breakGlass = await assertAdminBreakGlass(req, 'admin.team.write', user.id);
 
     const { id } = await context.params;
     const parsed = PatchSchema.safeParse(await req.json());
@@ -31,8 +34,15 @@ export async function PATCH(req: NextRequest, context: { params: Promise<{ id: s
       throw createError('VALIDATION_ERROR', 'Payload invalide', 400, parsed.error.flatten());
     }
 
-    if (id === user.id && parsed.data.is_active === false) {
-      throw createError('FORBIDDEN', 'Tu ne peux pas désactiver ton propre accès', 403);
+    // Validation métier
+    const validation = await teamValidators.canUpdate(id, user.id, { is_active: parsed.data.is_active });
+    if (!validation.valid) {
+      throw createError(
+        'VALIDATION_ERROR',
+        'Cannot update admin team member',
+        400,
+        { errors: validation.errors }
+      );
     }
 
     const admin = getAdminClient();

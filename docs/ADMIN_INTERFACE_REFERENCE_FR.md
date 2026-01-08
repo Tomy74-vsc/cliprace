@@ -375,6 +375,9 @@ Format standard par page :
 - **But UX** : formation interne + aide contextuelle
 - **Sources DB** : contenu guide + (optionnel) playbooks `admin_playbooks`
 - **Permissions** : `guide.read`
+- **Contenu** : modules detailles pour chaque page (admin + liens brand/creator)
+- **Objectif** : expliquer le role de chaque page, les actions possibles et les flux entre interfaces
+- **UX** : aide simple (pas d'edition JSON), focus sur actions et controles
 
 ---
 

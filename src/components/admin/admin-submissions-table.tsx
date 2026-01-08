@@ -6,6 +6,7 @@ import { AdminTable } from '@/components/admin/admin-table';
 import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { formatDateTime } from '@/lib/formatters';
+import { getCsrfToken } from '@/lib/csrf-client';
 
 type SubmissionRow = {
   id: string;
@@ -34,12 +35,6 @@ function statusVariant(status: string): BadgeProps['variant'] {
   if (status === 'rejected') return 'rejected';
   if (status === 'removed') return 'danger';
   return 'pending';
-}
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
 }
 
 export function AdminSubmissionsTable({ submissions, canWrite }: AdminSubmissionsTableProps) {
@@ -197,6 +192,7 @@ export function AdminSubmissionsTable({ submissions, canWrite }: AdminSubmission
                 </td>
                 <td className="px-4 py-4">
                   {submission.thumbnail_url ? (
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={submission.thumbnail_url}
                       alt=""

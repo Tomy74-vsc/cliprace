@@ -4,6 +4,8 @@ import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
+import { brandValidators } from '@/lib/admin/validators';
 import { createError, formatErrorResponse } from '@/lib/errors';
 import type { ProfileInsert, ProfileBrandInsert } from '@/types/db';
 import { env } from '@/lib/env';
@@ -124,7 +126,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { user: actor } = await requireAdminPermission('brands.write');
-    await enforceAdminRateLimit(req, { route: 'admin:brands:create', max: 10, windowMs: 60_000 });
+    await enforceNotReadOnly(req, actor.id);
+    await enforceAdminRateLimit(req, { route: 'admin:brands:create', max: 10, windowMs: 60_000 }, actor.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
@@ -137,24 +140,23 @@ export async function POST(req: NextRequest) {
       throw createError('VALIDATION_ERROR', 'Invalid payload', 400, parsed.error.flatten());
     }
 
-    const admin = getAdminClient();
     const email = parsed.data.email.trim().toLowerCase();
+    
+    // Validation métier
+    const validation = await brandValidators.canCreate(email);
+    if (!validation.valid) {
+      throw createError(
+        'VALIDATION_ERROR',
+        'Cannot create brand',
+        400,
+        { errors: validation.errors }
+      );
+    }
+
+    const admin = getAdminClient();
     const companyName = parsed.data.company_name.trim();
     const orgName = (parsed.data.org_name ?? companyName).trim();
     const billingEmail = (parsed.data.billing_email ?? email).trim().toLowerCase();
-
-    const { data: existingProfile, error: existingError } = await admin
-      .from('profiles')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
-
-    if (existingError) {
-      throw createError('DATABASE_ERROR', 'Failed to check existing profile', 500, existingError.message);
-    }
-    if (existingProfile?.id) {
-      throw createError('CONFLICT', 'A profile with this email already exists', 409);
-    }
 
     let userId: string;
     let inviteSent = false;

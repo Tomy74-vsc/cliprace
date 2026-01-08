@@ -1,5 +1,5 @@
-/*
-Composant PDF pour générer une facture
+﻿/*
+Composant PDF pour gÃ©nÃ©rer une facture
 Utilise @react-pdf/renderer
 */
 import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
@@ -156,19 +156,19 @@ export function InvoicePDF({
   return (
     <Document>
       <Page size="A4" style={styles.page}>
-        {/* En-tête */}
+        {/* En-tÃªte */}
         <View style={styles.header}>
           <View style={styles.headerLeft}>
             <Text style={styles.logo}>ClipRace</Text>
             <Text style={styles.sectionTitle}>Facture</Text>
-            <Text style={styles.invoiceNumber}>N° {invoice.number}</Text>
+            <Text style={styles.invoiceNumber}>NÂ° {invoice.number}</Text>
           </View>
           <View style={styles.headerRight}>
-            <Text style={styles.sectionTitle}>Date d'émission</Text>
+            <Text style={styles.sectionTitle}>Date d&apos;emission</Text>
             <Text>{formatDate(invoice.issued_at)}</Text>
             {invoice.due_date && (
               <>
-                <Text style={[styles.sectionTitle, { marginTop: 10 }]}>Date d'échéance</Text>
+                <Text style={[styles.sectionTitle, { marginTop: 10 }]}>Date d&apos;echeance</Text>
                 <Text>{formatDate(invoice.due_date)}</Text>
               </>
             )}
@@ -178,26 +178,26 @@ export function InvoicePDF({
         {/* Informations de facturation */}
         <View style={styles.billingInfo}>
           <View style={styles.billingBox}>
-            <Text style={styles.sectionTitle}>Facturer à</Text>
+            <Text style={styles.sectionTitle}>Facturer Ã </Text>
             <Text>{brand.company_name}</Text>
             {brand.address && <Text>{brand.address}</Text>}
             {brand.vat_number && <Text>TVA: {brand.vat_number}</Text>}
           </View>
           <View style={styles.billingBox}>
-            <Text style={styles.sectionTitle}>Émetteur</Text>
+            <Text style={styles.sectionTitle}>Ã‰metteur</Text>
             <Text>ClipRace</Text>
             <Text>Plateforme UGC</Text>
             <Text>contact@cliprace.com</Text>
           </View>
         </View>
 
-        {/* Détails de la facture */}
+        {/* DÃ©tails de la facture */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Détails</Text>
+          <Text style={styles.sectionTitle}>DÃ©tails</Text>
           <View style={styles.table}>
             <View style={[styles.tableRow, styles.tableHeader]}>
               <Text style={styles.tableCell}>Description</Text>
-              <Text style={[styles.tableCell, { flex: 0.3 }]}>Quantité</Text>
+              <Text style={[styles.tableCell, { flex: 0.3 }]}>QuantitÃ©</Text>
               <Text style={[styles.tableCell, { flex: 0.4 }]}>Prix unitaire</Text>
               <Text style={[styles.tableCell, { flex: 0.4 }]}>Total</Text>
             </View>
@@ -247,9 +247,9 @@ export function InvoicePDF({
             <Text>Concours: {contest.title}</Text>
             <Text>Date de paiement: {formatDate(payment.created_at)}</Text>
             {payment.stripe_payment_intent_id && (
-              <Text>Référence Stripe: {payment.stripe_payment_intent_id}</Text>
+              <Text>RÃ©fÃ©rence Stripe: {payment.stripe_payment_intent_id}</Text>
             )}
-            <Text>Statut: Payé</Text>
+            <Text>Statut: PayÃ©</Text>
           </View>
         </View>
 
@@ -257,16 +257,16 @@ export function InvoicePDF({
         <View style={styles.notes}>
           <Text style={styles.sectionTitle}>Notes</Text>
           <Text>
-            Cette facture a été générée automatiquement suite au paiement du concours "{contest.title}".
+            Cette facture a ete generee automatiquement suite au paiement du concours &quot;{contest.title}&quot;.
           </Text>
           <Text style={{ marginTop: 5 }}>
-            Pour toute question, contactez-nous à contact@cliprace.com
+            Pour toute question, contactez-nous Ã  contact@cliprace.com
           </Text>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text>Facture générée le {generatedAt} par ClipRace</Text>
+          <Text>Facture gÃ©nÃ©rÃ©e le {generatedAt} par ClipRace</Text>
           <Text>Merci pour votre confiance !</Text>
         </View>
       </Page>

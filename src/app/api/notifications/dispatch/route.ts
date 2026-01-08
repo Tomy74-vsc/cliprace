@@ -1,4 +1,4 @@
-/*
+﻿/*
 Source: POST /api/notifications/dispatch
 Effects: insert notifications (optionally template-resolved later)
 */
@@ -14,10 +14,10 @@ const BodySchema = z.object({ user_id: z.string().uuid(), type: z.string().min(1
 export async function POST(req: NextRequest) {
   try {
     // Rate limit: 30/min per IP
-    const ip = req.headers.get('x-forwarded-for') || (req as any).ip || 'unknown';
+    const ip = req.headers.get('x-forwarded-for') || (req as UnsafeAny).ip || 'unknown';
     const rlKey = `notifications:dispatch:${ip}`;
     if (!(await rateLimit({ key: rlKey, route: 'notifications:dispatch', windowMs: 60 * 1000, max: 30 }))) {
-      return NextResponse.json({ ok: false, message: 'Trop de requêtes, réessayez plus tard.' }, { status: 429 });
+      return NextResponse.json({ ok: false, message: 'Trop de requÃªtes, rÃ©essayez plus tard.' }, { status: 429 });
     }
 
     // CSRF
@@ -42,3 +42,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }
+

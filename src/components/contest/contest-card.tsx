@@ -11,7 +11,7 @@ import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Sparkles, Trophy, Clock, Star, Video, Crown } from "lucide-react";
+import { Sparkles, Trophy, Clock } from "lucide-react";
 import type { Platform } from "@/lib/validators/platforms";
 import { track } from "@/lib/analytics";
 import { Button } from "@/components/ui/button";

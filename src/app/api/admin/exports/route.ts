@@ -142,7 +142,7 @@ export async function GET(req: NextRequest) {
       const headers = ['user_id', 'email', 'display_name', 'company_name', 'website', 'industry', 'vat_number', 'is_active', 'onboarding_complete', 'created_at', 'updated_at'];
       const csv = toCsv(
         headers,
-        (data ?? []).map((row: any) => {
+        (data ?? []).map((row: UnsafeAny) => {
           const profile = Array.isArray(row.profile) ? row.profile[0] : row.profile;
           return [
             row.user_id,
@@ -337,7 +337,7 @@ export async function GET(req: NextRequest) {
       const { data, error } = await q;
       if (error) throw createError('DATABASE_ERROR', 'Export jobs ingestion impossible', 500, error.message);
       const headers = ['id', 'account_id', 'kind', 'status', 'started_at', 'finished_at', 'created_at'];
-      const csv = toCsv(headers, (data ?? []).map((row: any) => [row.id, row.account_id, row.kind, row.status, row.started_at, row.finished_at, row.created_at]));
+      const csv = toCsv(headers, (data ?? []).map((row: UnsafeAny) => [row.id, row.account_id, row.kind, row.status, row.started_at, row.finished_at, row.created_at]));
       return new Response(csv, { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="ingestion_jobs.csv"' } });
     }
 
@@ -354,7 +354,7 @@ export async function GET(req: NextRequest) {
       const { data, error } = await q;
       if (error) throw createError('DATABASE_ERROR', 'Export erreurs ingestion impossible', 500, error.message);
       const headers = ['id', 'job_id', 'error_code', 'details', 'created_at'];
-      const csv = toCsv(headers, (data ?? []).map((row: any) => [row.id, row.job_id, row.error_code, row.details, row.created_at]));
+      const csv = toCsv(headers, (data ?? []).map((row: UnsafeAny) => [row.id, row.job_id, row.error_code, row.details, row.created_at]));
       return new Response(csv, { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="ingestion_errors.csv"' } });
     }
 
@@ -388,7 +388,7 @@ export async function GET(req: NextRequest) {
       const { data, error } = await q;
       if (error) throw createError('DATABASE_ERROR', 'Export livraisons webhooks impossible', 500, error.message);
       const headers = ['id', 'endpoint_id', 'event', 'status', 'retry_count', 'last_error', 'created_at', 'updated_at'];
-      const csv = toCsv(headers, (data ?? []).map((row: any) => [row.id, row.endpoint_id, row.event, row.status, row.retry_count, row.last_error, row.created_at, row.updated_at]));
+      const csv = toCsv(headers, (data ?? []).map((row: UnsafeAny) => [row.id, row.endpoint_id, row.event, row.status, row.retry_count, row.last_error, row.created_at, row.updated_at]));
       return new Response(csv, { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="webhook_deliveries.csv"' } });
     }
 
@@ -405,7 +405,7 @@ export async function GET(req: NextRequest) {
       const { data, error } = await q;
       if (error) throw createError('DATABASE_ERROR', 'Export KYC impossible', 500, error.message);
       const headers = ['id', 'user_id', 'provider', 'status', 'reason', 'reviewed_at', 'created_at', 'updated_at'];
-      const csv = toCsv(headers, (data ?? []).map((row: any) => [row.id, row.user_id, row.provider, row.status, row.reason, row.reviewed_at, row.created_at, row.updated_at]));
+      const csv = toCsv(headers, (data ?? []).map((row: UnsafeAny) => [row.id, row.user_id, row.provider, row.status, row.reason, row.reviewed_at, row.created_at, row.updated_at]));
       return new Response(csv, { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="kyc_checks.csv"' } });
     }
 
@@ -422,7 +422,7 @@ export async function GET(req: NextRequest) {
       const { data, error } = await q;
       if (error) throw createError('DATABASE_ERROR', 'Export signaux de risque impossible', 500, error.message);
       const headers = ['id', 'user_id', 'reason', 'severity', 'resolved_at', 'created_at', 'updated_at'];
-      const csv = toCsv(headers, (data ?? []).map((row: any) => [row.id, row.user_id, row.reason, row.severity, row.resolved_at, row.created_at, row.updated_at]));
+      const csv = toCsv(headers, (data ?? []).map((row: UnsafeAny) => [row.id, row.user_id, row.reason, row.severity, row.resolved_at, row.created_at, row.updated_at]));
       return new Response(csv, { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="risk_flags.csv"' } });
     }
 
@@ -439,7 +439,7 @@ export async function GET(req: NextRequest) {
       const { data, error } = await q;
       if (error) throw createError('DATABASE_ERROR', 'Export assets impossible', 500, error.message);
       const headers = ['id', 'bucket', 'path', 'mime_type', 'size_bytes', 'owner_id', 'created_at'];
-      const csv = toCsv(headers, (data ?? []).map((row: any) => [row.id, row.bucket, row.path, row.mime_type, row.size_bytes, row.owner_id, row.created_at]));
+      const csv = toCsv(headers, (data ?? []).map((row: UnsafeAny) => [row.id, row.bucket, row.path, row.mime_type, row.size_bytes, row.owner_id, row.created_at]));
       return new Response(csv, { headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': 'attachment; filename="assets.csv"' } });
     }
 
@@ -448,3 +448,4 @@ export async function GET(req: NextRequest) {
     return formatErrorResponse(error);
   }
 }
+

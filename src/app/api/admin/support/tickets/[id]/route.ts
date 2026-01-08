@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
 import { createError, formatErrorResponse } from '@/lib/errors';
@@ -25,7 +26,8 @@ export async function PATCH(
   try {
     const { id } = await context.params;
     const { user } = await requireAdminPermission('support.write');
-    await enforceAdminRateLimit(req, { route: 'admin:support:tickets:update', max: 30, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:support:tickets:update', max: 30, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
@@ -104,7 +106,7 @@ export async function DELETE(
   try {
     const { id } = await context.params;
     const { user } = await requireAdminPermission('support.write');
-    await enforceAdminRateLimit(req, { route: 'admin:support:tickets:delete', max: 30, windowMs: 60_000 });
+    await enforceAdminRateLimit(req, { route: 'admin:support:tickets:delete', max: 30, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {

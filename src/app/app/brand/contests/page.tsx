@@ -1,6 +1,6 @@
-/*
+﻿/*
 Page: Brand contests list
-Objectifs: liste des concours de la marque avec filtres (statut, plateforme, période), actions rapides.
+Objectifs: liste des concours de la marque avec filtres (statut, plateforme, pÃ©riode), actions rapides.
 */
 import Link from 'next/link';
 import { getSession } from '@/lib/auth';
@@ -74,18 +74,18 @@ export default async function BrandContestsPage({ searchParams }: ContestsPagePr
     <main className="space-y-8">
       <TrackOnView event="view_brand_contests" payload={{ total, status: statusParam }} />
 
-      {/* En-tête avec CTA */}
+      {/* En-tÃªte avec CTA */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="space-y-2">
           <h1 className="text-3xl font-semibold">Mes concours</h1>
           <p className="text-muted-foreground">
-            Gère tes concours, modère les participations, suivez les performances.
+            GÃ¨re tes concours, modÃ¨re les participations, suivez les performances.
           </p>
         </div>
         <Button asChild>
           <Link href="/app/brand/contests/new">
             <Plus className="h-4 w-4 mr-2" />
-            Créer un concours
+            CrÃ©er un concours
           </Link>
         </Button>
       </div>
@@ -118,7 +118,7 @@ export default async function BrandContestsPage({ searchParams }: ContestsPagePr
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground transition-colors duration-200 group-hover:text-foreground/80">Terminés</p>
+                <p className="text-sm text-muted-foreground transition-colors duration-200 group-hover:text-foreground/80">TerminÃ©s</p>
                 <p className="text-2xl font-semibold transition-colors duration-200 group-hover:text-primary">{stats.ended}</p>
               </div>
               <CheckCircle2 className="h-8 w-8 text-success transition-transform duration-200 group-hover:scale-110" />
@@ -157,7 +157,7 @@ export default async function BrandContestsPage({ searchParams }: ContestsPagePr
                 defaultValue={search}
                 className="pl-9"
               />
-              {/* Préserver les autres paramètres */}
+              {/* PrÃ©server les autres paramÃ¨tres */}
               {statusParam !== 'all' && (
                 <input type="hidden" name="status" value={statusParam} />
               )}
@@ -250,16 +250,16 @@ export default async function BrandContestsPage({ searchParams }: ContestsPagePr
       {contests.length === 0 ? (
         <BrandEmptyState
           type={statusParam === 'draft' ? 'no-contests' : 'no-results'}
-          title="Aucun concours trouvé"
+          title="Aucun concours trouvÃ©"
           description={
             statusParam === 'draft'
-              ? 'Crée ton premier concours pour commencer.'
-              : 'Aucun concours ne correspond à tes filtres.'
+              ? 'CrÃ©e ton premier concours pour commencer.'
+              : 'Aucun concours ne correspond Ã  tes filtres.'
           }
           action={
             statusParam === 'draft'
               ? {
-                  label: 'Créer un concours',
+                  label: 'CrÃ©er un concours',
                   href: '/app/brand/contests/new',
                   variant: 'primary',
                 }
@@ -286,7 +286,7 @@ export default async function BrandContestsPage({ searchParams }: ContestsPagePr
               <Link
                 href={`/app/brand/contests?page=${page - 1}${statusParam !== 'all' ? `&status=${statusParam}` : ''}${search ? `&search=${encodeURIComponent(search)}` : ''}${selectedPlatforms.length > 0 ? `&platforms=${selectedPlatforms.join(',')}` : ''}${sortParam !== 'newest' ? `&sort=${sortParam}` : ''}`}
               >
-                Précédent
+                PrÃ©cÃ©dent
               </Link>
             </Button>
           )}
@@ -312,8 +312,8 @@ const statusLabels: Record<string, string> = {
   all: 'Tous',
   draft: 'Brouillons',
   active: 'Actifs',
-  ended: 'Terminés',
-  archived: 'Archivés',
+  ended: 'TerminÃ©s',
+  archived: 'ArchivÃ©s',
 };
 
 const statusVariants: Record<string, 'secondary' | 'success' | 'warning' | 'info'> = {
@@ -324,9 +324,9 @@ const statusVariants: Record<string, 'secondary' | 'success' | 'warning' | 'info
 };
 
 const sortLabels: Record<string, string> = {
-  newest: 'Plus récents',
+  newest: 'Plus rÃ©cents',
   oldest: 'Plus anciens',
-  prize_desc: 'Budget décroissant',
+  prize_desc: 'Budget dÃ©croissant',
   submissions_desc: 'Plus de soumissions',
 };
 
@@ -384,8 +384,8 @@ function ContestCard({ contest }: ContestCardProps) {
             {isActive && daysLeft > 0
               ? `Se termine dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}`
               : isEnded
-                ? `Terminé le ${formatDate(contest.end_at)}`
-                : `Démarre le ${formatDate(contest.start_at)}`}
+                ? `TerminÃ© le ${formatDate(contest.end_at)}`
+                : `DÃ©marre le ${formatDate(contest.start_at)}`}
           </div>
         </div>
 
@@ -414,7 +414,7 @@ function ContestCard({ contest }: ContestCardProps) {
           </Button>
           {contest.pending_submissions_count > 0 && (
             <Button asChild size="sm" variant="secondary" className="flex-1">
-              <Link href={`/app/brand/contests/${contest.id}/submissions`}>Modérer</Link>
+              <Link href={`/app/brand/contests/${contest.id}/submissions`}>ModÃ©rer</Link>
             </Button>
           )}
         </div>
@@ -467,7 +467,7 @@ async function fetchContests({
     query = query.overlaps('networks', platforms);
   }
 
-  // Pour le tri par soumissions, on doit d'abord récupérer tous les concours,
+  // Pour le tri par soumissions, on doit d'abord rÃ©cupÃ©rer tous les concours,
   // calculer les stats, trier, puis paginer
   const needsSubmissionsSort = sort === 'submissions_desc';
   
@@ -486,13 +486,13 @@ async function fetchContests({
     }
   }
 
-  // Récupérer tous les concours si tri par soumissions, sinon paginer directement
-  let contests: any[] | null = null;
+  // RÃ©cupÃ©rer tous les concours si tri par soumissions, sinon paginer directement
+  let contests: UnsafeAny[] | null = null;
   let totalCount: number = 0;
-  let queryError: any = null;
+  let queryError: UnsafeAny = null;
 
   if (needsSubmissionsSort) {
-    // Récupérer tous les concours pour le tri par soumissions
+    // RÃ©cupÃ©rer tous les concours pour le tri par soumissions
     const { data, count, error } = await query;
     contests = data;
     totalCount = count || 0;
@@ -510,7 +510,7 @@ async function fetchContests({
     return { contests: [], total: 0, stats: { active: 0, draft: 0, ended: 0 } };
   }
 
-  // Récupérer les stats globales
+  // RÃ©cupÃ©rer les stats globales
   const { data: allContests } = await supabase
     .from('contests')
     .select('status')
@@ -522,7 +522,7 @@ async function fetchContests({
     ended: allContests?.filter((c) => c.status === 'ended').length || 0,
   };
 
-  // Récupérer le nombre de soumissions et vues par concours
+  // RÃ©cupÃ©rer le nombre de soumissions et vues par concours
   const contestIds = contests?.map((c) => c.id) || [];
   const submissionsData: Record<string, { total: number; pending: number; views: number }> = {};
 
@@ -538,7 +538,7 @@ async function fetchContests({
       submissionsData[id] = {
         total: contestSubmissions.length,
         pending: contestSubmissions.filter((s) => s.status === 'pending').length,
-        views: 0, // Sera rempli par la requête suivante
+        views: 0, // Sera rempli par la requÃªte suivante
       };
     });
 
@@ -550,13 +550,13 @@ async function fetchContests({
         .select('submission_id, views')
         .in('submission_id', submissionIds);
 
-      // Agréger les vues par concours
+      // AgrÃ©ger les vues par concours
       const viewsByContest = new Map<string, number>();
       metrics?.forEach((m: { submission_id: string; views: number }) => {
-        const submission = submissions?.find((s: any) => s.id === m.submission_id);
+        const submission = submissions?.find((s: UnsafeAny) => s.id === m.submission_id);
         if (submission) {
-          const current = viewsByContest.get((submission as any).contest_id) || 0;
-          viewsByContest.set((submission as any).contest_id, current + (m.views || 0));
+          const current = viewsByContest.get((submission as UnsafeAny).contest_id) || 0;
+          viewsByContest.set((submission as UnsafeAny).contest_id, current + (m.views || 0));
         }
       });
 
@@ -575,7 +575,7 @@ async function fetchContests({
     views: submissionsData[contest.id]?.views || 0,
   }));
 
-  // Tri par soumissions si demandé (sur tous les résultats)
+  // Tri par soumissions si demandÃ© (sur tous les rÃ©sultats)
   let sortedContests = contestsWithStats;
   if (sort === 'submissions_desc') {
     sortedContests = [...contestsWithStats].sort((a, b) => b.submissions_count - a.submissions_count);
@@ -592,3 +592,4 @@ async function fetchContests({
     stats,
   };
 }
+

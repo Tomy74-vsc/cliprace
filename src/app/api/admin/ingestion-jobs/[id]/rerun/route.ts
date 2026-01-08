@@ -3,6 +3,7 @@ import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 export async function POST(
@@ -11,8 +12,9 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params;
-    await requireAdminPermission('ingestion.write');
-    await enforceAdminRateLimit(req, { route: 'admin:ingestion:jobs:rerun', max: 60, windowMs: 60_000 });
+    const { user } = await requireAdminPermission('ingestion.write');
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:ingestion:jobs:rerun', max: 60, windowMs: 60_000 }, user.id);
 
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));

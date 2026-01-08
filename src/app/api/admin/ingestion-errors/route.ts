@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     const selectV1 = 'id, job_id, error_code, details, created_at, job:ingestion_jobs(id, account_id, kind, status)';
 
     const runQuery = async (select: string) => {
-      let q: any = admin
+      let q: UnsafeAny = admin
         .from('ingestion_errors')
         .select(select, { count: 'exact' })
         .order('created_at', { ascending: false })
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
       return await q;
     };
 
-    let res: any = await runQuery(selectV2);
+    let res: UnsafeAny = await runQuery(selectV2);
     if (res?.error && res.error.message?.includes('column \"is_resolved\"')) {
       res = await runQuery(selectV1);
     }
@@ -73,3 +73,4 @@ export async function GET(req: NextRequest) {
     return formatErrorResponse(error);
   }
 }
+

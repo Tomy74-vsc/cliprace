@@ -112,7 +112,6 @@ export function WalletBalance({ wallet }: WalletBalanceProps) {
   }, [wallet.winnings]);
 
   const [animatedBalance, setAnimatedBalance] = useState(0);
-  const [animatedTotalEarnings, setAnimatedTotalEarnings] = useState(0);
   const [animatedWithdrawn, setAnimatedWithdrawn] = useState(0);
 
   useEffect(() => {
@@ -136,15 +135,13 @@ export function WalletBalance({ wallet }: WalletBalanceProps) {
     };
 
     const i1 = animateValue(wallet.balance_cents, setAnimatedBalance);
-    const i2 = animateValue(wallet.total_earnings_cents, setAnimatedTotalEarnings);
-    const i3 = animateValue(wallet.withdrawn_cents, setAnimatedWithdrawn);
+    const i2 = animateValue(wallet.withdrawn_cents, setAnimatedWithdrawn);
 
     return () => {
       clearInterval(i1);
       clearInterval(i2);
-      clearInterval(i3);
     };
-  }, [wallet.balance_cents, wallet.total_earnings_cents, wallet.withdrawn_cents]);
+  }, [wallet.balance_cents, wallet.withdrawn_cents]);
 
   const handleCashout = async () => {
     if (wallet.balance_cents <= 0) {
@@ -446,4 +443,3 @@ export function WalletBalance({ wallet }: WalletBalanceProps) {
     </div>
   );
 }
-

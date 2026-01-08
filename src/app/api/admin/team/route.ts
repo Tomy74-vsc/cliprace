@@ -5,14 +5,16 @@ import { getAdminClient } from '@/lib/admin/supabase';
 import { assertAdminBreakGlass } from '@/lib/admin/break-glass';
 import { createError, formatErrorResponse } from '@/lib/errors';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
 import { assertCsrf } from '@/lib/csrf';
+import { teamValidators } from '@/lib/admin/validators';
 
 type SupabaseErrorLike = { message?: string; code?: string } | null | undefined;
 
 function isMissingTable(error: SupabaseErrorLike, tableName: string) {
-  const code = String((error as any)?.code || '').toUpperCase();
+  const code = String((error as UnsafeAny)?.code || '').toUpperCase();
   if (code === '42P01') return true;
-  const msg = String((error as any)?.message || '').toLowerCase();
+  const msg = String((error as UnsafeAny)?.message || '').toLowerCase();
   if (!msg.includes(tableName.toLowerCase())) return false;
   if (msg.includes('schema cache')) return msg.includes('table') && !msg.includes('column');
   return msg.includes('does not exist') || msg.includes('could not find');
@@ -28,8 +30,8 @@ const CreateAdminSchema = z.object({
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAdminPermission('admin.team.read');
-    await enforceAdminRateLimit(req, { route: 'admin:team:list', max: 120, windowMs: 60_000 });
+    const { user } = await requireAdminPermission('admin.team.read');
+    await enforceAdminRateLimit(req, { route: 'admin:team:list', max: 120, windowMs: 60_000 }, user.id);
 
     const admin = getAdminClient();
     const { data: staffRows, error: staffError } = await admin
@@ -127,22 +129,35 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { user } = await requireAdminPermission('admin.team.write');
-    await enforceAdminRateLimit(req, { route: 'admin:team:create', max: 30, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:team:create', max: 30, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
       throw createError('FORBIDDEN', 'Jeton CSRF invalide', 403, csrfError);
     }
 
-    const breakGlass = assertAdminBreakGlass(req, 'admin.team.write');
+    const breakGlass = await assertAdminBreakGlass(req, 'admin.team.write', user.id);
 
     const parsed = CreateAdminSchema.safeParse(await req.json());
     if (!parsed.success) {
       throw createError('VALIDATION_ERROR', 'Payload invalide', 400, parsed.error.flatten());
     }
 
-    const admin = getAdminClient();
     const email = parsed.data.email.trim().toLowerCase();
+    
+    // Validation métier
+    const validation = await teamValidators.canCreate(email, user.id);
+    if (!validation.valid) {
+      throw createError(
+        'VALIDATION_ERROR',
+        'Cannot create admin team member',
+        400,
+        { errors: validation.errors }
+      );
+    }
+
+    const admin = getAdminClient();
     const displayName = parsed.data.display_name?.trim() || null;
 
     const { data: existingProfile, error: existingProfileError } = await admin
@@ -288,3 +303,4 @@ export async function POST(req: NextRequest) {
     return formatErrorResponse(error);
   }
 }
+

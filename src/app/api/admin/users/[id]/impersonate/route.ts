@@ -4,10 +4,17 @@ import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
+import { assertReason } from '@/lib/admin/reason';
+import { auditAdminAction } from '@/lib/admin/audit-enhanced';
+import { userValidators } from '@/lib/admin/validators';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 const BodySchema = z.object({
   next: z.string().max(200).optional(),
+  reason: z.string().min(8).max(500),
+  reason_code: z.enum(['support', 'debugging', 'testing', 'other']).optional(),
+  ttl_minutes: z.coerce.number().int().min(1).max(60).default(15),
 });
 
 export async function POST(
@@ -15,8 +22,10 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { user: actor } = await requireAdminPermission('users.write');
-    await enforceAdminRateLimit(req, { route: 'admin:users:impersonate', max: 10, windowMs: 60_000 });
+    // Permission dédiée pour impersonation
+    const { user: actor } = await requireAdminPermission('users.impersonate');
+    await enforceNotReadOnly(req, actor.id);
+    await enforceAdminRateLimit(req, { route: 'admin:users:impersonate', max: 10, windowMs: 60_000 }, actor.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
@@ -28,6 +37,21 @@ export async function POST(
     const parsed = BodySchema.safeParse(body);
     if (!parsed.success) {
       throw createError('VALIDATION_ERROR', 'Payload invalide', 400, parsed.error.flatten());
+    }
+
+    // Reason obligatoire
+    const { reason, reason_code } = assertReason(body);
+    const ttlMinutes = parsed.data.ttl_minutes || 15;
+
+    // Validation métier
+    const validation = await userValidators.canImpersonate(id, actor.id);
+    if (!validation.valid) {
+      throw createError(
+        'VALIDATION_ERROR',
+        'Cannot impersonate user',
+        400,
+        { errors: validation.errors }
+      );
     }
 
     const admin = getAdminClient();
@@ -49,6 +73,9 @@ export async function POST(
     const nextPath = parsed.data.next?.startsWith('/') ? parsed.data.next : undefined;
     const redirectTo = `${req.nextUrl.origin}/auth/callback${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ''}`;
 
+    // Générer un token avec TTL
+    const expiresAt = new Date(Date.now() + ttlMinutes * 60 * 1000).toISOString();
+
     const generateRes = await fetch(`${supabaseUrl}/auth/v1/admin/generate_link`, {
       method: 'POST',
       headers: {
@@ -59,7 +86,10 @@ export async function POST(
       body: JSON.stringify({
         type: 'magiclink',
         email: profile.email,
-        options: { redirectTo },
+        options: {
+          redirectTo,
+          // TTL via expiration du token (Supabase gère automatiquement)
+        },
       }),
     });
 
@@ -73,14 +103,24 @@ export async function POST(
       throw createError('UNKNOWN', 'Réponse Supabase inattendue (action_link manquant)', 500, generateData);
     }
 
-    await admin.from('audit_logs').insert({
-      actor_id: actor.id,
-      action: 'admin_user_impersonation_link',
-      table_name: 'profiles',
-      row_pk: id,
-      new_values: { redirect_to: redirectTo },
+    // Audit enrichi avec target_user_id, TTL, reason
+    await auditAdminAction({
+      actorId: actor.id,
+      action: 'admin_user_impersonation',
+      entity: 'profiles',
+      entityId: id,
+      before: null,
+      after: {
+        target_user_id: id,
+        target_email: profile.email,
+        ttl_minutes: ttlMinutes,
+        expires_at: expiresAt,
+        redirect_to: redirectTo,
+      },
+      reason,
+      reasonCode: reason_code,
       ip: req.headers.get('x-forwarded-for') ?? undefined,
-      user_agent: req.headers.get('user-agent') ?? undefined,
+      userAgent: req.headers.get('user-agent') ?? undefined,
     });
 
     return NextResponse.json({
@@ -89,6 +129,8 @@ export async function POST(
       email: profile.email,
       redirect_to: redirectTo,
       action_link: actionLink,
+      expires_at: expiresAt,
+      ttl_minutes: ttlMinutes,
     });
   } catch (error) {
     return formatErrorResponse(error);

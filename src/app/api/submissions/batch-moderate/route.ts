@@ -1,9 +1,9 @@
-/*
+﻿/*
 Source: POST /api/submissions/batch-moderate
 Tables: submissions, moderation_actions, notifications, audit_logs
 Rules:
 - Only brand owner of the contest or admin can moderate
-- status ∈ {'approved','rejected'}; reason optional for rejected
+- status âˆˆ {'approved','rejected'}; reason optional for rejected
 - Process multiple submissions in batch
 */
 import { NextRequest, NextResponse } from 'next/server';
@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     const role = await getUserRole(user.id);
     if (!role) {
-      throw createError('FORBIDDEN', 'Accès refusé', 403);
+      throw createError('FORBIDDEN', 'AccÃ¨s refusÃ©', 403);
     }
 
     const body = await req.json();
@@ -57,17 +57,17 @@ export async function POST(req: NextRequest) {
     const ip = req.headers.get('x-forwarded-for') ?? undefined;
     const ua = req.headers.get('user-agent') ?? undefined;
 
-    // Vérifier que toutes les soumissions appartiennent à des concours de la marque
+    // VÃ©rifier que toutes les soumissions appartiennent Ã  des concours de la marque
     const { data: submissions, error: subErr } = await admin
       .from('submissions')
       .select('id, contest_id, creator_id, status, rejection_reason')
       .in('id', submission_ids);
 
     if (subErr || !submissions || submissions.length === 0) {
-      throw createError('NOT_FOUND', 'Soumissions non trouvées', 404);
+      throw createError('NOT_FOUND', 'Soumissions non trouvÃ©es', 404);
     }
 
-    // Vérifier l'ownership des concours
+    // VÃ©rifier l'ownership des concours
     const contestIds = [...new Set(submissions.map((s) => s.contest_id))];
     const { data: contests, error: contestErr } = await admin
       .from('contests')
@@ -75,30 +75,30 @@ export async function POST(req: NextRequest) {
       .in('id', contestIds);
 
     if (contestErr || !contests) {
-      throw createError('DATABASE_ERROR', 'Erreur lors de la vérification des concours', 500);
+      throw createError('DATABASE_ERROR', 'Erreur lors de la vÃ©rification des concours', 500);
     }
 
     const isAdmin = role === 'admin';
     const contestsByBrand = new Map(contests.map((c) => [c.id, c.brand_id]));
     
-    // Vérifier que toutes les soumissions appartiennent à des concours de la marque
+    // VÃ©rifier que toutes les soumissions appartiennent Ã  des concours de la marque
     for (const submission of submissions) {
       const brandId = contestsByBrand.get(submission.contest_id);
       if (!brandId) {
-        throw createError('NOT_FOUND', 'Concours non trouvé', 404);
+        throw createError('NOT_FOUND', 'Concours non trouvÃ©', 404);
       }
       if (!isAdmin && brandId !== user.id) {
-        throw createError('FORBIDDEN', 'Accès refusé à ce concours', 403);
+        throw createError('FORBIDDEN', 'AccÃ¨s refusÃ© Ã  ce concours', 403);
       }
     }
 
     // Filtrer uniquement les soumissions en attente
     const pendingSubmissions = submissions.filter((s) => s.status === 'pending');
     if (pendingSubmissions.length === 0) {
-      throw createError('VALIDATION_ERROR', 'Aucune soumission en attente à modérer', 400);
+      throw createError('VALIDATION_ERROR', 'Aucune soumission en attente Ã  modÃ©rer', 400);
     }
 
-    const updatePayload: Record<string, any> = {
+    const updatePayload: Record<string, UnsafeAny> = {
       status,
       moderated_by: user.id,
       updated_at: now,
@@ -111,14 +111,14 @@ export async function POST(req: NextRequest) {
       updatePayload.approved_at = null;
     }
 
-    // Mettre à jour toutes les soumissions
+    // Mettre Ã  jour toutes les soumissions
     const { error: updErr } = await admin
       .from('submissions')
       .update(updatePayload)
       .in('id', pendingSubmissions.map((s) => s.id));
 
     if (updErr) {
-      throw createError('DATABASE_ERROR', 'Erreur lors de la mise à jour', 500, updErr.message);
+      throw createError('DATABASE_ERROR', 'Erreur lors de la mise Ã  jour', 500, updErr.message);
     }
 
     // Update moderation queue status
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
         updated_at: now,
       })
       .in('submission_id', pendingSubmissions.map((s) => s.id));
-    // Créer les actions de modération
+    // CrÃ©er les actions de modÃ©ration
     const moderationActions = pendingSubmissions.map((sub) => ({
       target_table: 'submissions',
       target_id: sub.id,
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
 
     await admin.from('moderation_actions').insert(moderationActions);
 
-    // Notifier les créateurs
+    // Notifier les crÃ©ateurs
     const { notifyCreatorAboutModeration } = await import('@/lib/notifications');
     await Promise.all(
       pendingSubmissions.map((sub) =>
@@ -181,5 +181,6 @@ export async function POST(req: NextRequest) {
     return formatErrorResponse(error);
   }
 }
+
 
 

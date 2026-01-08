@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
-import { BookOpen, ChevronRight, Search, RotateCcw, CheckCircle2 } from 'lucide-react';
+import { ChevronRight, Search, RotateCcw, CheckCircle2 } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 import type { AdminGuideModule, AdminGlossaryTerm, AdminGuideChecklistItem } from '@/lib/admin/guide-content';
+
+type GuideTab = 'modules' | 'glossary' | 'onboarding';
 
 type AdminGuideClientProps = {
   modules: AdminGuideModule[];
@@ -28,9 +30,7 @@ function normalize(text: string) {
 function findModuleByRoute(modules: AdminGuideModule[], route: string | null) {
   if (!route) return null;
   const r = route.startsWith('/') ? route : `/${route}`;
-  return (
-    modules.find((m) => m.routePrefixes.some((prefix) => r.startsWith(prefix))) ?? null
-  );
+  return modules.find((m) => m.routePrefixes.some((prefix) => r.startsWith(prefix))) ?? null;
 }
 
 const STORAGE_KEY = 'admin-guide:onboarding';
@@ -46,7 +46,7 @@ export function AdminGuideClient({
   const searchParams = useSearchParams();
 
   const [query, setQuery] = useState('');
-  const [activeTab, setActiveTab] = useState<'modules' | 'glossary' | 'onboarding'>('modules');
+  const [activeTab, setActiveTab] = useState<GuideTab>('modules');
   const [selectedModuleKey, setSelectedModuleKey] = useState<string | null>(null);
   const [checked, setChecked] = useState<Record<string, boolean>>({});
 
@@ -58,8 +58,7 @@ export function AdminGuideClient({
   }, [modules, selectedModuleKey]);
 
   const activeFromRoute = useMemo(() => {
-    const byQuery =
-      initialModuleKey ? modules.find((m) => m.key === initialModuleKey) ?? null : null;
+    const byQuery = initialModuleKey ? modules.find((m) => m.key === initialModuleKey) ?? null : null;
     if (byQuery) return byQuery;
     return findModuleByRoute(modules, initialRoute ?? pathname);
   }, [initialModuleKey, initialRoute, modules, pathname]);
@@ -109,7 +108,14 @@ export function AdminGuideClient({
     const q = normalize(query.trim());
     if (!q) return modules;
     return modules.filter((m) => {
-      const hay = normalize([m.title, m.description, ...m.minute, ...(m.examples?.flatMap((e) => [e.title, ...e.steps]) ?? [])].join(' '));
+      const hay = normalize(
+        [
+          m.title,
+          m.description,
+          ...m.minute,
+          ...(m.examples?.flatMap((e) => [e.title, ...e.steps]) ?? []),
+        ].join(' ')
+      );
       return hay.includes(q);
     });
   }, [modules, query]);
@@ -127,52 +133,31 @@ export function AdminGuideClient({
   }, [checklist, checked]);
 
   const resetChecklist = () => {
-    if (!window.confirm('Réinitialiser la checklist ?')) return;
+    if (!window.confirm('Reset the checklist?')) return;
     setChecked({});
   };
 
   return (
     <section className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-primary to-accent shadow-card flex items-center justify-center text-primary-foreground">
-              <BookOpen className="h-5 w-5" />
-            </div>
-            <div>
-              <h1 className="display-2">Guide Admin</h1>
-              <p className="text-sm text-muted-foreground">
-                Formation rapide, aide contextuelle, et bonnes pratiques.
-              </p>
-            </div>
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button asChild variant="secondary">
-            <Link href="/app/admin/dashboard">Retour dashboard</Link>
-          </Button>
-        </div>
-      </div>
-
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="relative w-full md:max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <input
             className="h-11 w-full rounded-2xl border border-border bg-background pl-10 pr-3 text-sm"
-            placeholder="Rechercher dans le guide (modules, mini-tutos, glossaire)…"
+            placeholder="Search the guide (modules, playbooks, glossary)"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
         <div className="text-xs text-muted-foreground">
-          Astuce : le bouton <span className="font-medium">?</span> en haut ouvre la section liée à la page courante.
+          Tip: the <span className="font-medium">?</span> button opens the section linked to the current page.
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)}>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as GuideTab)}>
         <TabsList>
           <TabsTrigger value="modules">Modules</TabsTrigger>
-          <TabsTrigger value="glossary">Glossaire</TabsTrigger>
+          <TabsTrigger value="glossary">Glossary</TabsTrigger>
           <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
         </TabsList>
 
@@ -184,7 +169,7 @@ export function AdminGuideClient({
               </CardHeader>
               <CardContent className="space-y-1">
                 {filteredModules.length === 0 ? (
-                  <div className="text-sm text-muted-foreground">Aucun résultat.</div>
+                  <div className="text-sm text-muted-foreground">No results.</div>
                 ) : (
                   filteredModules.map((m) => {
                     const active = m.key === selectedModuleKey;
@@ -222,7 +207,7 @@ export function AdminGuideClient({
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                      <div className="text-sm font-semibold">En 1 minute</div>
+                      <div className="text-sm font-semibold">Quick in 1 minute</div>
                       <ol className="mt-2 list-decimal pl-5 space-y-1 text-sm">
                         {selectedModule.minute.map((s, idx) => (
                           <li key={idx}>{s}</li>
@@ -232,7 +217,7 @@ export function AdminGuideClient({
 
                     {selectedModule.examples && selectedModule.examples.length > 0 ? (
                       <div className="space-y-2">
-                        <div className="text-sm font-semibold">Mini-tutos (exemples)</div>
+                        <div className="text-sm font-semibold">Mini playbooks</div>
                         <Accordion>
                           {selectedModule.examples.map((ex) => (
                             <AccordionItem key={ex.title} value={ex.title}>
@@ -252,7 +237,7 @@ export function AdminGuideClient({
 
                     {selectedModule.related && selectedModule.related.length > 0 ? (
                       <div className="space-y-2">
-                        <div className="text-sm font-semibold">Liens utiles</div>
+                        <div className="text-sm font-semibold">Related links</div>
                         <div className="flex flex-wrap gap-2">
                           {selectedModule.related.map((r) => (
                             <Button key={r.route} asChild size="sm" variant="secondary">
@@ -266,7 +251,7 @@ export function AdminGuideClient({
                 </Card>
               ) : (
                 <Card>
-                  <CardContent className="p-6 text-sm text-muted-foreground">Sélectionne un module.</CardContent>
+                  <CardContent className="p-6 text-sm text-muted-foreground">Select a module.</CardContent>
                 </Card>
               )}
             </div>
@@ -276,11 +261,11 @@ export function AdminGuideClient({
         <TabsContent value="glossary" className="mt-4">
           <Card>
             <CardHeader>
-              <CardTitle className="text-base">Glossaire</CardTitle>
+              <CardTitle className="text-base">Glossary</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {filteredGlossary.length === 0 ? (
-                <div className="text-sm text-muted-foreground">Aucun résultat.</div>
+                <div className="text-sm text-muted-foreground">No results.</div>
               ) : (
                 <Accordion>
                   {filteredGlossary.map((t) => (
@@ -290,7 +275,7 @@ export function AdminGuideClient({
                         <div className="text-sm text-muted-foreground">{t.definition}</div>
                         {t.related && t.related.length > 0 ? (
                           <div className="mt-2 text-xs text-muted-foreground">
-                            Lié à : {t.related.join(', ')}
+                            Related: {t.related.join(', ')}
                           </div>
                         ) : null}
                       </AccordionContent>
@@ -306,16 +291,17 @@ export function AdminGuideClient({
           <div className="grid gap-4 lg:grid-cols-2">
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Checklist “mise en route admin”</CardTitle>
+                <CardTitle className="text-base">Admin onboarding checklist</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between gap-3">
                   <div className="text-sm text-muted-foreground">
-                    Progression : <span className="font-semibold text-foreground">{checklistProgress.done}</span> / {checklistProgress.total} ({checklistProgress.pct}%)
+                    Progress: <span className="font-semibold text-foreground">{checklistProgress.done}</span> /{' '}
+                    {checklistProgress.total} ({checklistProgress.pct}%)
                   </div>
                   <Button variant="ghost" size="sm" onClick={resetChecklist}>
                     <RotateCcw className="h-4 w-4 mr-2" />
-                    Réinitialiser
+                    Reset
                   </Button>
                 </div>
 
@@ -347,7 +333,7 @@ export function AdminGuideClient({
                           {isDone ? <CheckCircle2 className="h-4 w-4 text-primary" /> : null}
                           {item.route ? (
                             <Button asChild size="sm" variant="secondary">
-                              <Link href={item.route}>Ouvrir</Link>
+                              <Link href={item.route}>Open</Link>
                             </Button>
                           ) : null}
                         </div>
@@ -357,21 +343,24 @@ export function AdminGuideClient({
                 </div>
 
                 <div className="text-xs text-muted-foreground">
-                  Note : la checklist est stockée localement dans ton navigateur (version 1). Si tu veux une sync par admin, je peux l’adosser à Supabase.
+                  Note: the checklist is stored locally in your browser. If you want shared admin sync, we can
+                  connect it to Supabase.
                 </div>
               </CardContent>
             </Card>
 
             <Card>
               <CardHeader>
-                <CardTitle className="text-base">Bonnes pratiques</CardTitle>
+                <CardTitle className="text-base">Best practices</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 text-sm text-muted-foreground">
                 <ul className="list-disc pl-5 space-y-1">
-                  <li>Principe du moindre privilège : donne le minimum de droits nécessaires.</li>
-                  <li>Sur actions sensibles (finance/settings/team) : raison claire + traçabilité audit.</li>
-                  <li>En cas d’erreur système : commence par Integrations/Ingestion avant de toucher aux données.</li>
-                  <li>Marketing : privilégie “Marques → Concours → Insights” pour des actions ROI.</li>
+                  <li>Least privilege: grant only the permissions needed.</li>
+                  <li>For sensitive actions (finance/settings/team): use clear reasons and audit trails.</li>
+                  <li>If ingestion or webhooks fail, check Integrations and Ingestion before editing data.</li>
+                  <li>
+                    Marketing flow: Brands {'→'} Contests {'→'} Insights for ROI-driven actions.
+                  </li>
                 </ul>
               </CardContent>
             </Card>

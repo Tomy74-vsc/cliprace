@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
 import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
+import { assertCsrf } from '@/lib/csrf';
+import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 const Schema = z.object({
   rule_type: z.enum(['content', 'spam', 'duplicate', 'domain', 'flood']),
-  config: z.record(z.any()).default({}),
+  config: z.record(z.unknown()).default({}),
 });
 
 type SubmissionRow = {
@@ -28,22 +30,22 @@ function normalize(s: string) {
 
 function matches(ruleType: string, config: Record<string, unknown>, row: SubmissionRow) {
   if (ruleType === 'domain') {
-    const domains = toStringArray((config as any).domains);
+    const domains = toStringArray((config as UnsafeAny).domains);
     if (domains.length === 0) return false;
     const url = normalize(row.external_url);
     return domains.some((d) => url.includes(normalize(d)));
   }
 
   if (ruleType === 'spam') {
-    const keywords = toStringArray((config as any).keywords);
+    const keywords = toStringArray((config as UnsafeAny).keywords);
     if (keywords.length === 0) return false;
     const hay = normalize(`${row.title ?? ''} ${row.external_url ?? ''}`);
     return keywords.some((k) => hay.includes(normalize(k)));
   }
 
   if (ruleType === 'content') {
-    const contains = typeof (config as any).contains === 'string' ? (config as any).contains.trim() : '';
-    const field = (config as any).field === 'external_url' ? 'external_url' : 'title';
+    const contains = typeof (config as UnsafeAny).contains === 'string' ? (config as UnsafeAny).contains.trim() : '';
+    const field = (config as UnsafeAny).field === 'external_url' ? 'external_url' : 'title';
     if (!contains) return false;
     const value = field === 'external_url' ? row.external_url : row.title ?? '';
     return normalize(value).includes(normalize(contains));
@@ -54,7 +56,13 @@ function matches(ruleType: string, config: Record<string, unknown>, row: Submiss
 
 export async function POST(req: NextRequest) {
   try {
-    await requireAdminPermission('moderation.read');
+    const { user } = await requireAdminPermission('moderation.read');
+    await enforceAdminRateLimit(req, { route: 'admin:moderation:rules:simulate', max: 20, windowMs: 60_000 }, user.id);
+    try {
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
+    } catch (csrfError) {
+      throw createError('FORBIDDEN', 'Invalid CSRF token', 403, csrfError);
+    }
 
     const body = await req.json().catch(() => ({}));
     const parsed = Schema.safeParse(body);
@@ -113,4 +121,5 @@ export async function POST(req: NextRequest) {
     return formatErrorResponse(error);
   }
 }
+
 

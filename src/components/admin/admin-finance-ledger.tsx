@@ -29,18 +29,18 @@ export function AdminFinanceLedger({ items }: AdminFinanceLedgerProps) {
       <thead className="text-left text-xs uppercase text-muted-foreground">
         <tr>
           <th className="px-4 py-3">Type</th>
-          <th className="px-4 py-3">Montant</th>
-          <th className="px-4 py-3">Statut</th>
+          <th className="px-4 py-3">Amount</th>
+          <th className="px-4 py-3">Status</th>
           <th className="px-4 py-3">User</th>
           <th className="px-4 py-3">Contest</th>
-          <th className="px-4 py-3">Créé</th>
+          <th className="px-4 py-3">Created</th>
         </tr>
       </thead>
       <tbody className="divide-y divide-border text-sm">
         {items.length === 0 ? (
           <tr>
             <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">
-              Aucune activité finance
+              No finance activity yet.
             </td>
           </tr>
         ) : (

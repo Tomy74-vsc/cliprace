@@ -4,6 +4,9 @@ import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
+import { invoiceValidators } from '@/lib/admin/validators';
+import { notifyAdminAction } from '@/lib/admin/notifications';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 const BodySchema = z.object({
@@ -17,7 +20,8 @@ export async function POST(
   try {
     const { id } = await context.params;
     const { user } = await requireAdminPermission('invoices.write');
-    await enforceAdminRateLimit(req, { route: 'admin:invoices:void', max: 10, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:invoices:void', max: 10, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
@@ -30,6 +34,17 @@ export async function POST(
       throw createError('VALIDATION_ERROR', 'Invalid payload', 400, parsed.error.flatten());
     }
 
+    // Validation métier
+    const validation = await invoiceValidators.canVoid(id);
+    if (!validation.valid) {
+      throw createError(
+        'VALIDATION_ERROR',
+        'Cannot void invoice',
+        400,
+        { errors: validation.errors }
+      );
+    }
+
     const admin = getAdminClient();
     const { data: invoice, error: invoiceError } = await admin
       .from('invoices')
@@ -39,10 +54,6 @@ export async function POST(
 
     if (invoiceError || !invoice) {
       throw createError('NOT_FOUND', 'Invoice not found', 404, invoiceError?.message);
-    }
-
-    if (invoice.status === 'void') {
-      throw createError('CONFLICT', 'Invoice already voided', 409);
     }
 
     const now = new Date().toISOString();
@@ -74,6 +85,44 @@ export async function POST(
       changed_by: user.id,
       reason: parsed.data.reason,
     });
+
+    // Notifier l'org owner
+    const { data: invoiceFull } = await admin
+      .from('invoices')
+      .select('id, org_id')
+      .eq('id', id)
+      .single();
+
+    if (invoiceFull?.org_id) {
+      const { data: org } = await admin
+        .from('orgs')
+        .select('id, billing_email, owner_id')
+        .eq('id', invoiceFull.org_id)
+        .single();
+
+      if (org) {
+        let notifyUserId: string | null = org.owner_id || null;
+        if (!notifyUserId && org.billing_email) {
+          const { data: profile } = await admin
+            .from('profiles')
+            .select('id')
+            .eq('email', org.billing_email)
+            .single();
+          notifyUserId = profile?.id || null;
+        }
+
+        if (notifyUserId) {
+          await notifyAdminAction({
+            userId: notifyUserId,
+            type: 'invoice_voided',
+            data: {
+              invoice_id: id,
+              reason: parsed.data.reason,
+            },
+          });
+        }
+      }
+    }
 
     return NextResponse.json({ ok: true, status: 'void' });
   } catch (error) {

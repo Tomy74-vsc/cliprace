@@ -22,10 +22,12 @@ export function TrackedLink({
   event,
   payload,
   children,
+  href,
   ...props
-}: ComponentProps<'a'> & { event: string; payload?: Record<string, unknown> }) {
+}: ComponentProps<'a'> & { href: string; event: string; payload?: Record<string, unknown> }) {
   return (
     <a
+      href={href}
       {...props}
       onClick={(e) => {
         props.onClick?.(e);

@@ -1,6 +1,7 @@
 'use client';
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { supabase } from '@/lib/supabase/client';
 
 export type AdminInboxSummary = {
   generated_at: string;
@@ -55,14 +56,13 @@ export function AdminInboxProvider({
   const [summary, setSummary] = useState<AdminInboxSummary | null>(initialSummary ?? null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const intervalRef = useRef<number | null>(null);
 
   const refresh = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       const res = await fetch('/api/admin/inbox/summary', { cache: 'no-store' });
-      if (!res.ok) throw new Error("Impossible de charger l’inbox admin.");
+      if (!res.ok) throw new Error("Impossible de charger l'inbox admin.");
       const data = (await res.json()) as AdminInboxSummary;
       setSummary(data);
     } catch (e) {
@@ -77,24 +77,126 @@ export function AdminInboxProvider({
     void refresh();
   }, [initialSummary, refresh]);
 
+  // Realtime subscription pour mettre à jour automatiquement l'inbox
   useEffect(() => {
-    const poll = () => {
-      if (document.visibilityState !== 'visible') return;
-      void refresh();
-    };
+    // Ne pas créer de subscription si on n'a pas de summary initial
+    if (!summary && !initialSummary) return;
 
-    intervalRef.current = window.setInterval(poll, 30_000);
-
-    const onFocus = () => poll();
-    const onVisibility = () => poll();
-    window.addEventListener('focus', onFocus);
-    document.addEventListener('visibilitychange', onVisibility);
+    const channel = supabase
+      .channel('admin_inbox_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'cashouts',
+          filter: 'status=eq.requested',
+        },
+        () => {
+          // Rafraîchir quand un cashout change
+          void refresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'submissions',
+          filter: 'status=eq.pending',
+        },
+        () => {
+          void refresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'admin_tasks',
+          filter: 'status=eq.pending',
+        },
+        () => {
+          void refresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'moderation_queue',
+        },
+        () => {
+          void refresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'webhook_deliveries',
+          filter: 'status=eq.failed',
+        },
+        () => {
+          void refresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'ingestion_errors',
+        },
+        () => {
+          void refresh();
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'support_tickets',
+          filter: 'status=eq.open',
+        },
+        () => {
+          void refresh();
+        }
+      )
+      .subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('Admin inbox Realtime subscribed');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('Admin inbox Realtime channel error');
+          // Fallback sur polling en cas d'erreur Realtime
+          const intervalId = window.setInterval(() => {
+            if (document.visibilityState === 'visible') {
+              void refresh();
+            }
+          }, 30_000);
+          return () => window.clearInterval(intervalId);
+        }
+      });
 
     return () => {
-      if (intervalRef.current) window.clearInterval(intervalRef.current);
-      window.removeEventListener('focus', onFocus);
-      document.removeEventListener('visibilitychange', onVisibility);
+      void supabase.removeChannel(channel);
     };
+  }, [refresh, summary, initialSummary]);
+
+  // Fallback polling si Realtime n'est pas disponible (seulement quand la page est visible)
+  useEffect(() => {
+    // Utiliser un interval plus long (5 minutes) comme fallback
+    const intervalId = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void refresh();
+      }
+    }, 300_000); // 5 minutes
+
+    return () => window.clearInterval(intervalId);
   }, [refresh]);
 
   const value = useMemo<AdminInboxContextValue>(() => ({ summary, loading, error, refresh }), [summary, loading, error, refresh]);

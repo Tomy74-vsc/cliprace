@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { hasAdminPermission, requireAdminAnyPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { adminCache, cacheKey, CACHE_TTL } from '@/lib/admin/cache';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 const QuerySchema = z.object({
@@ -18,7 +19,7 @@ type LookupItem = { id: string; label: string; subtitle?: string | null };
 
 export async function GET(req: NextRequest) {
   try {
-    const { access } = await requireAdminAnyPermission([
+    const { access, user } = await requireAdminAnyPermission([
       'users.read',
       'brands.read',
       'contests.read',
@@ -34,7 +35,7 @@ export async function GET(req: NextRequest) {
       'emails.read',
       'audit.read',
     ]);
-    await enforceAdminRateLimit(req, { route: 'admin:lookup', max: 240, windowMs: 60_000 });
+    await enforceAdminRateLimit(req, { route: 'admin:lookup', max: 240, windowMs: 60_000 }, user.id);
 
     const parsed = QuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams.entries()));
     if (!parsed.success) {
@@ -69,81 +70,89 @@ export async function GET(req: NextRequest) {
     const like = `%${term}%`;
     const termIsUuid = uuidPattern.test(term);
 
-    const items: LookupItem[] = [];
+    const key = cacheKey('admin:lookup', {
+      user_id: user.id,
+      kind,
+      q: term || '',
+      id: id || '',
+      limit,
+    });
 
-    if (kind === 'user') {
-      let query = admin
-        .from('profiles')
-        .select('id, email, display_name, role')
-        .limit(limit);
-      if (id) query = query.eq('id', id);
-      if (term) {
-        query = termIsUuid ? query.eq('id', term) : query.or(`email.ilike.${like},display_name.ilike.${like}`);
-      }
-      const { data, error } = await query;
-      if (error) throw createError('DATABASE_ERROR', 'Lookup utilisateurs impossible', 500, error.message);
-      for (const row of data ?? []) {
-        items.push({
-          id: row.id,
-          label: row.display_name || row.email,
-          subtitle: `${row.email} • ${row.role}`,
-        });
-      }
-    }
+    const items = await adminCache.getOrSet<LookupItem[]>(
+      key,
+      async () => {
+        const out: LookupItem[] = [];
 
-    if (kind === 'brand') {
-      let query = admin
-        .from('profiles')
-        .select('id, email, display_name, role, brand:profile_brands(company_name)')
-        .eq('role', 'brand')
-        .limit(limit);
-      if (id) query = query.eq('id', id);
-      if (term) query = query.or(`email.ilike.${like},display_name.ilike.${like}`);
-      const { data, error } = await query;
-      if (error) throw createError('DATABASE_ERROR', 'Lookup marques impossible', 500, error.message);
-      for (const row of data ?? []) {
-        const brand = Array.isArray((row as any).brand) ? (row as any).brand[0] : (row as any).brand;
-        const companyName = brand?.company_name ?? null;
-        items.push({
-          id: row.id,
-          label: companyName || row.display_name || row.email,
-          subtitle: row.email,
-        });
-      }
-    }
+        if (kind === 'user') {
+          let query = admin.from('profiles').select('id, email, display_name, role').limit(limit);
+          if (id) query = query.eq('id', id);
+          if (term) query = termIsUuid ? query.eq('id', term) : query.or(`email.ilike.${like},display_name.ilike.${like}`);
+          const { data, error } = await query;
+          if (error) throw createError('DATABASE_ERROR', 'Lookup utilisateurs impossible', 500, error.message);
+          for (const row of data ?? []) {
+            out.push({
+              id: row.id,
+              label: row.display_name || row.email,
+              subtitle: `${row.email} • ${row.role}`,
+            });
+          }
+        }
 
-    if (kind === 'org') {
-      let query = admin.from('orgs').select('id, name, billing_email').limit(limit);
-      if (id) query = query.eq('id', id);
-      if (term) {
-        query = termIsUuid ? query.eq('id', term) : query.or(`name.ilike.${like},billing_email.ilike.${like}`);
-      }
-      const { data, error } = await query;
-      if (error) throw createError('DATABASE_ERROR', 'Lookup organisations impossible', 500, error.message);
-      for (const row of data ?? []) {
-        items.push({ id: row.id, label: row.name || row.id, subtitle: row.billing_email });
-      }
-    }
+        if (kind === 'brand') {
+          let query = admin
+            .from('profiles')
+            .select('id, email, display_name, role, brand:profile_brands(company_name)')
+            .eq('role', 'brand')
+            .limit(limit);
+          if (id) query = query.eq('id', id);
+          if (term) query = query.or(`email.ilike.${like},display_name.ilike.${like}`);
+          const { data, error } = await query;
+          if (error) throw createError('DATABASE_ERROR', 'Lookup marques impossible', 500, error.message);
+          for (const row of data ?? []) {
+            const brand = Array.isArray((row as UnsafeAny).brand) ? (row as UnsafeAny).brand[0] : (row as UnsafeAny).brand;
+            const companyName = brand?.company_name ?? null;
+            out.push({
+              id: row.id,
+              label: companyName || row.display_name || row.email,
+              subtitle: row.email,
+            });
+          }
+        }
 
-    if (kind === 'contest') {
-      let query = admin.from('contests').select('id, title, slug, status').limit(limit);
-      if (id) query = query.eq('id', id);
-      if (term) {
-        query = termIsUuid ? query.eq('id', term) : query.or(`title.ilike.${like},slug.ilike.${like}`);
-      }
-      const { data, error } = await query;
-      if (error) throw createError('DATABASE_ERROR', 'Lookup concours impossible', 500, error.message);
-      for (const row of data ?? []) {
-        items.push({
-          id: row.id,
-          label: row.title,
-          subtitle: `${row.status}${row.slug ? ` • ${row.slug}` : ''}`,
-        });
-      }
-    }
+        if (kind === 'org') {
+          let query = admin.from('orgs').select('id, name, billing_email').limit(limit);
+          if (id) query = query.eq('id', id);
+          if (term) query = termIsUuid ? query.eq('id', term) : query.or(`name.ilike.${like},billing_email.ilike.${like}`);
+          const { data, error } = await query;
+          if (error) throw createError('DATABASE_ERROR', 'Lookup organisations impossible', 500, error.message);
+          for (const row of data ?? []) {
+            out.push({ id: row.id, label: row.name || row.id, subtitle: row.billing_email });
+          }
+        }
+
+        if (kind === 'contest') {
+          let query = admin.from('contests').select('id, title, slug, status').limit(limit);
+          if (id) query = query.eq('id', id);
+          if (term) query = termIsUuid ? query.eq('id', term) : query.or(`title.ilike.${like},slug.ilike.${like}`);
+          const { data, error } = await query;
+          if (error) throw createError('DATABASE_ERROR', 'Lookup concours impossible', 500, error.message);
+          for (const row of data ?? []) {
+            out.push({
+              id: row.id,
+              label: row.title,
+              subtitle: `${row.status}${row.slug ? ` • ${row.slug}` : ''}`,
+            });
+          }
+        }
+
+        return out;
+      },
+      CACHE_TTL.SHORT
+    );
 
     return NextResponse.json({ ok: true, items });
   } catch (error) {
     return formatErrorResponse(error);
   }
 }
+

@@ -1,9 +1,9 @@
-/*
+﻿/*
 Source: PATCH /api/submissions/[id]/moderate
 Tables: submissions, moderation_actions, notifications, audit_logs
 Rules:
 - Only brand owner of the contest or admin can moderate
-- status ∈ {'approved','rejected'}; reason optional for rejected
+- status âˆˆ {'approved','rejected'}; reason optional for rejected
 */
 import { NextRequest, NextResponse } from 'next/server';
 import { z } from 'zod';
@@ -63,7 +63,7 @@ export async function PATCH(
     }
 
     // Update submission
-    const updatePayload: Record<string, any> = {
+    const updatePayload: Record<string, UnsafeAny> = {
       status,
       moderated_by: user.id,
       updated_at: new Date().toISOString(),
@@ -133,4 +133,5 @@ export async function PATCH(
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }
+
 

@@ -3,15 +3,16 @@ import { NextResponse } from 'next/server';
 import { requireAdminPermission, hasAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { ensureAdminTasksSynced } from '@/lib/admin/admin-tasks-sync';
+import { adminCache, cacheKey } from '@/lib/admin/cache';
 import { createError, formatErrorResponse } from '@/lib/errors';
 import { getAllowedTaskTypes } from '@/lib/admin/admin-tasks';
 
 type SupabaseErrorLike = { message?: string; code?: string } | null | undefined;
 
 function isMissingTable(error: SupabaseErrorLike, tableName: string) {
-  const code = String((error as any)?.code || '').toUpperCase();
+  const code = String((error as UnsafeAny)?.code || '').toUpperCase();
   if (code === '42P01') return true;
-  const msg = String((error as any)?.message || '').toLowerCase();
+  const msg = String((error as UnsafeAny)?.message || '').toLowerCase();
   if (!msg.includes(tableName.toLowerCase())) return false;
   return msg.includes('does not exist') || msg.includes('could not find') || msg.includes('schema cache');
 }
@@ -20,18 +21,18 @@ function isoHoursAgo(hours: number) {
   return new Date(Date.now() - hours * 60 * 60 * 1000).toISOString();
 }
 
-async function countExact(table: string, filter: (q: any) => any) {
+async function countExact(table: string, filter: (q: UnsafeAny) => UnsafeAny) {
   const admin = getAdminClient();
   const { count, error } = await filter(admin.from(table).select('id', { count: 'exact', head: true }));
   if (error) throw createError('DATABASE_ERROR', `Failed to count ${table}`, 500, error.message);
   return count ?? 0;
 }
 
-async function oldestIso(table: string, select: string, filter: (q: any) => any, orderBy: string) {
+async function oldestIso(table: string, select: string, filter: (q: UnsafeAny) => UnsafeAny, orderBy: string) {
   const admin = getAdminClient();
   const { data, error } = await filter(admin.from(table).select(select).order(orderBy, { ascending: true }).limit(1)).maybeSingle();
   if (error) throw createError('DATABASE_ERROR', `Failed to load ${table}`, 500, error.message);
-  const row = data as any;
+  const row = data as UnsafeAny;
   const value = row?.[orderBy];
   return typeof value === 'string' ? value : null;
 }
@@ -191,57 +192,61 @@ async function legacySummary(access: Awaited<ReturnType<typeof requireAdminPermi
 
 export async function GET() {
   try {
-    const { access } = await requireAdminPermission('inbox.read');
+    const { access, user } = await requireAdminPermission('inbox.read');
     const can = (permission: string) => hasAdminPermission(access, permission);
 
-    const syncRes = await ensureAdminTasksSynced();
+    const key = cacheKey('admin:inbox:summary', { user_id: user.id });
+    const payload = await adminCache.getOrSet(
+      key,
+      async () => {
+        const syncRes = await ensureAdminTasksSynced();
 
-    const admin = getAdminClient();
-    const allowedTypes = getAllowedTaskTypes(access);
+        const admin = getAdminClient();
+        const allowedTypes = getAllowedTaskTypes(access);
 
-    const ops = {
-      cashouts_pending: 0,
-      cashouts_oldest_at: null as string | null,
-      moderation_pending: 0,
-      moderation_oldest_at: null as string | null,
-      webhook_failures_24h: 0,
-      webhook_failures_1h: 0,
-      ingestion_errors_24h: 0,
-      ingestion_errors_1h: 0,
-      ingestion_jobs_failed: 0,
-      kyc_pending: 0,
-      risk_flags_open: 0,
-      support_open: 0,
-      support_unassigned: 0,
-      leads_new: 0,
-      leads_unassigned: 0,
-    };
+        const ops = {
+          cashouts_pending: 0,
+          cashouts_oldest_at: null as string | null,
+          moderation_pending: 0,
+          moderation_oldest_at: null as string | null,
+          webhook_failures_24h: 0,
+          webhook_failures_1h: 0,
+          ingestion_errors_24h: 0,
+          ingestion_errors_1h: 0,
+          ingestion_jobs_failed: 0,
+          kyc_pending: 0,
+          risk_flags_open: 0,
+          support_open: 0,
+          support_unassigned: 0,
+          leads_new: 0,
+          leads_unassigned: 0,
+        };
 
-    if (syncRes && (syncRes as any).missing) {
-      return NextResponse.json(await legacySummary(access));
-    }
+        if (syncRes && (syncRes as UnsafeAny).missing) {
+          return await legacySummary(access);
+        }
 
-    const tasksRes = allowedTypes.length
-      ? await admin
-          .from('admin_tasks')
-          .select('task_type, status, assigned_to, metadata, created_at')
-          .in('task_type', allowedTypes as any)
-      : { data: [], error: null as any };
+        const tasksRes = allowedTypes.length
+          ? await admin
+              .from('admin_tasks')
+              .select('task_type, status, assigned_to, metadata, created_at')
+              .in('task_type', allowedTypes as UnsafeAny)
+          : { data: [], error: null as UnsafeAny };
 
-    if (tasksRes.error) {
-      if (isMissingTable(tasksRes.error, 'admin_tasks')) {
-        return NextResponse.json(await legacySummary(access));
-      }
-      throw createError('DATABASE_ERROR', 'Failed to load admin_tasks summary', 500, tasksRes.error.message);
-    }
+        if (tasksRes.error) {
+          if (isMissingTable(tasksRes.error, 'admin_tasks')) {
+            return await legacySummary(access);
+          }
+          throw createError('DATABASE_ERROR', 'Failed to load admin_tasks summary', 500, tasksRes.error.message);
+        }
 
-    const rows = (tasksRes.data ?? []) as any[];
-    const openRows = rows.filter((r) => ['open', 'in_progress', 'blocked'].includes(String(r.status)));
+        const rows = (tasksRes.data ?? []) as UnsafeAny[];
+        const openRows = rows.filter((r) => ['open', 'in_progress', 'blocked'].includes(String(r.status)));
 
     const countByType = new Map<string, number>();
     const oldestByType = new Map<string, string>();
     for (const r of openRows) {
-      const meta = (r.metadata ?? {}) as any;
+      const meta = (r.metadata ?? {}) as UnsafeAny;
       const count = typeof meta.count === 'number' ? meta.count : 1;
       countByType.set(r.task_type, (countByType.get(r.task_type) ?? 0) + count);
       const createdAt = typeof meta.oldest_at === 'string' ? meta.oldest_at : (r.created_at as string | undefined);
@@ -366,14 +371,21 @@ export async function GET() {
     const totalSignals = signals.length;
     const badgeCount = Math.min(99, totalOps + totalSignals);
 
-    return NextResponse.json({
-      generated_at: new Date().toISOString(),
-      badge_count: badgeCount,
-      ops: { ...ops, total: totalOps },
-      signals: { total: totalSignals, items: signals },
-    });
+        return {
+          generated_at: new Date().toISOString(),
+          badge_count: badgeCount,
+          ops: { ...ops, total: totalOps },
+          signals: { total: totalSignals, items: signals },
+        };
+      },
+      // TTL très court: évite les doublons (layout + client) sans cacher trop longtemps
+      5_000
+    );
+
+    return NextResponse.json(payload);
   } catch (error) {
     return formatErrorResponse(error);
   }
 }
+
 

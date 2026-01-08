@@ -5,7 +5,6 @@ Tables: contests, submissions, profiles, profile_creators
 DB functions: is_contest_active(uuid), can_creator_submit(uuid, uuid)
 */
 import { NextRequest, NextResponse } from 'next/server';
-import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { getSession } from '@/lib/auth';
 import { formatErrorResponse } from '@/lib/errors';

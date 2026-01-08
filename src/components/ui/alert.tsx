@@ -23,8 +23,16 @@ export function Alert({ className, variant = 'default', ...props }: AlertProps) 
   );
 }
 
-export function AlertTitle({ className, ...props }: React.HTMLAttributes<HTMLHeadingElement>) {
-  return <h5 className={cn('mb-1 font-medium leading-none tracking-tight', className)} {...props} />;
+export function AlertTitle({
+  className,
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLHeadingElement>) {
+  return (
+    <h5 className={cn('mb-1 font-medium leading-none tracking-tight', className)} {...props}>
+      {children}
+    </h5>
+  );
 }
 
 export function AlertDescription({ className, ...props }: React.HTMLAttributes<HTMLParagraphElement>) {

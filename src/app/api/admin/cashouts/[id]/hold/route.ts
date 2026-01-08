@@ -5,6 +5,8 @@ import { getAdminClient } from '@/lib/admin/supabase';
 import { assertAdminBreakGlass } from '@/lib/admin/break-glass';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
+import { cashoutValidators } from '@/lib/admin/validators';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 const BodySchema = z.object({
@@ -18,19 +20,31 @@ export async function POST(
   try {
     const { id } = await context.params;
     const { user } = await requireAdminPermission('finance.write');
-    await enforceAdminRateLimit(req, { route: 'admin:cashouts:hold', max: 10, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:cashouts:hold', max: 10, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
       throw createError('FORBIDDEN', 'Invalid CSRF token', 403, csrfError);
     }
 
-    const breakGlass = assertAdminBreakGlass(req, 'finance.write');
+    const breakGlass = await assertAdminBreakGlass(req, 'finance.write', user.id);
 
     const body = await req.json();
     const parsed = BodySchema.safeParse(body);
     if (!parsed.success) {
       throw createError('VALIDATION_ERROR', 'Invalid payload', 400, parsed.error.flatten());
+    }
+
+    // Validation métier
+    const validation = await cashoutValidators.canHold(id);
+    if (!validation.valid) {
+      throw createError(
+        'VALIDATION_ERROR',
+        'Cannot hold cashout',
+        400,
+        { errors: validation.errors }
+      );
     }
 
     const admin = getAdminClient();
@@ -42,10 +56,6 @@ export async function POST(
 
     if (cashoutError || !cashout) {
       throw createError('NOT_FOUND', 'Cashout not found', 404, cashoutError?.message);
-    }
-
-    if (!['requested', 'processing'].includes(cashout.status)) {
-      throw createError('CONFLICT', `Cashout cannot be held from ${cashout.status}`, 409);
     }
 
     const now = new Date().toISOString();

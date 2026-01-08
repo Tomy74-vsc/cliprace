@@ -10,7 +10,6 @@ import {
   FileText,
   CreditCard,
   Search,
-  Rocket,
   TrendingUp,
   Inbox,
   AlertCircle,

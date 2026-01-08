@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(req: NextRequest) {
   try {
     // Read CSRF token from cookie in the request
-    let csrfToken = req.cookies.get('csrf')?.value;
+    const csrfToken = req.cookies.get('csrf')?.value;
 
     // If no token exists, generate one (should be set by middleware, but fallback here)
     if (!csrfToken) {

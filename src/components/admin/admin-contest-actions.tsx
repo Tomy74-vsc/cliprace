@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { getCsrfToken } from '@/lib/csrf-client';
 
 type ContestStatus = 'draft' | 'active' | 'paused' | 'ended' | 'archived';
 
@@ -12,12 +13,6 @@ interface AdminContestActionsProps {
   canWrite: boolean;
 }
 
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
-}
-
 export function AdminContestActions({ contestId, status, canWrite }: AdminContestActionsProps) {
   const [loading, setLoading] = useState<string | null>(null);
   const router = useRouter();
@@ -25,12 +20,12 @@ export function AdminContestActions({ contestId, status, canWrite }: AdminContes
   const runAction = async (action: 'publish' | 'pause' | 'end' | 'archive') => {
     if (!canWrite) return;
     const labels: Record<string, string> = {
-      publish: 'publier',
-      pause: 'mettre en pause',
-      end: 'terminer',
-      archive: 'archiver',
+      publish: 'publish',
+      pause: 'pause',
+      end: 'end',
+      archive: 'archive',
     };
-    const confirmed = window.confirm(`Confirmer : ${labels[action]} ce concours ?`);
+    const confirmed = window.confirm(`Confirm: ${labels[action]} this contest?`);
     if (!confirmed) return;
 
     setLoading(action);
@@ -42,13 +37,13 @@ export function AdminContestActions({ contestId, status, canWrite }: AdminContes
       });
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        const message = payload?.message || 'Action failed';
+        const message = payload?.message || 'Action failed.';
         window.alert(message);
       } else {
         router.refresh();
       }
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Action failed');
+      window.alert(error instanceof Error ? error.message : 'Action failed.');
     } finally {
       setLoading(null);
     }
@@ -58,22 +53,22 @@ export function AdminContestActions({ contestId, status, canWrite }: AdminContes
     <div className="flex flex-wrap gap-2">
       {status !== 'active' && status !== 'ended' && status !== 'archived' ? (
         <Button onClick={() => runAction('publish')} disabled={!canWrite || loading !== null} variant="primary">
-          {loading === 'publish' ? 'Publication…' : 'Publier'}
+          {loading === 'publish' ? 'Publishing...' : 'Publish'}
         </Button>
       ) : null}
       {status === 'active' ? (
         <Button onClick={() => runAction('pause')} disabled={!canWrite || loading !== null} variant="secondary">
-          {loading === 'pause' ? 'Pause…' : 'Pause'}
+          {loading === 'pause' ? 'Pausing...' : 'Pause'}
         </Button>
       ) : null}
       {status === 'active' ? (
         <Button onClick={() => runAction('end')} disabled={!canWrite || loading !== null} variant="secondary">
-          {loading === 'end' ? 'Clôture…' : 'Terminer'}
+          {loading === 'end' ? 'Ending...' : 'End'}
         </Button>
       ) : null}
-      {(status === 'ended' || status === 'paused') ? (
+      {status === 'ended' || status === 'paused' ? (
         <Button onClick={() => runAction('archive')} disabled={!canWrite || loading !== null} variant="secondary">
-          {loading === 'archive' ? 'Archivage…' : 'Archiver'}
+          {loading === 'archive' ? 'Archiving...' : 'Archive'}
         </Button>
       ) : null}
     </div>

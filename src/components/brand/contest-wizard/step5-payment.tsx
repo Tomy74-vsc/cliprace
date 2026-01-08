@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
@@ -17,7 +16,6 @@ interface Step5PaymentProps {
 }
 
 export function Step5Payment({ data, updateData, brandId }: Step5PaymentProps) {
-  const router = useRouter();
   const csrfToken = useCsrfToken();
   const [isCreating, setIsCreating] = useState(false);
   const [isLoadingPayment, setIsLoadingPayment] = useState(false);

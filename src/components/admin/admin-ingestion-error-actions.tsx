@@ -4,13 +4,8 @@ import { useRouter } from 'next/navigation';
 import { CheckCircle2, Undo2 } from 'lucide-react';
 import { AdminActionPanel } from '@/components/admin/admin-action-panel';
 import { Button } from '@/components/ui/button';
+import { getCsrfToken } from '@/lib/csrf-client';
 import { useToastContext } from '@/hooks/use-toast-context';
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
-}
 
 export function AdminIngestionErrorActions({
   errorId,
@@ -31,13 +26,13 @@ export function AdminIngestionErrorActions({
       trigger={
         <Button size="sm" variant={isResolved ? 'secondary' : 'primary'}>
           {isResolved ? <Undo2 className="h-4 w-4 mr-2" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
-          {isResolved ? 'Réouvrir' : 'Résoudre'}
+          {isResolved ? 'Reopen' : 'Resolve'}
         </Button>
       }
-      title={isResolved ? 'Réouvrir cette erreur' : 'Marquer cette erreur comme résolue'}
-      description="Permet de garder une inbox ingestion propre (sans supprimer l’historique)."
+      title={isResolved ? 'Reopen this error' : 'Mark this error as resolved'}
+      description="Keeps the ingestion inbox clean without deleting history."
       requiresReason
-      confirmLabel={isResolved ? 'Réouvrir' : 'Résoudre'}
+      confirmLabel={isResolved ? 'Reopen' : 'Resolve'}
       onConfirm={async ({ reason }) => {
         try {
           const token = await getCsrfToken();
@@ -48,19 +43,22 @@ export function AdminIngestionErrorActions({
           });
           if (!res.ok) {
             const payload = await res.json().catch(() => ({}));
-            throw new Error(payload?.message || 'Action impossible.');
+            throw new Error(payload?.message || 'Action failed.');
           }
-          toast({ type: 'success', title: 'OK', message: isResolved ? 'Erreur réouverte.' : 'Erreur résolue.' });
+          toast({
+            type: 'success',
+            title: 'OK',
+            message: isResolved ? 'Error reopened.' : 'Error resolved.',
+          });
           router.refresh();
         } catch (error) {
           toast({
             type: 'error',
-            title: 'Erreur',
-            message: error instanceof Error ? error.message : 'Action impossible.',
+            title: 'Error',
+            message: error instanceof Error ? error.message : 'Action failed.',
           });
         }
       }}
     />
   );
 }
-

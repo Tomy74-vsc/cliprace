@@ -9,6 +9,7 @@ import { Badge, type BadgeProps } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useToastContext } from '@/hooks/use-toast-context';
 import { formatCurrency, formatDateTime } from '@/lib/formatters';
+import { getCsrfToken } from '@/lib/csrf-client';
 
 type CashoutItem = {
   id: string;
@@ -36,12 +37,6 @@ function statusVariant(status: string): BadgeProps['variant'] {
   return 'default';
 }
 
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
-}
-
 export function AdminCashoutQueue({ items, canWrite = true }: AdminCashoutQueueProps) {
   const router = useRouter();
   const { toast } = useToastContext();
@@ -51,8 +46,8 @@ export function AdminCashoutQueue({ items, canWrite = true }: AdminCashoutQueueP
     if (!canWrite) {
       toast({
         type: 'warning',
-        title: 'Lecture seule',
-        message: "Vous n'avez pas les droits pour exécuter des actions Finance.",
+        title: 'Read only',
+        message: 'You do not have permission to run finance actions.',
       });
       return;
     }
@@ -67,18 +62,18 @@ export function AdminCashoutQueue({ items, canWrite = true }: AdminCashoutQueueP
       });
       if (!res.ok) {
         const payload = await res.json().catch(() => ({}));
-        throw new Error(payload?.message || "L'action a échoué.");
+        throw new Error(payload?.message || 'Action failed.');
       }
 
       toast({
         type: 'success',
-        title: 'Action effectuée',
+        title: 'Action complete',
         message:
           action === 'approve'
-            ? 'Cashout approuvé.'
+            ? 'Cashout approved.'
             : action === 'hold'
-              ? 'Cashout mis en pause.'
-              : 'Cashout rejeté.',
+              ? 'Cashout placed on hold.'
+              : 'Cashout rejected.',
       });
       router.refresh();
     } finally {
@@ -90,12 +85,12 @@ export function AdminCashoutQueue({ items, canWrite = true }: AdminCashoutQueueP
     <AdminTable>
       <thead className="text-left text-xs uppercase text-muted-foreground">
         <tr>
-          <th>Créateur</th>
-          <th>Montant</th>
-          <th>Statut</th>
+          <th>Creator</th>
+          <th>Amount</th>
+          <th>Status</th>
           <th>KYC</th>
-          <th>Risque</th>
-          <th>Demandé</th>
+          <th>Risk</th>
+          <th>Requested</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -103,12 +98,12 @@ export function AdminCashoutQueue({ items, canWrite = true }: AdminCashoutQueueP
         {items.length === 0 ? (
           <tr>
             <td colSpan={7} className="py-10 text-center text-muted-foreground">
-              Aucun cashout trouvé.
+              No cashouts found.
             </td>
           </tr>
         ) : (
           items.map((cashout) => {
-            const onHold = Boolean(cashout.metadata && (cashout.metadata as any).on_hold);
+            const onHold = Boolean(cashout.metadata && (cashout.metadata as UnsafeAny).on_hold);
             const creatorLabel = cashout.creator?.display_name || cashout.creator?.email || cashout.creator_id;
             const preview = (
               <div className="space-y-1">
@@ -129,15 +124,15 @@ export function AdminCashoutQueue({ items, canWrite = true }: AdminCashoutQueueP
                 <td className="font-medium">{formatCurrency(cashout.amount_cents, cashout.currency)}</td>
                 <td>
                   <Badge variant={statusVariant(cashout.status)}>{cashout.status}</Badge>
-                  {onHold ? <div className="mt-1 text-xs text-muted-foreground">En pause</div> : null}
+                  {onHold ? <div className="mt-1 text-xs text-muted-foreground">On hold</div> : null}
                 </td>
                 <td className="text-xs text-muted-foreground">
-                  {cashout.kyc ? `${cashout.kyc.provider} • ${cashout.kyc.status}` : 'Aucun'}
+                  {cashout.kyc ? `${cashout.kyc.provider} - ${cashout.kyc.status}` : 'None'}
                 </td>
-                <td className="text-xs text-muted-foreground">{cashout.open_risk_flags} ouvert(s)</td>
+                <td className="text-xs text-muted-foreground">{cashout.open_risk_flags} open</td>
                 <td className="text-xs text-muted-foreground">
                   {formatDateTime(cashout.requested_at)}
-                  {cashout.processed_at ? ` • ${formatDateTime(cashout.processed_at)}` : ''}
+                  {cashout.processed_at ? ` - ${formatDateTime(cashout.processed_at)}` : ''}
                 </td>
                 <td>
                   <div className="flex flex-wrap gap-2">
@@ -150,41 +145,41 @@ export function AdminCashoutQueue({ items, canWrite = true }: AdminCashoutQueueP
                           loading={loadingKey === `${cashout.id}:approve`}
                           disabled={!canWrite}
                         >
-                          Approuver
+                          Approve
                         </Button>
                         <AdminActionPanel
                           trigger={
                             <Button size="sm" variant="secondary" disabled={!canWrite}>
-                              Mettre en pause
+                              Hold
                             </Button>
                           }
-                          title="Mettre en pause ce cashout"
-                          description="Ajoutez une raison (visible dans l'audit)."
+                          title="Place this cashout on hold"
+                          description="Add a reason (recorded in the audit log)."
                           requiresReason
-                          confirmLabel="Mettre en pause"
+                          confirmLabel="Hold cashout"
                           confirmVariant="secondary"
-                          reasonLabel="Raison"
+                          reasonLabel="Reason"
                           preview={preview}
                           onConfirm={({ reason }) => runAction(cashout.id, 'hold', reason)}
                         />
                         <AdminActionPanel
                           trigger={
                             <Button size="sm" variant="destructive" disabled={!canWrite}>
-                              Rejeter
+                              Reject
                             </Button>
                           }
-                          title="Rejeter ce cashout"
-                          description="Ajoutez une raison (visible dans l'audit)."
+                          title="Reject this cashout"
+                          description="Add a reason (recorded in the audit log)."
                           requiresReason
-                          confirmLabel="Rejeter"
+                          confirmLabel="Reject cashout"
                           confirmVariant="destructive"
-                          reasonLabel="Raison"
+                          reasonLabel="Reason"
                           preview={preview}
                           onConfirm={({ reason }) => runAction(cashout.id, 'reject', reason)}
                         />
                       </>
                     ) : (
-                      <span className="text-xs text-muted-foreground">Aucune action</span>
+                      <span className="text-xs text-muted-foreground">No actions</span>
                     )}
                   </div>
                 </td>
@@ -196,4 +191,3 @@ export function AdminCashoutQueue({ items, canWrite = true }: AdminCashoutQueueP
     </AdminTable>
   );
 }
-

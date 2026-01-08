@@ -25,12 +25,12 @@ export function AdminFiltersBar({
     <div className={cn('space-y-2', className)}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="text-sm text-muted-foreground">
-          {typeof resultsCount === 'number' ? `${resultsCount.toLocaleString()} résultat(s)` : null}
+          {typeof resultsCount === 'number' ? `${resultsCount.toLocaleString()} result(s)` : null}
         </div>
         <div className="flex items-center gap-2">
           {resetHref ? (
             <Button asChild variant="ghost" size="sm">
-              <Link href={resetHref}>Réinitialiser</Link>
+              <Link href={resetHref}>Reset</Link>
             </Button>
           ) : null}
           {actions}
@@ -40,4 +40,3 @@ export function AdminFiltersBar({
     </div>
   );
 }
-

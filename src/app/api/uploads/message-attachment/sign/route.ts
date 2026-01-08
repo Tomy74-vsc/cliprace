@@ -1,4 +1,4 @@
-/*
+﻿/*
 Source: POST /api/uploads/message-attachment/sign
 Effect: return bucket+path under contest_assets for a thread with contest_id (policy requires folder by contest)
 */
@@ -15,10 +15,10 @@ const BodySchema = z.object({ thread_id: z.string().uuid(), filename: z.string()
 export async function POST(req: NextRequest) {
   try {
     // Rate limit: 10/min per IP
-    const ip = req.headers.get('x-forwarded-for') || (req as any).ip || 'unknown';
+    const ip = req.headers.get('x-forwarded-for') || (req as UnsafeAny).ip || 'unknown';
     const rlKey = `uploads:message-attachment:sign:${ip}`;
     if (!(await rateLimit({ key: rlKey, route: 'uploads:message-attachment:sign', windowMs: 60 * 1000, max: 10 }))) {
-      return NextResponse.json({ ok: false, message: 'Trop de requêtes, réessayez plus tard.' }, { status: 429 });
+      return NextResponse.json({ ok: false, message: 'Trop de requÃªtes, rÃ©essayez plus tard.' }, { status: 429 });
     }
 
     // CSRF check
@@ -56,3 +56,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }
+

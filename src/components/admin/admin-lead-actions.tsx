@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { getCsrfToken } from '@/lib/csrf-client';
 
 const STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
 
@@ -11,12 +12,6 @@ interface AdminLeadActionsProps {
   status: string;
   assignedToId: string | null;
   canWrite: boolean;
-}
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
 }
 
 export function AdminLeadActions({ leadId, status, assignedToId, canWrite }: AdminLeadActionsProps) {
@@ -57,7 +52,7 @@ export function AdminLeadActions({ leadId, status, assignedToId, canWrite }: Adm
 
   return (
     <div className="flex flex-col gap-2">
-      {!canWrite ? <div className="text-xs text-muted-foreground">Lecture seule</div> : null}
+      {!canWrite ? <div className="text-xs text-muted-foreground">Read only</div> : null}
       <div className="flex items-center gap-2">
         <select
           className="h-9 rounded-lg border border-border bg-background px-2 text-xs"

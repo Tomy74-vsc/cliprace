@@ -1,6 +1,7 @@
 
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { motion, useScroll, useTransform, type Variants } from "framer-motion";
@@ -662,9 +663,9 @@ export default function Home() {
           <div>
             <div className="text-sm font-semibold">Réseaux sociaux</div>
             <ul className="mt-3 space-y-2 text-sm text-zinc-300">
-              <li><a href="#" aria-disabled>Instagram</a></li>
-              <li><a href="#" aria-disabled>TikTok</a></li>
-              <li><a href="#" aria-disabled>LinkedIn</a></li>
+              <li><a href="https://www.instagram.com" target="_blank" rel="noreferrer">Instagram</a></li>
+              <li><a href="https://www.tiktok.com" target="_blank" rel="noreferrer">TikTok</a></li>
+              <li><a href="https://www.linkedin.com" target="_blank" rel="noreferrer">LinkedIn</a></li>
             </ul>
           </div>
         </div>
@@ -822,7 +823,7 @@ function TrustMarquee({ logos, title }: { logos: string[]; title?: string }) {
               key={`${src}-${i}`}
               className="h-20 w-28 sm:h-24 sm:w-32 rounded-2xl bg-white/70 dark:bg-zinc-900/60 backdrop-blur flex items-center justify-center ring-1 ring-inset ring-zinc-200/60 dark:ring-white/10"
             >
-              <img
+              <Image
                 src={src}
                 alt="Logo partenaire"
                 width={96}
@@ -922,7 +923,7 @@ function FeatureGrid({ className = "" }: { className?: string }) {
             {/* Icône + titre */}
             <div className="flex items-center gap-4 mb-4">
               <div className="h-14 w-14 shrink-0 rounded-2xl border border-violet-500/50 bg-violet-500/10 grid place-items-center">
-                <img src={it.icon} alt="" width={28} height={28} className="opacity-90" />
+                <Image src={it.icon} alt="" width={28} height={28} className="opacity-90" />
               </div>
               <h3 className="text-[22px] sm:text-[26px] font-bold tracking-tight leading-snug">
                 {it.title}
@@ -976,7 +977,7 @@ function EnterpriseCard({
     <div className="group rounded-2xl border border-white/15 bg-white/10 p-6 shadow-[0_25px_60px_-25px_rgba(0,0,0,.5)] transition will-change-transform hover:-translate-y-1 hover:shadow-[0_35px_80px_-25px_rgba(0,0,0,.6)]">
       <div className="flex items-start gap-4">
         <div className="h-12 w-12 rounded-2xl bg-white/15 border border-white/20 grid place-items-center">
-          <img src={icon} alt="" width={26} height={26} />
+          <Image src={icon} alt="" width={26} height={26} />
         </div>
         <div>
           <div className="text-xl font-semibold">{title}</div>

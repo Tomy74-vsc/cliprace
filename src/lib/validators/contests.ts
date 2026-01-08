@@ -1,4 +1,4 @@
-// Source: Validation Zod pour concours
+﻿// Source: Validation Zod pour concours
 import { z } from 'zod';
 
 const prizeRangeSchema = z
@@ -15,7 +15,7 @@ const prizeRangeSchema = z
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'amount_cents ou percentage doit être renseigné',
+        message: 'amount_cents ou percentage doit Ãªtre renseignÃ©',
         path: ['amount_cents'],
       });
     }
@@ -23,7 +23,7 @@ const prizeRangeSchema = z
     if (value.rank_to !== undefined && value.rank_to < value.rank_from) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        message: 'rank_to doit être supérieur ou égal à rank_from',
+        message: 'rank_to doit Ãªtre supÃ©rieur ou Ã©gal Ã  rank_from',
         path: ['rank_to'],
       });
     }
@@ -34,21 +34,11 @@ const contestAssetSchema = z.object({
   type: z.enum(['image', 'video', 'pdf']).default('image'),
 });
 
-// Schéma pour les données produit
-// TODO: ajouter colonnes dédiées dans la table contests (product_name, product_one_liner, etc.)
-// Pour l'instant, on stocke dans product_brief JSONB
-const productBriefSchema = z.object({
-  productName: z.string().min(2, 'Nom trop court').optional(),
-  productOneLiner: z.string().min(5, 'Description trop courte').optional(),
-  productCategory: z.string().optional().nullable(),
-  productBenefits: z.array(z.string().min(2)).max(3).optional(),
-  productTargetAudience: z.array(z.string()).optional(),
-}).optional();
 
-// Schéma de base sans les refinements (pour pouvoir utiliser .partial())
+// SchÃ©ma de base sans les refinements (pour pouvoir utiliser .partial())
 const contestCreateBaseSchema = z.object({
-  title: z.string().min(1).max(120, 'Le titre ne peut pas dépasser 120 caractères'),
-  brief_md: z.string().min(1).max(5000, 'Le brief ne peut pas dépasser 5000 caractères'),
+  title: z.string().min(1).max(120, 'Le titre ne peut pas dÃ©passer 120 caractÃ¨res'),
+  brief_md: z.string().min(1).max(5000, 'Le brief ne peut pas dÃ©passer 5000 caractÃ¨res'),
   cover_url: z.string().url().optional(),
   allowed_platforms: z
     .object({
@@ -76,11 +66,11 @@ const contestCreateBaseSchema = z.object({
   // product_brief: productBriefSchema,
 });
 
-// Schéma de création avec validations supplémentaires
+// SchÃ©ma de crÃ©ation avec validations supplÃ©mentaires
 export const contestCreateSchema = contestCreateBaseSchema
   .refine(
     (data) => new Date(data.end_at) > new Date(data.start_at),
-    { message: 'La date de fin doit être après la date de début', path: ['end_at'] }
+    { message: 'La date de fin doit Ãªtre aprÃ¨s la date de dÃ©but', path: ['end_at'] }
   )
   .refine(
     (data) => {
@@ -88,10 +78,10 @@ export const contestCreateSchema = contestCreateBaseSchema
       const total = data.prizes.reduce((sum, p) => sum + (p.amount_cents ?? 0), 0);
       return total <= data.total_prize_pool_cents;
     },
-    { message: 'La somme des prix ne peut pas dépasser le total du prize pool', path: ['prizes'] }
+    { message: 'La somme des prix ne peut pas dÃ©passer le total du prize pool', path: ['prizes'] }
   );
 
-// Schéma de mise à jour : tous les champs sont optionnels
+// SchÃ©ma de mise Ã  jour : tous les champs sont optionnels
 export const contestUpdateSchema = contestCreateBaseSchema.partial();
 
 export type ContestCreateInput = z.infer<typeof contestCreateSchema>;

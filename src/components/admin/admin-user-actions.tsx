@@ -28,13 +28,13 @@ export function AdminUserActions({ userId, role, isActive, canWrite = true }: Ad
 
   const updateUser = async (payload: Record<string, unknown>) => {
     if (!canWrite) {
-      window.alert("Accès en lecture seule : impossible de modifier l'utilisateur.");
+      window.alert("Read-only access: cannot update this user.");
       return;
     }
     setLoading(true);
     try {
       if (!csrfToken) {
-        window.alert('Token CSRF manquant. Rafraîchis la page.');
+        window.alert('Missing CSRF token. Refresh the page.');
         return;
       }
       const res = await fetch(`/api/admin/users/${userId}`, {
@@ -48,12 +48,12 @@ export function AdminUserActions({ userId, role, isActive, canWrite = true }: Ad
       });
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        window.alert(data?.message || 'Mise à jour impossible');
+        window.alert(data?.message || 'Update failed.');
         return;
       }
       router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Mise à jour impossible');
+      window.alert(error instanceof Error ? error.message : 'Update failed.');
     } finally {
       setLoading(false);
     }
@@ -61,13 +61,13 @@ export function AdminUserActions({ userId, role, isActive, canWrite = true }: Ad
 
   const resetOnboarding = async () => {
     if (!canWrite) {
-      window.alert("Accès en lecture seule : impossible de modifier l'utilisateur.");
+      window.alert("Read-only access: cannot update this user.");
       return;
     }
     setLoading(true);
     try {
       if (!csrfToken) {
-        window.alert('Token CSRF manquant. Rafraîchis la page.');
+        window.alert('Missing CSRF token. Refresh the page.');
         return;
       }
       const res = await fetch(`/api/admin/users/${userId}/reset-onboarding`, {
@@ -77,7 +77,7 @@ export function AdminUserActions({ userId, role, isActive, canWrite = true }: Ad
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.ok) {
-        window.alert(data?.message || "Impossible de réinitialiser l'onboarding");
+        window.alert(data?.message || 'Unable to reset onboarding.');
         return;
       }
       router.refresh();
@@ -88,13 +88,13 @@ export function AdminUserActions({ userId, role, isActive, canWrite = true }: Ad
 
   const createImpersonationLink = async () => {
     if (!canWrite) {
-      window.alert("Accès en lecture seule : impossible de modifier l'utilisateur.");
+      window.alert("Read-only access: cannot update this user.");
       return;
     }
     setLoading(true);
     try {
       if (!csrfToken) {
-        window.alert('Token CSRF manquant. Rafraîchis la page.');
+        window.alert('Missing CSRF token. Refresh the page.');
         return;
       }
       const res = await fetch(`/api/admin/users/${userId}/impersonate`, {
@@ -105,7 +105,7 @@ export function AdminUserActions({ userId, role, isActive, canWrite = true }: Ad
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data?.ok || !data.action_link) {
-        window.alert(data?.message || "Impossible de générer le lien d'impersonation");
+        window.alert(data?.message || 'Unable to generate impersonation link.');
         return;
       }
       setImpersonationLink(data.action_link);
@@ -118,53 +118,53 @@ export function AdminUserActions({ userId, role, isActive, canWrite = true }: Ad
   return (
     <>
       <div className="flex flex-wrap items-end gap-3">
-      <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-2">
           <label className="text-xs text-muted-foreground" htmlFor="role">
-            Rôle
+            Role
           </label>
-        <select
-          id="role"
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          value={nextRole}
-          onChange={(event) => setNextRole(event.target.value as 'admin' | 'brand' | 'creator')}
-        >
+          <select
+            id="role"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            value={nextRole}
+            onChange={(event) => setNextRole(event.target.value as 'admin' | 'brand' | 'creator')}
+          >
             <option value="admin">admin</option>
             <option value="brand">brand</option>
             <option value="creator">creator</option>
-        </select>
-      </div>
-      <Button
-        variant="secondary"
-        onClick={() => updateUser({ role: nextRole })}
-        loading={loading}
-        disabled={!canWrite || nextRole === role}
-      >
-          Mettre à jour le rôle
-      </Button>
-      <Button
-        variant={isActive ? 'destructive' : 'primary'}
-        onClick={() => updateUser({ is_active: !isActive })}
-        loading={loading}
-        disabled={!canWrite}
-      >
-          {isActive ? 'Suspendre' : 'Activer'}
-      </Button>
+          </select>
+        </div>
+        <Button
+          variant="secondary"
+          onClick={() => updateUser({ role: nextRole })}
+          loading={loading}
+          disabled={!canWrite || nextRole === role}
+        >
+          Update role
+        </Button>
+        <Button
+          variant={isActive ? 'destructive' : 'primary'}
+          onClick={() => updateUser({ is_active: !isActive })}
+          loading={loading}
+          disabled={!canWrite}
+        >
+          {isActive ? 'Suspend' : 'Activate'}
+        </Button>
         <Button variant="secondary" onClick={resetOnboarding} loading={loading} disabled={!canWrite}>
-          Réinitialiser l'onboarding
+          Reset onboarding
         </Button>
         <Button variant="secondary" onClick={createImpersonationLink} loading={loading} disabled={!canWrite}>
-          Lien d'impersonation
+          Impersonation link
         </Button>
-    </div>
+      </div>
 
       <Dialog open={impersonationOpen} onOpenChange={setImpersonationOpen}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Lien d'impersonation</DialogTitle>
+            <DialogTitle>Impersonation link</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
             <Input
-              label="Lien"
+              label="Link"
               value={impersonationLink ?? ''}
               readOnly
               onFocus={(e) => e.currentTarget.select()}
@@ -177,7 +177,7 @@ export function AdminUserActions({ userId, role, isActive, canWrite = true }: Ad
                   await navigator.clipboard.writeText(impersonationLink).catch(() => void 0);
                 }}
               >
-                Copier
+                Copy
               </Button>
               <Button
                 onClick={() => {
@@ -185,11 +185,11 @@ export function AdminUserActions({ userId, role, isActive, canWrite = true }: Ad
                   window.open(impersonationLink, '_blank', 'noopener,noreferrer');
                 }}
               >
-                Ouvrir
+                Open
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Ouvre le lien dans une fenêtre privée pour ne pas perdre ta session admin.
+              Open the link in a private window to avoid losing your admin session.
             </p>
           </div>
         </DialogContent>

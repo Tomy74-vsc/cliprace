@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
     if (eventType === 'checkout.session.completed') {
       const session = payload as { id: string; payment_intent?: string; metadata?: Record<string, unknown> };
       // Mark payment succeeded
-      const { data: updatedPayment, error: updErr } = await admin
+      const { error: updErr } = await admin
         .from('payments_brand')
         .update({
           status: 'succeeded',

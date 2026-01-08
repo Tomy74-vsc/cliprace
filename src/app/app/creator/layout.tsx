@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { CreatorNav, type CreatorNavItem } from "./layout_nav";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Banner } from "@/components/creator/banner";
+import { AdminImpersonationBanner } from "@/components/admin/admin-impersonation-banner";
 import { getSupabaseSSR } from "@/lib/supabase/ssr";
 import { NotificationsDropdown } from "@/components/notifications/notifications-dropdown";
 import { CreatorBreadcrumbs } from "@/components/navigation/creator-breadcrumbs";
@@ -108,6 +109,7 @@ export default async function CreatorLayout({ children }: { children: ReactNode 
         </aside>
 
         <div className="flex-1 flex flex-col">
+          <AdminImpersonationBanner />
           <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
             <div className="flex h-14 items-center justify-between px-4 lg:px-8">
               <div className="flex items-center gap-3 overflow-hidden">

@@ -97,7 +97,6 @@ export function AdminGlobalSearch() {
 
         <div className="space-y-4">
           <Input
-            autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Rechercher (email, nom, org, concours...)"
@@ -140,4 +139,3 @@ export function AdminGlobalSearch() {
     </Dialog>
   );
 }
-

@@ -7,7 +7,7 @@ Use: track('event_name', { contest_id, network, ... })
 export function track(event: string, payload: Record<string, unknown> = {}) {
   try {
     if (typeof window === 'undefined') return;
-    const globalAny = window as any;
+    const globalAny = window as UnsafeAny;
     if (globalAny.analytics?.track) {
       globalAny.analytics.track(event, payload);
     } else if (globalAny.dispatchEvent) {
@@ -19,3 +19,4 @@ export function track(event: string, payload: Record<string, unknown> = {}) {
     console.error('track error', e);
   }
 }
+

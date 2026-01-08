@@ -4,6 +4,7 @@ import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 const QuerySchema = z.object({
@@ -14,6 +15,8 @@ const CreateSchema = z.object({
   route: z.string().min(1).max(200),
   name: z.string().min(2).max(80),
   params: z.record(z.string()).default({}),
+  visibility: z.enum(['personal', 'team']).default('personal'),
+  is_default: z.boolean().default(false),
 });
 
 function isMissingTable(error: { message?: string; code?: string } | null | undefined) {
@@ -32,8 +35,8 @@ function isMissingTable(error: { message?: string; code?: string } | null | unde
 
 export async function GET(req: NextRequest) {
   try {
-    await requireAdminPermission('dashboard.read');
-    await enforceAdminRateLimit(req, { route: 'admin:saved-views:list', max: 120, windowMs: 60_000 });
+    const { user } = await requireAdminPermission('dashboard.read');
+    await enforceAdminRateLimit(req, { route: 'admin:saved-views:list', max: 120, windowMs: 60_000 }, user.id);
 
     const parsed = QuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams.entries()));
     if (!parsed.success) {
@@ -41,12 +44,15 @@ export async function GET(req: NextRequest) {
     }
 
     const admin = getAdminClient();
-    const { data, error } = await admin
+    const query = admin
       .from('admin_saved_views')
-      .select('id, route, name, params, created_at, updated_at')
+      .select('id, route, name, params, visibility, is_default, created_by, created_at, updated_at')
       .eq('route', parsed.data.route)
+      .or(`visibility.eq.team,and(visibility.eq.personal,created_by.eq.${user.id})`)
+      .order('is_default', { ascending: false })
       .order('name', { ascending: true });
 
+    const { data, error } = await query;
     if (error) {
       if (isMissingTable(error)) {
         return NextResponse.json({ ok: true, items: [], missing_table: true });
@@ -63,7 +69,8 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     const { user } = await requireAdminPermission('dashboard.read');
-    await enforceAdminRateLimit(req, { route: 'admin:saved-views:create', max: 60, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:saved-views:create', max: 60, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
@@ -78,10 +85,35 @@ export async function POST(req: NextRequest) {
 
     const admin = getAdminClient();
     const now = new Date().toISOString();
+
+    // Si is_default = true, désactiver les autres vues default de même route et visibility
+    if (parsed.data.is_default) {
+      if (parsed.data.visibility === 'team') {
+        // Une seule vue team default par route
+        await admin
+          .from('admin_saved_views')
+          .update({ is_default: false })
+          .eq('route', parsed.data.route)
+          .eq('visibility', 'team')
+          .eq('is_default', true);
+      } else {
+        // Désactiver les autres vues personal default de cet admin pour cette route
+        await admin
+          .from('admin_saved_views')
+          .update({ is_default: false })
+          .eq('route', parsed.data.route)
+          .eq('visibility', 'personal')
+          .eq('created_by', user.id)
+          .eq('is_default', true);
+      }
+    }
+
     const insertRow = {
       route: parsed.data.route,
       name: parsed.data.name,
       params: parsed.data.params,
+      visibility: parsed.data.visibility,
+      is_default: parsed.data.is_default,
       created_by: user.id,
       created_at: now,
       updated_at: now,
@@ -90,7 +122,7 @@ export async function POST(req: NextRequest) {
     const { data, error } = await admin
       .from('admin_saved_views')
       .insert(insertRow)
-      .select('id, route, name, params, created_at, updated_at')
+      .select('id, route, name, params, visibility, is_default, created_at, updated_at')
       .single();
 
     if (error) {

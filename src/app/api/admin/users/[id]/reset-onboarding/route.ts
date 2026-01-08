@@ -3,6 +3,8 @@ import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
+import { userValidators } from '@/lib/admin/validators';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 export async function POST(
@@ -11,7 +13,8 @@ export async function POST(
 ) {
   try {
     const { user: actor } = await requireAdminPermission('users.write');
-    await enforceAdminRateLimit(req, { route: 'admin:users:reset-onboarding', max: 20, windowMs: 60_000 });
+    await enforceNotReadOnly(req, actor.id);
+    await enforceAdminRateLimit(req, { route: 'admin:users:reset-onboarding', max: 20, windowMs: 60_000 }, actor.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
@@ -19,8 +22,19 @@ export async function POST(
     }
 
     const { id } = await context.params;
-    const admin = getAdminClient();
+    
+    // Validation métier
+    const validation = await userValidators.canResetOnboarding(id);
+    if (!validation.valid) {
+      throw createError(
+        'VALIDATION_ERROR',
+        'Cannot reset onboarding',
+        400,
+        { errors: validation.errors }
+      );
+    }
 
+    const admin = getAdminClient();
     const { data: current, error: currentError } = await admin
       .from('profiles')
       .select('id, onboarding_complete')

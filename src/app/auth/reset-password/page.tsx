@@ -1,4 +1,4 @@
-/*
+﻿/*
 Source: Page reset-password
 Purpose: Demande de réinitialisation de mot de passe
 */
@@ -118,10 +118,10 @@ export default function ResetPasswordPage() {
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Si l'email <strong>{email}</strong> existe dans notre système, un lien de réinitialisation vous a été envoyé.
+              Si l&apos;email <strong>{email}</strong> existe dans notre système, un lien de réinitialisation vous a été envoyé.
             </p>
             <p className="text-sm text-muted-foreground">
-              Cliquez sur le lien dans l'email pour réinitialiser votre mot de passe. Le lien expire dans 1 heure.
+              Cliquez sur le lien dans l&apos;email pour réinitialiser votre mot de passe. Le lien expire dans 1 heure.
             </p>
           </CardContent>
           <CardFooter className="flex flex-col gap-3">
@@ -212,3 +212,4 @@ export default function ResetPasswordPage() {
     </div>
   );
 }
+

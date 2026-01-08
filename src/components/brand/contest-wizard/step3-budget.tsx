@@ -1,11 +1,10 @@
-'use client';
+﻿'use client';
 
 import { useState, useEffect } from 'react';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import { FieldWithTooltip } from '@/components/ui/field-with-tooltip';
 import { Plus, Trash2, TrendingUp, ChevronDown } from 'lucide-react';
 import { formatCurrency } from '@/lib/formatters';
@@ -25,7 +24,7 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
   const [hasManualEdit, setHasManualEdit] = useState(false);
   const [lastAutoBudget, setLastAutoBudget] = useState<number | null>(null);
 
-  // Simulateur : calculer les vues estimées
+  // Simulateur : calculer les vues estimÃ©es
   useEffect(() => {
     // Estimation : ~1000 vues par euro de prize pool (exemple)
     const views = Math.round(data.total_prize_pool_cents / 100 * 1000);
@@ -38,9 +37,9 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
     const MIN_PRIZE_EUR = 10;
 
     // Ne recalculer automatiquement que si :
-    // - Le budget est valide (>= 10€)
-    // - On n'a pas fait d'édition manuelle OU le budget a changé depuis le dernier calcul
-    // - Les prix sont vides OU le budget a changé
+    // - Le budget est valide (>= 10â‚¬)
+    // - On n'a pas fait d'Ã©dition manuelle OU le budget a changÃ© depuis le dernier calcul
+    // - Les prix sont vides OU le budget a changÃ©
     const shouldRecalculate =
       data.total_prize_pool_cents > 0 &&
       budgetEur >= MIN_PRIZE_EUR &&
@@ -55,7 +54,7 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [data.total_prize_pool_cents]);
 
-  // Recalculer automatiquement à partir du budget
+  // Recalculer automatiquement Ã  partir du budget
   const recalculateAuto = () => {
     const autoPrizes = computeAutomaticPrizes(data.total_prize_pool_cents);
     updateData({ prizes: autoPrizes });
@@ -85,18 +84,12 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
     setHasManualEdit(true);
   };
 
-  const totalDistributed = data.prizes.reduce(
-    (sum, p) => sum + (p.amount_cents || 0) * (p.rank_end - p.rank_start + 1),
-    0,
-  );
-  const remaining = data.total_prize_pool_cents - totalDistributed;
-
   return (
     <div className="space-y-8">
       <div className="text-center space-y-2 pb-2">
-        <h2 className="text-2xl font-semibold">Définissez votre budget</h2>
+        <h2 className="text-2xl font-semibold">DÃ©finissez votre budget</h2>
         <p className="text-muted-foreground">
-          Nous calculons automatiquement la répartition optimale des gains
+          Nous calculons automatiquement la rÃ©partition optimale des gains
         </p>
       </div>
 
@@ -105,7 +98,7 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
         <div className="grid gap-4 md:grid-cols-2">
           <FieldWithTooltip
             label="Montant total du prize pool"
-            tooltip="Définis le budget total que tu veux allouer à ce concours. Ce montant sera réparti entre les gagnants selon la répartition que tu configures. Plus le budget est élevé, plus tu attires de créateurs de qualité et génères de vues. Estimation : 1000€ = ~50 000 vues estimées."
+            tooltip="DÃ©finis le budget total que tu veux allouer Ã  ce concours. Ce montant sera rÃ©parti entre les gagnants selon la rÃ©partition que tu configures. Plus le budget est Ã©levÃ©, plus tu attires de crÃ©ateurs de qualitÃ© et gÃ©nÃ¨res de vues. Estimation : 1000â‚¬ = ~50 000 vues estimÃ©es."
             required
           >
             <Input
@@ -124,16 +117,16 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
 
           <FieldWithTooltip
             label="Devise"
-            tooltip="Sélectionne la devise dans laquelle tu veux payer les prix. Les paiements seront effectués dans cette devise via Stripe. Assure-toi que ta méthode de paiement Stripe supporte cette devise."
+            tooltip="SÃ©lectionne la devise dans laquelle tu veux payer les prix. Les paiements seront effectuÃ©s dans cette devise via Stripe. Assure-toi que ta mÃ©thode de paiement Stripe supporte cette devise."
           >
             <select
               className="flex w-full rounded-xl border border-input bg-background px-4 py-3 text-sm"
               value={data.currency}
               onChange={(e) => updateData({ currency: e.target.value })}
             >
-              <option value="EUR">EUR (€)</option>
+              <option value="EUR">EUR (â‚¬)</option>
               <option value="USD">USD ($)</option>
-              <option value="GBP">GBP (£)</option>
+              <option value="GBP">GBP (Â£)</option>
             </select>
           </FieldWithTooltip>
         </div>
@@ -143,22 +136,22 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
           <Card className="bg-muted/50 border-warning/20">
             <CardContent className="pt-6">
               <p className="text-sm text-muted-foreground">
-                Le budget est trop faible pour proposer des gains intéressants. Augmentez le montant pour lancer un concours.
+                Le budget est trop faible pour proposer des gains intÃ©ressants. Augmentez le montant pour lancer un concours.
               </p>
             </CardContent>
           </Card>
         )}
 
-        {/* Résumé automatique des gains calculés - Design épuré */}
+        {/* RÃ©sumÃ© automatique des gains calculÃ©s - Design Ã©purÃ© */}
         {data.total_prize_pool_cents >= 1000 && data.prizes.length > 0 && (
           <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-2xl border border-primary/20 p-8 space-y-6">
             <div className="text-center space-y-1">
-              <p className="text-sm text-muted-foreground">Répartition automatique</p>
+              <p className="text-sm text-muted-foreground">RÃ©partition automatique</p>
               <h3 className="text-2xl font-bold">
                 {formatCurrency(data.total_prize_pool_cents, data.currency)}
               </h3>
               <p className="text-sm text-muted-foreground">
-                pour <strong className="text-foreground">{data.prizes.length} créateurs</strong>
+                pour <strong className="text-foreground">{data.prizes.length} crÃ©ateurs</strong>
               </p>
             </div>
 
@@ -178,7 +171,7 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
             {data.prizes.length > 3 && (
               <div className="text-center p-4 bg-background/50 rounded-xl border">
                 <div className="text-xs text-muted-foreground mb-1">
-                  {data.prizes[3].rank_start}e–{data.prizes[data.prizes.length - 1].rank_end}e
+                  {data.prizes[3].rank_start}eâ€“{data.prizes[data.prizes.length - 1].rank_end}e
                 </div>
                 <div className="text-sm font-medium">
                   {formatCurrency(data.prizes[data.prizes.length - 1].amount_cents, data.currency)} - {formatCurrency(data.prizes[3].amount_cents, data.currency)}
@@ -187,7 +180,7 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
             )}
 
             <p className="text-xs text-center text-muted-foreground">
-              Cette répartition motive les meilleurs créateurs tout en récompensant un large panel de participants.
+              Cette rÃ©partition motive les meilleurs crÃ©ateurs tout en rÃ©compensant un large panel de participants.
             </p>
 
             {hasManualEdit && (
@@ -214,17 +207,17 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
               </div>
               <p className="text-sm text-muted-foreground">
                 Pour {formatCurrency(data.total_prize_pool_cents, data.currency)}, vous pouvez
-                espérer environ <strong>{estimatedViews.toLocaleString()} vues</strong>.
+                espÃ©rer environ <strong>{estimatedViews.toLocaleString()} vues</strong>.
               </p>
               <p className="text-xs text-muted-foreground mt-1">
-                Estimation basée sur les performances moyennes des concours UGC.
+                Estimation basÃ©e sur les performances moyennes des concours UGC.
               </p>
             </CardContent>
           </Card>
         )}
 
 
-        {/* Options avancées : Répartition manuelle détaillée */}
+        {/* Options avancÃ©es : RÃ©partition manuelle dÃ©taillÃ©e */}
         {data.total_prize_pool_cents >= 1000 && (
           <Card>
             <CardContent className="pt-6">
@@ -233,17 +226,17 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
                 onClick={() => setAdvancedOpen(!advancedOpen)}
                 className="flex w-full items-center justify-between text-sm font-medium py-2 hover:text-primary transition-colors"
               >
-                <span>Modifier la répartition (options avancées)</span>
+                <span>Modifier la rÃ©partition (options avancÃ©es)</span>
                 <ChevronDown className={`h-4 w-4 transition-transform ${advancedOpen ? 'rotate-180' : ''}`} />
               </button>
               {advancedOpen && (
                 <div className="space-y-4 pt-4">
                   <p className="text-xs text-muted-foreground">
-                    Vous pouvez modifier cette répartition dans les options avancées.
+                    Vous pouvez modifier cette rÃ©partition dans les options avancÃ©es.
                   </p>
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <Label>Répartition des prix</Label>
+                      <Label>RÃ©partition des prix</Label>
                       <Button type="button" onClick={addPrize} size="sm" variant="secondary">
                         <Plus className="h-4 w-4 mr-1" />
                         Ajouter un prix
@@ -252,7 +245,7 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
 
                     {data.prizes.length === 0 ? (
                       <p className="text-sm text-muted-foreground text-center py-4">
-                        Aucun prix défini. Clique sur "Répartition automatique" ou ajoute manuellement.
+                        Aucun prix dÃ©fini. Clique sur &quot;RÃ©partition automatique&quot; ou ajoute manuellement.
                       </p>
                     ) : (
                       <div className="space-y-2">
@@ -262,7 +255,7 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
                               <div className="flex items-start gap-4">
                                 <div className="flex-1 grid gap-2 md:grid-cols-3">
                                   <Input
-                                    label="Rang début"
+                                    label="Rang dÃ©but"
                                     type="number"
                                     min="1"
                                     value={prize.rank_start}
@@ -280,7 +273,7 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
                                     }
                                   />
                                   <Input
-                                    label="Montant (€)"
+                                    label="Montant (â‚¬)"
                                     type="number"
                                     min="0"
                                     step="0.01"
@@ -319,4 +312,5 @@ export function Step3Budget({ data, updateData, errors }: Step3BudgetProps) {
     </div>
   );
 }
+
 

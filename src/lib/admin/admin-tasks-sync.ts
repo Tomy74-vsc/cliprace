@@ -4,9 +4,9 @@ import { createError } from '@/lib/errors';
 type SupabaseErrorLike = { message?: string; code?: string } | null | undefined;
 
 function isMissingTable(error: SupabaseErrorLike, tableName: string) {
-  const code = String((error as any)?.code || '').toUpperCase();
+  const code = String((error as UnsafeAny)?.code || '').toUpperCase();
   if (code === '42P01') return true;
-  const msg = String((error as any)?.message || '').toLowerCase();
+  const msg = String((error as UnsafeAny)?.message || '').toLowerCase();
   if (!msg.includes(tableName.toLowerCase())) return false;
   return msg.includes('does not exist') || msg.includes('could not find') || msg.includes('schema cache');
 }
@@ -67,7 +67,7 @@ export async function ensureAdminTasksSynced(opts?: { force?: boolean }) {
     }));
     const { error } = await admin
       .from('admin_tasks')
-      .upsert(payload as any, { onConflict: 'source_table,source_id,task_type' });
+      .upsert(payload as UnsafeAny, { onConflict: 'source_table,source_id,task_type' });
     if (error) throw createError('DATABASE_ERROR', 'Failed to sync admin_tasks', 500, error.message);
   };
 
@@ -88,7 +88,7 @@ export async function ensureAdminTasksSynced(opts?: { force?: boolean }) {
         .order('requested_at', { ascending: true })
         .limit(1)
         .maybeSingle();
-      const oldestAt = (oldest as any)?.requested_at ?? null;
+      const oldestAt = (oldest as UnsafeAny)?.requested_at ?? null;
       const ageHours = hoursBetween(oldestAt);
       aggregated.push({
         source_table: 'cashouts',
@@ -124,7 +124,7 @@ export async function ensureAdminTasksSynced(opts?: { force?: boolean }) {
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle();
-      const oldestAt = (oldest as any)?.created_at ?? null;
+      const oldestAt = (oldest as UnsafeAny)?.created_at ?? null;
       const ageHours = hoursBetween(oldestAt);
       aggregated.push({
         source_table: 'webhook_deliveries',
@@ -257,28 +257,28 @@ export async function ensureAdminTasksSynced(opts?: { force?: boolean }) {
         for (const row of rows ?? []) {
           perRecord.push({
             source_table: 'support_tickets',
-            source_id: String((row as any).id),
+            source_id: String((row as UnsafeAny).id),
             task_type: 'support.ticket',
             title: 'Support',
-            description: (row as any).subject ?? 'Ticket support',
+            description: (row as UnsafeAny).subject ?? 'Ticket support',
             status: 'open',
             priority:
-              (row as any).priority === 'urgent'
+              (row as UnsafeAny).priority === 'urgent'
                 ? 'critical'
-                : (row as any).priority === 'high'
+                : (row as UnsafeAny).priority === 'high'
                   ? 'high'
                   : 'normal',
-            assigned_to: (row as any).assigned_to ?? null,
+            assigned_to: (row as UnsafeAny).assigned_to ?? null,
             metadata: {
               count: 1,
               href: '/app/admin/support',
-              source_status: (row as any).status,
+              source_status: (row as UnsafeAny).status,
             },
           });
         }
 
         if (loadAll) {
-          const openIds = new Set((rows ?? []).map((r: any) => String(r.id)));
+          const openIds = new Set((rows ?? []).map((r: UnsafeAny) => String(r.id)));
           const { data: existing } = await admin
             .from('admin_tasks')
             .select('id, source_id')
@@ -286,7 +286,7 @@ export async function ensureAdminTasksSynced(opts?: { force?: boolean }) {
             .eq('task_type', 'support.ticket')
             .in('status', ['open', 'in_progress', 'blocked'])
             .limit(500);
-          const toClose = (existing ?? []).filter((t: any) => !openIds.has(String(t.source_id))).map((t: any) => t.id);
+          const toClose = (existing ?? []).filter((t: UnsafeAny) => !openIds.has(String(t.source_id))).map((t: UnsafeAny) => t.id);
           if (toClose.length) {
             const { error: closeErr } = await admin
               .from('admin_tasks')
@@ -316,27 +316,27 @@ export async function ensureAdminTasksSynced(opts?: { force?: boolean }) {
         .limit(loadAll ? cap : cap);
       if (!error) {
         for (const row of rows ?? []) {
-          const name = (row as any).name ?? 'Lead';
-          const company = (row as any).company ?? null;
+          const name = (row as UnsafeAny).name ?? 'Lead';
+          const company = (row as UnsafeAny).company ?? null;
           perRecord.push({
             source_table: 'sales_leads',
-            source_id: String((row as any).id),
+            source_id: String((row as UnsafeAny).id),
             task_type: 'crm.lead',
             title: 'CRM',
             description: company ? `${name} · ${company}` : name,
             status: 'open',
             priority: 'normal',
-            assigned_to: (row as any).assigned_to ?? null,
+            assigned_to: (row as UnsafeAny).assigned_to ?? null,
             metadata: {
               count: 1,
               href: '/app/admin/crm',
-              source_status: (row as any).status,
+              source_status: (row as UnsafeAny).status,
             },
           });
         }
 
         if (loadAll) {
-          const openIds = new Set((rows ?? []).map((r: any) => String(r.id)));
+          const openIds = new Set((rows ?? []).map((r: UnsafeAny) => String(r.id)));
           const { data: existing } = await admin
             .from('admin_tasks')
             .select('id, source_id')
@@ -344,7 +344,7 @@ export async function ensureAdminTasksSynced(opts?: { force?: boolean }) {
             .eq('task_type', 'crm.lead')
             .in('status', ['open', 'in_progress', 'blocked'])
             .limit(500);
-          const toClose = (existing ?? []).filter((t: any) => !openIds.has(String(t.source_id))).map((t: any) => t.id);
+          const toClose = (existing ?? []).filter((t: UnsafeAny) => !openIds.has(String(t.source_id))).map((t: UnsafeAny) => t.id);
           if (toClose.length) {
             const { error: closeErr } = await admin
               .from('admin_tasks')
@@ -374,16 +374,16 @@ export async function ensureAdminTasksSynced(opts?: { force?: boolean }) {
         .limit(loadAll ? cap : cap);
       if (!error) {
         for (const row of rows ?? []) {
-          const status = (row as any).status;
+          const status = (row as UnsafeAny).status;
           perRecord.push({
             source_table: 'moderation_queue',
-            source_id: String((row as any).id),
+            source_id: String((row as UnsafeAny).id),
             task_type: 'moderation.queue',
             title: 'Modération',
             description: status === 'processing' ? 'En cours de traitement' : 'À modérer',
             status: status === 'processing' ? 'in_progress' : 'open',
             priority: 'high',
-            assigned_to: (row as any).reviewed_by ?? null,
+            assigned_to: (row as UnsafeAny).reviewed_by ?? null,
             metadata: {
               count: 1,
               href: '/app/admin/moderation',
@@ -393,7 +393,7 @@ export async function ensureAdminTasksSynced(opts?: { force?: boolean }) {
         }
 
         if (loadAll) {
-          const openIds = new Set((rows ?? []).map((r: any) => String(r.id)));
+          const openIds = new Set((rows ?? []).map((r: UnsafeAny) => String(r.id)));
           const { data: existing } = await admin
             .from('admin_tasks')
             .select('id, source_id')
@@ -401,7 +401,7 @@ export async function ensureAdminTasksSynced(opts?: { force?: boolean }) {
             .eq('task_type', 'moderation.queue')
             .in('status', ['open', 'in_progress', 'blocked'])
             .limit(1000);
-          const toClose = (existing ?? []).filter((t: any) => !openIds.has(String(t.source_id))).map((t: any) => t.id);
+          const toClose = (existing ?? []).filter((t: UnsafeAny) => !openIds.has(String(t.source_id))).map((t: UnsafeAny) => t.id);
           if (toClose.length) {
             const { error: closeErr } = await admin
               .from('admin_tasks')
@@ -418,3 +418,4 @@ export async function ensureAdminTasksSynced(opts?: { force?: boolean }) {
 
   return { ok: true, skipped: false };
 }
+

@@ -3,14 +3,9 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { getCsrfToken } from '@/lib/csrf-client';
 
 const STATUSES = ['new', 'contacted', 'qualified', 'proposal', 'won', 'lost'];
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
-}
 
 export function AdminLeadCreate({ canWrite }: { canWrite: boolean }) {
   const router = useRouter();
@@ -71,68 +66,113 @@ export function AdminLeadCreate({ canWrite }: { canWrite: boolean }) {
     <div className="rounded-2xl border border-border bg-card p-4 shadow-soft space-y-3">
       <div className="text-sm font-semibold">Create lead</div>
       {!canWrite ? (
-        <div className="text-xs text-muted-foreground">Lecture seule — permission requise : crm.write</div>
+        <div className="text-xs text-muted-foreground">Read only - requires crm.write</div>
       ) : null}
       <div className="grid gap-3 lg:grid-cols-4">
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Name"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          disabled={!canWrite || loading}
-        />
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          disabled={!canWrite || loading}
-        />
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Company"
-          value={company}
-          onChange={(event) => setCompany(event.target.value)}
-          disabled={!canWrite || loading}
-        />
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Source"
-          value={source}
-          onChange={(event) => setSource(event.target.value)}
-          disabled={!canWrite || loading}
-        />
+        <div className="flex flex-col gap-2">
+          <label htmlFor="lead-name" className="text-xs font-medium text-muted-foreground">
+            Lead name
+          </label>
+          <input
+            id="lead-name"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="Lead name"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            disabled={!canWrite || loading}
+            aria-required="true"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="lead-email" className="text-xs font-medium text-muted-foreground">
+            Lead email
+          </label>
+          <input
+            id="lead-email"
+            type="email"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="lead@company.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            disabled={!canWrite || loading}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="lead-company" className="text-xs font-medium text-muted-foreground">
+            Company
+          </label>
+          <input
+            id="lead-company"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="Company name"
+            value={company}
+            onChange={(event) => setCompany(event.target.value)}
+            disabled={!canWrite || loading}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="lead-source" className="text-xs font-medium text-muted-foreground">
+            Source
+          </label>
+          <input
+            id="lead-source"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="Inbound, referral, outbound"
+            value={source}
+            onChange={(event) => setSource(event.target.value)}
+            disabled={!canWrite || loading}
+          />
+        </div>
       </div>
       <div className="grid gap-3 lg:grid-cols-4">
-        <input
-          type="number"
-          min={0}
-          step="0.01"
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Value (EUR)"
-          value={value}
-          onChange={(event) => setValue(event.target.value)}
-          disabled={!canWrite || loading}
-        />
-        <select
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
-          disabled={!canWrite || loading}
-        >
-          {STATUSES.map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Assigned admin id"
-          value={assignedTo}
-          onChange={(event) => setAssignedTo(event.target.value)}
-          disabled={!canWrite || loading}
-        />
+        <div className="flex flex-col gap-2">
+          <label htmlFor="lead-value" className="text-xs font-medium text-muted-foreground">
+            Value (EUR)
+          </label>
+          <input
+            id="lead-value"
+            type="number"
+            min={0}
+            step="0.01"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="Value (EUR)"
+            value={value}
+            onChange={(event) => setValue(event.target.value)}
+            disabled={!canWrite || loading}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="lead-status" className="text-xs font-medium text-muted-foreground">
+            Status
+          </label>
+          <select
+            id="lead-status"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+            disabled={!canWrite || loading}
+            aria-label="Lead status"
+          >
+            {STATUSES.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="lead-assigned" className="text-xs font-medium text-muted-foreground">
+            Assigned to (admin id)
+          </label>
+          <input
+            id="lead-assigned"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="Assigned admin id"
+            value={assignedTo}
+            onChange={(event) => setAssignedTo(event.target.value)}
+            disabled={!canWrite || loading}
+          />
+        </div>
       </div>
       <Button onClick={createLead} loading={loading} variant="primary" disabled={!canWrite || loading}>
         Create lead

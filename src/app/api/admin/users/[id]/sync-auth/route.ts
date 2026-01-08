@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { assertCsrf } from '@/lib/csrf';
+import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 export async function POST(
@@ -15,8 +17,12 @@ export async function POST(
     const usingSecret =
       !!bootstrapSecret && !!headerSecret && headerSecret === bootstrapSecret;
 
+    let user: { id: string } | null = null;
     if (!usingSecret) {
-      await requireAdminPermission('users.write');
+      const result = await requireAdminPermission('users.write');
+      user = result.user;
+      await enforceNotReadOnly(req, user.id);
+      await enforceAdminRateLimit(req, { route: 'admin:users:sync-auth', max: 10, windowMs: 60_000 }, user.id);
       try {
         assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
       } catch (csrfError) {

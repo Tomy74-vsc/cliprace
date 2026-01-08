@@ -100,13 +100,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
             terms_url: contestTerms.terms_url,
           }
         : null,
-      assets: (contest.contest_assets || []).map((asset: any) => ({
+      assets: (contest.contest_assets || []).map((asset: UnsafeAny) => ({
         url: asset.url,
         type: asset.type,
       })),
       prizes: (contest.contest_prizes || [])
-        .sort((a: any, b: any) => a.position - b.position)
-        .map((prize: any) => ({
+        .sort((a: UnsafeAny, b: UnsafeAny) => a.position - b.position)
+        .map((prize: UnsafeAny) => ({
           position: prize.position,
           amount_cents: prize.amount_cents,
           percentage: prize.percentage,
@@ -118,4 +118,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return formatErrorResponse(error);
   }
 }
+
 

@@ -4,13 +4,8 @@ import { useRouter } from 'next/navigation';
 import { RotateCcw } from 'lucide-react';
 import { AdminActionPanel } from '@/components/admin/admin-action-panel';
 import { Button } from '@/components/ui/button';
+import { getCsrfToken } from '@/lib/csrf-client';
 import { useToastContext } from '@/hooks/use-toast-context';
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
-}
 
 export function AdminWebhookDeliveryActions({
   deliveryId,
@@ -29,13 +24,13 @@ export function AdminWebhookDeliveryActions({
       trigger={
         <Button variant="secondary">
           <RotateCcw className="h-4 w-4 mr-2" />
-          Relancer
+          Retry
         </Button>
       }
-      title="Relancer cette livraison webhook"
-      description="Repasse la livraison en “pending” et incrémente le compteur de retry."
+      title="Retry webhook delivery"
+      description="Sets the delivery back to pending and increments the retry counter."
       requiresReason
-      confirmLabel="Relancer"
+      confirmLabel="Retry"
       onConfirm={async ({ reason }) => {
         try {
           const token = await getCsrfToken();
@@ -46,19 +41,18 @@ export function AdminWebhookDeliveryActions({
           });
           if (!res.ok) {
             const payload = await res.json().catch(() => ({}));
-            throw new Error(payload?.message || 'Relance impossible.');
+            throw new Error(payload?.message || 'Retry failed.');
           }
-          toast({ type: 'success', title: 'OK', message: 'Livraison relancée.' });
+          toast({ type: 'success', title: 'OK', message: 'Delivery retried.' });
           router.refresh();
         } catch (error) {
           toast({
             type: 'error',
-            title: 'Erreur',
-            message: error instanceof Error ? error.message : 'Relance impossible.',
+            title: 'Error',
+            message: error instanceof Error ? error.message : 'Retry failed.',
           });
         }
       }}
     />
   );
 }
-

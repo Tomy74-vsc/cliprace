@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,9 +18,9 @@ export function Step4Preview({ data }: Step4PreviewProps) {
   return (
     <div className="space-y-8">
       <div className="text-center space-y-2 pb-2">
-        <h2 className="text-2xl font-semibold">Récapitulatif</h2>
+        <h2 className="text-2xl font-semibold">RÃ©capitulatif</h2>
         <p className="text-muted-foreground">
-          Vérifiez toutes les informations avant de finaliser votre campagne
+          VÃ©rifiez toutes les informations avant de finaliser votre campagne
         </p>
       </div>
 
@@ -42,11 +42,11 @@ export function Step4Preview({ data }: Step4PreviewProps) {
           )}
           {data.productBenefits && data.productBenefits.length > 0 && (
             <div>
-              <div className="text-sm text-muted-foreground mb-2">Points clés</div>
+              <div className="text-sm text-muted-foreground mb-2">Points clÃ©s</div>
               <ul className="space-y-2">
                 {data.productBenefits.filter((b) => b.trim()).map((benefit, index) => (
                   <li key={index} className="flex items-start gap-2">
-                    <span className="text-primary mt-1">•</span>
+                    <span className="text-primary mt-1">â€¢</span>
                     <span>{benefit}</span>
                   </li>
                 ))}
@@ -56,20 +56,20 @@ export function Step4Preview({ data }: Step4PreviewProps) {
         </div>
       )}
 
-      {/* Résumé */}
+      {/* RÃ©sumÃ© */}
       <div className="grid gap-6 md:grid-cols-2">
         <div className="bg-muted/30 rounded-xl border p-6 space-y-4">
           <h3 className="font-semibold text-lg">Informations</h3>
           <div className="space-y-3 text-sm">
             <div>
               <div className="text-muted-foreground mb-1">Titre</div>
-              <div className="font-semibold">{data.title || '—'}</div>
+              <div className="font-semibold">{data.title || 'â€”'}</div>
             </div>
             <div>
               <div className="text-muted-foreground mb-1">Dates</div>
               <div className="font-medium">
-                {data.start_at ? formatDate(data.start_at) : '—'} →{' '}
-                {data.end_at ? formatDate(data.end_at) : '—'}
+                {data.start_at ? formatDate(data.start_at) : 'â€”'} â†’{' '}
+                {data.end_at ? formatDate(data.end_at) : 'â€”'}
               </div>
             </div>
             {data.marketing_objective && (
@@ -92,7 +92,7 @@ export function Step4Preview({ data }: Step4PreviewProps) {
                     <PlatformBadge key={p} platform={p as Platform} />
                   ))
                 ) : (
-                  <span className="text-muted-foreground">—</span>
+                  <span className="text-muted-foreground">â€”</span>
                 )}
               </div>
             </div>
@@ -112,8 +112,8 @@ export function Step4Preview({ data }: Step4PreviewProps) {
               <div>
                 <div className="text-muted-foreground mb-1">Seuils minimums</div>
                 <div className="font-medium">
-                  {data.min_followers && `${data.min_followers.toLocaleString()} abonnés`}
-                  {data.min_followers && data.min_views && ' • '}
+                  {data.min_followers && `${data.min_followers.toLocaleString()} abonnÃ©s`}
+                  {data.min_followers && data.min_views && ' â€¢ '}
                   {data.min_views && `${data.min_views.toLocaleString()} vues`}
                 </div>
               </div>
@@ -129,13 +129,13 @@ export function Step4Preview({ data }: Step4PreviewProps) {
             {formatCurrency(data.total_prize_pool_cents, data.currency)}
           </div>
           <p className="text-sm text-muted-foreground mt-1">
-            à distribuer à {data.prizes.reduce((sum, p) => sum + (p.rank_end - p.rank_start + 1), 0)} créateurs
+            Ã  distribuer Ã  {data.prizes.reduce((sum, p) => sum + (p.rank_end - p.rank_start + 1), 0)} crÃ©ateurs
           </p>
         </div>
 
         {data.prizes.length > 0 && (
           <div className="space-y-3">
-            <div className="text-sm font-medium text-center text-muted-foreground">Répartition</div>
+            <div className="text-sm font-medium text-center text-muted-foreground">RÃ©partition</div>
             <div className="grid grid-cols-3 gap-3">
               {data.prizes.slice(0, 3).map((prize, index) => (
                 <div key={index} className="text-center p-3 bg-background/50 rounded-lg border">
@@ -151,7 +151,7 @@ export function Step4Preview({ data }: Step4PreviewProps) {
             {data.prizes.length > 3 && (
               <div className="text-center p-3 bg-background/50 rounded-lg border">
                 <div className="text-xs text-muted-foreground mb-1">
-                  {data.prizes[3].rank_start}e–{data.prizes[data.prizes.length - 1].rank_end}e
+                  {data.prizes[3].rank_start}eâ€“{data.prizes[data.prizes.length - 1].rank_end}e
                 </div>
                 <div className="text-sm font-medium">
                   {formatCurrency(data.prizes[data.prizes.length - 1].amount_cents, data.currency)} - {formatCurrency(data.prizes[3].amount_cents, data.currency)}
@@ -160,7 +160,7 @@ export function Step4Preview({ data }: Step4PreviewProps) {
             )}
             <div className="pt-4 border-t space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total à payer :</span>
+                <span className="text-sm text-muted-foreground">Total Ã  payer :</span>
                 <span className="text-xl font-bold">
                   {formatCurrency(Math.round(data.total_prize_pool_cents * 1.15), data.currency)}
                 </span>
@@ -176,7 +176,7 @@ export function Step4Preview({ data }: Step4PreviewProps) {
       {data.brief_md && (
         <Card>
           <CardHeader>
-            <CardTitle>Brief créateur</CardTitle>
+            <CardTitle>Brief crÃ©ateur</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="prose prose-sm max-w-none">
@@ -189,12 +189,13 @@ export function Step4Preview({ data }: Step4PreviewProps) {
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="pt-6">
           <p className="text-sm text-muted-foreground">
-            En cliquant sur "Finaliser", vous serez redirigé vers le paiement. La campagne sera créée
-            en brouillon et passera en "active" une fois le paiement validé.
+            En cliquant sur &quot;Finaliser&quot;, vous serez redirigÃ© vers le paiement. La campagne sera crÃ©Ã©e
+            en brouillon et passera en &quot;active&quot; une fois le paiement validÃ©.
           </p>
         </CardContent>
       </Card>
     </div>
   );
 }
+
 

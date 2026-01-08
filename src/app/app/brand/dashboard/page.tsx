@@ -10,8 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BrandEmptyState } from '@/components/brand/empty-state-enhanced';
-import { formatCurrency, formatDate } from '@/lib/formatters';
-import { Trophy, Plus, TrendingUp, Eye, DollarSign, Users, AlertCircle } from 'lucide-react';
+import { formatCurrency } from '@/lib/formatters';
+import { Trophy, Plus, TrendingUp, Eye, DollarSign, AlertCircle } from 'lucide-react';
 import { TrackOnView } from '@/components/analytics/track-once';
 import { PlatformBadge } from '@/components/creator/platform-badge';
 import { ContestMetricsChart } from '@/components/brand/contest-metrics-chart';
@@ -96,7 +96,7 @@ export default async function BrandDashboard() {
           <Card className="bg-card/80 backdrop-blur-xl border-dashed border-border">
             <CardHeader className="pb-2">
               <CardTitle>État global</CardTitle>
-              <p className="text-sm text-muted-foreground">Vue d'ensemble de tes concours.</p>
+              <p className="text-sm text-muted-foreground">Vue d&apos;ensemble de tes concours.</p>
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
@@ -331,8 +331,6 @@ async function fetchDashboardData(
 ): Promise<{ data?: DashboardData; error?: string }> {
   try {
     const supabase = await getSupabaseSSR();
-    const now = new Date().toISOString();
-
     // Récupérer tous les concours de la marque
     const { data: contests, error: contestsError } = await supabase
       .from('contests')
@@ -350,7 +348,6 @@ async function fetchDashboardData(
     // Récupérer les stats via la vue contest_stats
     let totalViews = 0;
     let totalLikes = 0;
-    let totalSubmissions = 0;
     const contestMetrics: Record<string, { views: number; submissions: number }> = {};
 
     if (contestIds.length > 0) {
@@ -364,7 +361,6 @@ async function fetchDashboardData(
           const submissions = Number(m.approved_submissions || 0);
           totalViews += views;
           totalLikes += Number(m.total_likes || 0);
-          totalSubmissions += submissions;
           contestMetrics[contest.id] = { views, submissions };
         }
       }
@@ -390,7 +386,7 @@ async function fetchDashboardData(
 
     // Calculer les budgets
     const budgetEngaged = contests?.reduce((sum, c) => sum + (c.budget_cents || 0), 0) || 0;
-    const budgetSpent = contests?.reduce((sum, c) => {
+    const budgetSpent = contests?.reduce((sum, _contest) => {
       // TODO: calculer le budget réellement dépensé (prize_pool payé)
       return sum;
     }, 0) || 0;

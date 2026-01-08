@@ -10,7 +10,6 @@ import {
 } from "@/components/notifications/notification-item";
 import { TrackOnView } from "@/components/analytics/track-once";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/creator/empty-state";
 
 const PAGE_SIZE = 20;

@@ -5,7 +5,6 @@ Purpose: Vérifie l'éligibilité et affiche tooltip avec raison si non éligibl
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Skeleton } from '@/components/ui/skeleton';
 

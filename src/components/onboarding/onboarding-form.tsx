@@ -8,7 +8,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
+import { CardFooter } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { profileCompleteSchema, type ProfileCompleteInput } from '@/lib/validators/auth';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -66,16 +66,13 @@ export function OnboardingForm({ role, initialData }: OnboardingFormProps) {
     handleSubmit,
     control,
     formState: { errors, isSubmitting },
-    watch,
     trigger,
-    setValue,
   } = useForm<ProfileCompleteInput>({
     resolver: zodResolver(profileCompleteSchema),
     defaultValues: initialData,
     mode: 'onBlur',
   });
 
-  const watchedValues = watch();
   const platformLinkErrors =
     (errors.platform_links as Record<CreatorPlatformKey, { message?: string }> | undefined) ?? undefined;
 

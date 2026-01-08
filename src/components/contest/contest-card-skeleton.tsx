@@ -4,7 +4,6 @@ Purpose: Skeleton animé pour ContestCard
 */
 'use client';
 
-import { motion } from 'framer-motion';
 import { Card, CardContent, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 

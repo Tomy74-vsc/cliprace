@@ -1,4 +1,4 @@
-/*
+﻿/*
 Source: GET/POST /api/messages/threads
 Tables: messages_threads, audit_logs
 Rules:
@@ -36,10 +36,10 @@ const CreateSchema = z.object({
 export async function POST(req: NextRequest) {
   try {
     // Rate limit: 10 requests/min per user
-    const ip = req.headers.get('x-forwarded-for') || (req as any).ip || 'unknown';
+    const ip = req.headers.get('x-forwarded-for') || (req as UnsafeAny).ip || 'unknown';
     const rlKey = `messages:threads:create:${ip}`;
     if (!(await rateLimit({ key: rlKey, route: 'messages:threads:create', windowMs: 60 * 1000, max: 10 }))) {
-      return NextResponse.json({ ok: false, message: 'Trop de requêtes, réessayez plus tard.' }, { status: 429 });
+      return NextResponse.json({ ok: false, message: 'Trop de requÃªtes, rÃ©essayez plus tard.' }, { status: 429 });
     }
 
     // CSRF check (double submit)
@@ -112,3 +112,4 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, message }, { status: 500 });
   }
 }
+

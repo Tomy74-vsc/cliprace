@@ -27,12 +27,13 @@ export function getSupabaseSSRWithResponse(req: NextRequest, res: NextResponse) 
       get(name: string) {
         return req.cookies.get(name)?.value;
       },
-      set(name: string, value: string, options: any) {
+      set(name: string, value: string, options: UnsafeAny) {
         res.cookies.set(name, value, options);
       },
-      remove(name: string, options: any) {
+      remove(name: string, options: UnsafeAny) {
         res.cookies.set(name, '', { ...options, maxAge: 0 });
       },
     },
   });
 }
+

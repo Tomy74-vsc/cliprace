@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { AdminTable } from '@/components/admin/admin-table';
 import { Button } from '@/components/ui/button';
+import { getCsrfToken } from '@/lib/csrf-client';
 
 type FeatureFlag = {
   key: string;
@@ -16,12 +17,6 @@ type FeatureFlag = {
 interface AdminFeatureFlagsProps {
   flags: FeatureFlag[];
   canWrite?: boolean;
-}
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
 }
 
 export function AdminFeatureFlags({ flags, canWrite = true }: AdminFeatureFlagsProps) {
@@ -58,7 +53,7 @@ export function AdminFeatureFlags({ flags, canWrite = true }: AdminFeatureFlagsP
 
   const createFlag = async () => {
     if (!canWrite) {
-      window.alert("Accès en lecture seule : impossible de modifier les feature flags.");
+      window.alert('Read only access: settings.write required.');
       return;
     }
     setLoading(true);
@@ -91,7 +86,7 @@ export function AdminFeatureFlags({ flags, canWrite = true }: AdminFeatureFlagsP
   const saveFlag = async () => {
     if (!editingFlag) return;
     if (!canWrite) {
-      window.alert("Accès en lecture seule : impossible de modifier les feature flags.");
+      window.alert('Read only access: settings.write required.');
       return;
     }
     setLoading(true);
@@ -122,7 +117,7 @@ export function AdminFeatureFlags({ flags, canWrite = true }: AdminFeatureFlagsP
 
   const toggleFlag = async (flag: FeatureFlag) => {
     if (!canWrite) {
-      window.alert("Accès en lecture seule : impossible de modifier les feature flags.");
+      window.alert('Read only access: settings.write required.');
       return;
     }
     setLoading(true);
@@ -148,7 +143,7 @@ export function AdminFeatureFlags({ flags, canWrite = true }: AdminFeatureFlagsP
 
   const deleteFlag = async (flag: FeatureFlag) => {
     if (!canWrite) {
-      window.alert("Accès en lecture seule : impossible de modifier les feature flags.");
+      window.alert('Read only access: settings.write required.');
       return;
     }
     const ok = window.confirm('Delete this flag?');
@@ -179,18 +174,30 @@ export function AdminFeatureFlags({ flags, canWrite = true }: AdminFeatureFlagsP
         <div className="rounded-2xl border border-border bg-card p-4 shadow-soft space-y-3">
           <div className="text-sm font-semibold">Create feature flag</div>
           <div className="grid gap-3 lg:grid-cols-4">
-            <input
-              className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-              placeholder="Key"
-              value={key}
-              onChange={(event) => setKey(event.target.value)}
-            />
-            <input
-              className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-              placeholder="Description"
-              value={description}
-              onChange={(event) => setDescription(event.target.value)}
-            />
+            <div className="flex flex-col gap-2">
+              <label htmlFor="flag-key" className="text-xs font-medium text-muted-foreground">
+                Key
+              </label>
+              <input
+                id="flag-key"
+                className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+                placeholder="feature.new_checkout"
+                value={key}
+                onChange={(event) => setKey(event.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <label htmlFor="flag-description" className="text-xs font-medium text-muted-foreground">
+                Description
+              </label>
+              <input
+                id="flag-description"
+                className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+                placeholder="Short description"
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+              />
+            </div>
             <label className="flex items-center gap-2 text-xs text-muted-foreground">
               <input
                 type="checkbox"
@@ -206,7 +213,7 @@ export function AdminFeatureFlags({ flags, canWrite = true }: AdminFeatureFlagsP
         </div>
       ) : (
         <div className="rounded-2xl border border-border bg-card p-4 shadow-soft text-sm text-muted-foreground">
-          Lecture seule : tu peux consulter les feature flags mais pas les modifier.
+          Read only - you can view flags but cannot edit them.
         </div>
       )}
 
@@ -223,7 +230,7 @@ export function AdminFeatureFlags({ flags, canWrite = true }: AdminFeatureFlagsP
           {flags.length === 0 ? (
             <tr>
               <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
-                Aucun feature flag configuré
+                No feature flags configured yet.
               </td>
             </tr>
           ) : (
@@ -269,13 +276,28 @@ export function AdminFeatureFlags({ flags, canWrite = true }: AdminFeatureFlagsP
                     </>
                   ) : (
                     <>
-                      <Button onClick={() => startEdit(flag)} size="sm" variant="secondary" disabled={!canWrite}>
+                      <Button
+                        onClick={() => startEdit(flag)}
+                        size="sm"
+                        variant="secondary"
+                        disabled={!canWrite}
+                      >
                         Edit
                       </Button>
-                      <Button onClick={() => toggleFlag(flag)} size="sm" variant="secondary" disabled={!canWrite}>
+                      <Button
+                        onClick={() => toggleFlag(flag)}
+                        size="sm"
+                        variant="secondary"
+                        disabled={!canWrite}
+                      >
                         {flag.is_enabled ? 'Disable' : 'Enable'}
                       </Button>
-                      <Button onClick={() => deleteFlag(flag)} size="sm" variant="destructive" disabled={!canWrite}>
+                      <Button
+                        onClick={() => deleteFlag(flag)}
+                        size="sm"
+                        variant="destructive"
+                        disabled={!canWrite}
+                      >
                         Delete
                       </Button>
                     </>

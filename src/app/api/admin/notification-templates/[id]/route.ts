@@ -4,6 +4,7 @@ import { requireAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
 import { createError, formatErrorResponse } from '@/lib/errors';
 
 const BodySchema = z.object({
@@ -23,7 +24,8 @@ export async function PATCH(
   try {
     const { id } = await context.params;
     const { user } = await requireAdminPermission('emails.write');
-    await enforceAdminRateLimit(req, { route: 'admin:notification-templates:update', max: 20, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:notification-templates:update', max: 20, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
@@ -70,7 +72,7 @@ export async function DELETE(
   try {
     const { id } = await context.params;
     const { user } = await requireAdminPermission('emails.write');
-    await enforceAdminRateLimit(req, { route: 'admin:notification-templates:delete', max: 20, windowMs: 60_000 });
+    await enforceAdminRateLimit(req, { route: 'admin:notification-templates:delete', max: 20, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {

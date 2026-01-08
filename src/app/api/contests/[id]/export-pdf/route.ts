@@ -95,7 +95,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       .eq('contest_id', contestId)
       .order('position', { ascending: true });
 
-    const leaderboard = (leaderboardData || []).map((entry: any, index: number) => {
+    const leaderboard = (leaderboardData || []).map((entry: UnsafeAny, index: number) => {
       const rank = index + 1;
       const prize = prizes?.find((p) => p.position === rank);
       const estimatedPayout = prize
@@ -167,8 +167,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       : 0;
 
     // Générer le PDF
-    const brandName = (contest.brand as any)?.profile_brands?.company_name ||
-                     (contest.brand as any)?.display_name ||
+    const brandName = (contest.brand as UnsafeAny)?.profile_brands?.company_name ||
+                     (contest.brand as UnsafeAny)?.display_name ||
                      'Marque';
 
     const pdfDoc = createElement(ContestResultsPDF, {
@@ -202,4 +202,5 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return formatErrorResponse(error);
   }
 }
+
 

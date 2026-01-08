@@ -8,8 +8,32 @@ type AdminRateLimitOptions = {
   windowMs?: number;
 };
 
-export async function enforceAdminRateLimit(req: NextRequest, options: AdminRateLimitOptions) {
-  const ip = req.headers.get('x-forwarded-for') || (req as any).ip || 'unknown';
+export async function enforceAdminRateLimit(
+  req: NextRequest,
+  options: AdminRateLimitOptions,
+  userId?: string
+) {
+  // Limite globale par admin (si userId fourni)
+  if (userId) {
+    const globalKey = `admin:global:${userId}`;
+    const globalOk = await rateLimit({
+      key: globalKey,
+      route: 'admin:global',
+      windowMs: 60 * 60 * 1000, // 1 heure
+      max: 1000, // 1000 requêtes/heure par admin
+    });
+
+    if (!globalOk) {
+      throw createError(
+        'RATE_LIMIT',
+        'Too many requests (global limit: 1000/hour)',
+        429
+      );
+    }
+  }
+
+  // Limite par route
+  const ip = req.headers.get('x-forwarded-for') || (req as UnsafeAny).ip || 'unknown';
   const key = `${options.route}:${ip}`;
   const ok = await rateLimit({
     key,
@@ -22,3 +46,4 @@ export async function enforceAdminRateLimit(req: NextRequest, options: AdminRate
     throw createError('RATE_LIMIT', 'Too many requests', 429);
   }
 }
+

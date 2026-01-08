@@ -7,7 +7,7 @@ export async function requireAdminUser(): Promise<SessionUser> {
     throw createError('UNAUTHORIZED', 'Authentification requise', 401);
   }
   if (user.role !== 'admin') {
-    throw createError('FORBIDDEN', 'Acces admin requis', 403);
+    throw createError('FORBIDDEN', 'Accès admin requis', 403);
   }
   return user;
 }

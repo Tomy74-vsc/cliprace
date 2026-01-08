@@ -1,4 +1,4 @@
-﻿import { getSupabaseSSR } from '@/lib/supabase/ssr';
+import { getSupabaseSSR } from '@/lib/supabase/ssr';
 
 export interface LeaderboardEntry {
   rank: number;
@@ -16,23 +16,24 @@ export async function fetchContestLeaderboard(contestId: string, limit = 5): Pro
     return [];
   }
 
-  const creatorIds = Array.from(new Set((data || []).map((row: any) => row.creator_id)));
+  const creatorIds = Array.from(new Set((data || []).map((row: UnsafeAny) => row.creator_id)));
   const nameMap = new Map<string, string>();
   if (creatorIds.length > 0) {
     const { data: profiles } = await supabase.from('profiles').select('id, display_name').in('id', creatorIds);
     profiles?.forEach((profile: { id: string; display_name: string | null }) => {
-      nameMap.set(profile.id, profile.display_name || 'CrÃ©ateur');
+      nameMap.set(profile.id, profile.display_name || 'Créateur');
     });
   }
 
   return (
-    data?.map((row: any, index: number) => ({
+    data?.map((row: UnsafeAny, index: number) => ({
       rank: row.rank ?? index + 1,
       creator_id: row.creator_id as string,
-      creator_name: nameMap.get(row.creator_id as string) || 'CrÃ©ateur',
+      creator_name: nameMap.get(row.creator_id as string) || 'Créateur',
       total_views: row.total_views ?? 0,
       total_weighted_views: row.total_weighted_views ?? 0,
     })) || []
   );
 }
+
 

@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
     const counts = new Map<string, number>();
     for (const row of data ?? []) {
-      const errKey = (row as any).last_error ? String((row as any).last_error).slice(0, 180) : 'Erreur inconnue';
+      const errKey = (row as UnsafeAny).last_error ? String((row as UnsafeAny).last_error).slice(0, 180) : 'Erreur inconnue';
       counts.set(errKey, (counts.get(errKey) ?? 0) + 1);
     }
 
@@ -39,4 +39,5 @@ export async function GET(req: NextRequest) {
     return formatErrorResponse(error);
   }
 }
+
 

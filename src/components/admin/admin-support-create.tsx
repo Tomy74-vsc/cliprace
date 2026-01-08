@@ -3,15 +3,10 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
+import { getCsrfToken } from '@/lib/csrf-client';
 
 const STATUSES = ['open', 'pending', 'resolved', 'closed'];
 const PRIORITIES = ['low', 'medium', 'high', 'urgent'];
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json();
-  return data.token || '';
-}
 
 export function AdminSupportCreate({ canWrite }: { canWrite: boolean }) {
   const router = useRouter();
@@ -75,71 +70,118 @@ export function AdminSupportCreate({ canWrite }: { canWrite: boolean }) {
     <div className="rounded-2xl border border-border bg-card p-4 shadow-soft space-y-3">
       <div className="text-sm font-semibold">Create ticket</div>
       {!canWrite ? (
-        <div className="text-xs text-muted-foreground">Lecture seule — permission requise : support.write</div>
+        <div className="text-xs text-muted-foreground">Read only - requires support.write</div>
       ) : null}
       <div className="grid gap-3 lg:grid-cols-3">
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Subject"
-          value={subject}
-          onChange={(event) => setSubject(event.target.value)}
-          disabled={!canWrite || loading}
-        />
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Requester email"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          disabled={!canWrite || loading}
-        />
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Requester user id"
-          value={userId}
-          onChange={(event) => setUserId(event.target.value)}
-          disabled={!canWrite || loading}
-        />
+        <div className="flex flex-col gap-2">
+          <label htmlFor="support-subject" className="text-xs font-medium text-muted-foreground">
+            Subject <span className="text-destructive">*</span>
+          </label>
+          <input
+            id="support-subject"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="Subject"
+            value={subject}
+            onChange={(event) => setSubject(event.target.value)}
+            disabled={!canWrite || loading}
+            aria-required="true"
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="support-email" className="text-xs font-medium text-muted-foreground">
+            Requester email
+          </label>
+          <input
+            id="support-email"
+            type="email"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="Requester email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            disabled={!canWrite || loading}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="support-user-id" className="text-xs font-medium text-muted-foreground">
+            Requester user id
+          </label>
+          <input
+            id="support-user-id"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="Requester user id"
+            value={userId}
+            onChange={(event) => setUserId(event.target.value)}
+            disabled={!canWrite || loading}
+          />
+        </div>
       </div>
       <div className="grid gap-3 lg:grid-cols-4">
-        <select
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          value={status}
-          onChange={(event) => setStatus(event.target.value)}
+        <div className="flex flex-col gap-2">
+          <label htmlFor="support-status" className="text-xs font-medium text-muted-foreground">
+            Status
+          </label>
+          <select
+            id="support-status"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+            disabled={!canWrite || loading}
+            aria-label="Ticket status"
+          >
+            {STATUSES.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="support-priority" className="text-xs font-medium text-muted-foreground">
+            Priority
+          </label>
+          <select
+            id="support-priority"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            value={priority}
+            onChange={(event) => setPriority(event.target.value)}
+            disabled={!canWrite || loading}
+            aria-label="Ticket priority"
+          >
+            {PRIORITIES.map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="support-assigned" className="text-xs font-medium text-muted-foreground">
+            Assigned to (admin id)
+          </label>
+          <input
+            id="support-assigned"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="Assigned admin id"
+            value={assignedTo}
+            onChange={(event) => setAssignedTo(event.target.value)}
+            disabled={!canWrite || loading}
+          />
+        </div>
+      </div>
+      <div className="flex flex-col gap-2">
+        <label htmlFor="support-notes" className="text-xs font-medium text-muted-foreground">
+          Internal notes
+        </label>
+        <textarea
+          id="support-notes"
+          className="min-h-[100px] rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono"
+          placeholder="Internal notes"
+          value={notes}
+          onChange={(event) => setNotes(event.target.value)}
           disabled={!canWrite || loading}
-        >
-          {STATUSES.map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
-        <select
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          value={priority}
-          onChange={(event) => setPriority(event.target.value)}
-          disabled={!canWrite || loading}
-        >
-          {PRIORITIES.map((value) => (
-            <option key={value} value={value}>
-              {value}
-            </option>
-          ))}
-        </select>
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Assigned admin id"
-          value={assignedTo}
-          onChange={(event) => setAssignedTo(event.target.value)}
-          disabled={!canWrite || loading}
+          aria-label="Ticket internal notes"
         />
       </div>
-      <textarea
-        className="min-h-[100px] rounded-xl border border-border bg-background px-3 py-2 text-xs font-mono"
-        placeholder="Internal notes"
-        value={notes}
-        onChange={(event) => setNotes(event.target.value)}
-        disabled={!canWrite || loading}
-      />
       <Button onClick={createTicket} loading={loading} variant="primary" disabled={!canWrite || loading}>
         Create ticket
       </Button>

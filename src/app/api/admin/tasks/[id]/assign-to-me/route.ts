@@ -4,6 +4,7 @@ import { requireAdminPermission, hasAdminPermission } from '@/lib/admin/rbac';
 import { getAdminClient } from '@/lib/admin/supabase';
 import { assertCsrf } from '@/lib/csrf';
 import { enforceAdminRateLimit } from '@/lib/admin/rate-limit';
+import { enforceNotReadOnly } from '@/lib/admin/middleware-readonly';
 import { createError, formatErrorResponse } from '@/lib/errors';
 import { getTaskPermission } from '@/lib/admin/admin-tasks';
 
@@ -11,7 +12,8 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
   try {
     const { id } = await context.params;
     const { user, access } = await requireAdminPermission('tasks.write');
-    await enforceAdminRateLimit(req, { route: 'admin:tasks:assign_to_me', max: 60, windowMs: 60_000 });
+    await enforceNotReadOnly(req, user.id);
+    await enforceAdminRateLimit(req, { route: 'admin:tasks:assign_to_me', max: 60, windowMs: 60_000 }, user.id);
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
@@ -60,7 +62,7 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
         .select('id, status, reviewed_by')
         .eq('id', task.source_id)
         .maybeSingle();
-      if (row && (row as any).status === 'pending') {
+      if (row && (row as UnsafeAny).status === 'pending') {
         await admin
           .from('moderation_queue')
           .update({ status: 'processing', reviewed_by: user.id, reviewed_at: nowIso, updated_at: nowIso })
@@ -83,4 +85,5 @@ export async function POST(req: NextRequest, context: { params: Promise<{ id: st
     return formatErrorResponse(error);
   }
 }
+
 

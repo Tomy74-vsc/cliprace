@@ -8,6 +8,8 @@ interface UpdateContestStatusInput {
   newStatus: ContestStatus;
   actorId: string;
   action: string;
+  reason?: string;
+  reasonCode?: string;
   ip?: string;
   userAgent?: string;
   allowedFrom?: ContestStatus[];
@@ -18,6 +20,8 @@ export async function updateContestStatus({
   newStatus,
   actorId,
   action,
+  reason,
+  reasonCode,
   ip,
   userAgent,
   allowedFrom,
@@ -61,6 +65,8 @@ export async function updateContestStatus({
     old_status: oldStatus,
     new_status: newStatus,
     changed_by: actorId,
+    reason: reason || null,
+    reason_code: reasonCode || null,
   });
 
   await admin.from('audit_logs').insert({
@@ -69,7 +75,11 @@ export async function updateContestStatus({
     table_name: 'contests',
     row_pk: contestId,
     old_values: { status: oldStatus },
-    new_values: { status: newStatus },
+    new_values: {
+      status: newStatus,
+      ...(reason ? { reason } : {}),
+      ...(reasonCode ? { reason_code: reasonCode } : {}),
+    },
     ip,
     user_agent: userAgent,
   });

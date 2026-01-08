@@ -196,7 +196,7 @@ export function ContestResultsPDF({
               <Text style={styles.tableCell}>Likes</Text>
               <Text style={styles.tableCell}>Gain estimé</Text>
             </View>
-            {leaderboard.slice(0, 20).map((entry, index) => (
+            {leaderboard.slice(0, 20).map((entry) => (
               <View
                 key={entry.creator_name}
                 style={[styles.tableRow, entry.rank <= 3 ? styles.winnerRow : {}]}

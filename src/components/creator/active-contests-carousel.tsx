@@ -1,6 +1,6 @@
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { EmptyState } from '@/components/creator/empty-state';
-import { ActiveContestsRail, type ActiveContestCard, ActiveContestsCarouselSkeleton } from '@/components/creator/active-contests-rail';
+import { ActiveContestsRail, type ActiveContestCard } from '@/components/creator/active-contests-rail';
 import type { Platform } from '@/lib/validators/platforms';
 
 export async function ActiveContestsCarousel() {

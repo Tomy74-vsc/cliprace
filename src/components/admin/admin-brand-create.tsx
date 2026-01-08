@@ -3,12 +3,7 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-
-async function getCsrfToken(): Promise<string> {
-  const res = await fetch('/api/auth/csrf');
-  const data = await res.json().catch(() => ({}));
-  return data.token || '';
-}
+import { getCsrfToken } from '@/lib/csrf-client';
 
 export function AdminBrandCreate({ canWrite }: { canWrite: boolean }) {
   const router = useRouter();
@@ -56,7 +51,7 @@ export function AdminBrandCreate({ canWrite }: { canWrite: boolean }) {
 
       const contestHref = `/app/admin/contests/new?brand_id=${encodeURIComponent(data.brand_id)}`;
       window.alert(
-        `Marque créée.\nInvite: ${data.invite_sent ? 'envoyée' : 'non envoyée'}\nCréer un concours: ${contestHref}`
+        `Brand created.\nInvite: ${data.invite_sent ? 'sent' : 'not sent'}\nCreate contest: ${contestHref}`
       );
       router.refresh();
     } catch (error) {
@@ -68,39 +63,63 @@ export function AdminBrandCreate({ canWrite }: { canWrite: boolean }) {
 
   return (
     <div className="rounded-2xl border border-border bg-card p-4 shadow-soft space-y-3">
-      <div className="text-sm font-semibold">Créer une marque</div>
+      <div className="text-sm font-semibold">Create brand</div>
       {!canWrite ? (
-        <div className="text-xs text-muted-foreground">Lecture seule — permission requise : brands.write</div>
+        <div className="text-xs text-muted-foreground">Read only - requires brands.write</div>
       ) : null}
       <div className="grid gap-3 lg:grid-cols-4">
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Email (compte Supabase)"
-          value={email}
-          onChange={(event) => setEmail(event.target.value)}
-          disabled={!canWrite || loading}
-        />
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Nom de l'entreprise"
-          value={companyName}
-          onChange={(event) => setCompanyName(event.target.value)}
-          disabled={!canWrite || loading}
-        />
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Nom d'org (optionnel)"
-          value={orgName}
-          onChange={(event) => setOrgName(event.target.value)}
-          disabled={!canWrite || loading}
-        />
-        <input
-          className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
-          placeholder="Billing email (optionnel)"
-          value={billingEmail}
-          onChange={(event) => setBillingEmail(event.target.value)}
-          disabled={!canWrite || loading}
-        />
+        <div className="flex flex-col gap-2">
+          <label htmlFor="brand-email" className="text-xs font-medium text-muted-foreground">
+            Brand email
+          </label>
+          <input
+            id="brand-email"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="owner@brand.com"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            disabled={!canWrite || loading}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="brand-company" className="text-xs font-medium text-muted-foreground">
+            Company name
+          </label>
+          <input
+            id="brand-company"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="Acme Studios"
+            value={companyName}
+            onChange={(event) => setCompanyName(event.target.value)}
+            disabled={!canWrite || loading}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="brand-org" className="text-xs font-medium text-muted-foreground">
+            Organization name
+          </label>
+          <input
+            id="brand-org"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="Optional org name"
+            value={orgName}
+            onChange={(event) => setOrgName(event.target.value)}
+            disabled={!canWrite || loading}
+          />
+        </div>
+        <div className="flex flex-col gap-2">
+          <label htmlFor="brand-billing" className="text-xs font-medium text-muted-foreground">
+            Billing email
+          </label>
+          <input
+            id="brand-billing"
+            className="h-10 rounded-xl border border-border bg-background px-3 text-sm"
+            placeholder="billing@brand.com"
+            value={billingEmail}
+            onChange={(event) => setBillingEmail(event.target.value)}
+            disabled={!canWrite || loading}
+          />
+        </div>
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input
@@ -109,10 +128,10 @@ export function AdminBrandCreate({ canWrite }: { canWrite: boolean }) {
           onChange={(event) => setSendInvite(event.target.checked)}
           disabled={!canWrite || loading}
         />
-        Envoyer une invitation Supabase par email
+        Send Supabase invite email
       </label>
       <Button onClick={createBrand} loading={loading} disabled={!canWrite || !canSubmit} variant="primary">
-        Créer marque + org + owner
+        Create brand + org + owner
       </Button>
     </div>
   );

@@ -1,15 +1,14 @@
-'use client';
+﻿'use client';
 
 import { useState, useRef } from 'react';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { FieldWithTooltip } from '@/components/ui/field-with-tooltip';
-import { Plus, X, Upload, Image as ImageIcon, Video, FileText, Loader2 } from 'lucide-react';
+import { Plus, X, Upload, Video, FileText, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabase/client';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
 import { useToastContext } from '@/hooks/use-toast-context';
@@ -25,14 +24,14 @@ interface Step0ProductProps {
 const PRODUCT_CATEGORIES = [
   { value: 'boisson', label: 'Boisson' },
   { value: 'mode', label: 'Mode' },
-  { value: 'cosmetique', label: 'Cosmétique' },
+  { value: 'cosmetique', label: 'CosmÃ©tique' },
   { value: 'tech', label: 'Tech' },
   { value: 'restauration', label: 'Restauration' },
   { value: 'autre', label: 'Autre' },
 ] as const;
 
 const TARGET_AUDIENCE_OPTIONS = [
-  { value: 'etudiants', label: 'Étudiants' },
+  { value: 'etudiants', label: 'Ã‰tudiants' },
   { value: 'jeunes_actifs', label: 'Jeunes actifs' },
   { value: 'parents', label: 'Parents' },
   { value: 'sportifs', label: 'Sportifs' },
@@ -114,7 +113,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
           toast({
             type: 'error',
             title: 'Erreur',
-            message: `Le fichier ${file.name} dépasse 200 Mo.`,
+            message: `Le fichier ${file.name} dÃ©passe 200 Mo.`,
           });
           continue;
         }
@@ -124,12 +123,12 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
           toast({
             type: 'error',
             title: 'Erreur',
-            message: `Le type de fichier ${file.name} n'est pas supporté.`,
+            message: `Le type de fichier ${file.name} n'est pas supportÃ©.`,
           });
           continue;
         }
 
-        // Obtenir le path signé
+        // Obtenir le path signÃ©
         const signResponse = await fetch('/api/uploads/contest-asset/sign', {
           method: 'POST',
           headers: {
@@ -147,12 +146,12 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
 
         if (!signResponse.ok) {
           const error = await signResponse.json();
-          // Si l'API retourne une erreur, c'est que le concours n'existe pas ou que l'utilisateur n'est pas propriétaire
+          // Si l'API retourne une erreur, c'est que le concours n'existe pas ou que l'utilisateur n'est pas propriÃ©taire
           if (signResponse.status === 404) {
             throw new Error('Le concours n\'existe pas. Veuillez sauvegarder le brouillon d\'abord.');
           }
           if (signResponse.status === 403) {
-            throw new Error('Vous n\'êtes pas autorisé à uploader des fichiers pour ce concours.');
+            throw new Error('Vous n\'Ãªtes pas autorisÃ© Ã  uploader des fichiers pour ce concours.');
           }
           throw new Error(error.message || 'Erreur lors de la signature');
         }
@@ -162,16 +161,16 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
         // Debug: afficher les informations pour le diagnostic
         console.log('Upload attempt:', { bucket, path, contest_id: data.contest_id });
 
-        // Vérifier que l'utilisateur est authentifié
+        // VÃ©rifier que l'utilisateur est authentifiÃ©
         const { data: { user }, error: authError } = await supabase.auth.getUser();
         if (authError || !user) {
           console.error('Auth error:', authError);
-          throw new Error('Vous devez être connecté pour uploader des fichiers. Veuillez vous reconnecter.');
+          throw new Error('Vous devez Ãªtre connectÃ© pour uploader des fichiers. Veuillez vous reconnecter.');
         }
         console.log('Authenticated user:', user.id);
 
-        // Vérifier que le concours existe et que l'utilisateur est le propriétaire AVANT l'upload
-        // Cela permet d'afficher un message d'erreur plus clair si le problème vient de là
+        // VÃ©rifier que le concours existe et que l'utilisateur est le propriÃ©taire AVANT l'upload
+        // Cela permet d'afficher un message d'erreur plus clair si le problÃ¨me vient de lÃ 
         try {
           const checkResponse = await fetch(`/api/contests/${data.contest_id}`, {
             method: 'GET',
@@ -185,7 +184,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
           }
           const contestData = await checkResponse.json();
           
-          // Debug: afficher la structure complète de la réponse
+          // Debug: afficher la structure complÃ¨te de la rÃ©ponse
           console.log('Contest data from API:', contestData);
           
           // L'API retourne { ok: true, contest: { ... } }
@@ -193,12 +192,12 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
           
           if (!brandId) {
             console.warn('brand_id not found in contest data:', contestData);
-            // Si brand_id n'est pas disponible, on continue quand même
-            // La politique RLS vérifiera côté serveur
+            // Si brand_id n'est pas disponible, on continue quand mÃªme
+            // La politique RLS vÃ©rifiera cÃ´tÃ© serveur
             console.log('Skipping brand_id check, RLS will verify on server side');
           } else if (brandId !== user.id) {
             throw new Error(
-              `Vous n'êtes pas le propriétaire de ce concours. ` +
+              `Vous n'Ãªtes pas le propriÃ©taire de ce concours. ` +
               `Contest brand_id: ${brandId}, Your ID: ${user.id}`
             );
           } else {
@@ -210,23 +209,23 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
           }
         } catch (checkError) {
           console.error('Contest verification error:', checkError);
-          // Ne pas bloquer l'upload si la vérification échoue
-          // La politique RLS vérifiera côté serveur de toute façon
-          if (checkError instanceof Error && checkError.message.includes('propriétaire')) {
+          // Ne pas bloquer l'upload si la vÃ©rification Ã©choue
+          // La politique RLS vÃ©rifiera cÃ´tÃ© serveur de toute faÃ§on
+          if (checkError instanceof Error && checkError.message.includes('propriÃ©taire')) {
             throw checkError;
           }
           console.warn('Contest verification failed, continuing with upload (RLS will verify)');
         }
 
-        // L'API a déjà vérifié les permissions, on peut procéder à l'upload
-        // Le client Supabase utilisera automatiquement la session stockée dans les cookies
+        // L'API a dÃ©jÃ  vÃ©rifiÃ© les permissions, on peut procÃ©der Ã  l'upload
+        // Le client Supabase utilisera automatiquement la session stockÃ©e dans les cookies
         // Upload vers Supabase Storage
         const uploadResult = await supabase.storage.from(bucket).upload(path, file, {
           contentType: file.type,
           upsert: false,
         });
 
-        // Log complet du résultat pour diagnostic
+        // Log complet du rÃ©sultat pour diagnostic
         console.log('Upload result:', {
           data: uploadResult.data,
           error: uploadResult.error,
@@ -238,29 +237,29 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
         if (uploadResult.error) {
           const uploadError = uploadResult.error;
           
-          // Méthode 1: Accès direct aux propriétés
-          const directMessage = (uploadError as any).message;
-          const directStatus = (uploadError as any).statusCode || (uploadError as any).status;
-          const directName = (uploadError as any).name;
+          // MÃ©thode 1: AccÃ¨s direct aux propriÃ©tÃ©s
+          const directMessage = (uploadError as UnsafeAny).message;
+          const directStatus = (uploadError as UnsafeAny).statusCode || (uploadError as UnsafeAny).status;
+          const directName = (uploadError as UnsafeAny).name;
           
-          // Méthode 2: Conversion en objet
+          // MÃ©thode 2: Conversion en objet
           const errorObj = uploadError as unknown as Record<string, unknown>;
           const errorMessage = directMessage || (errorObj.message as string) || String(uploadError);
           const errorStatus = directStatus || (errorObj.statusCode as string) || (errorObj.status as string);
           const errorName = directName || (errorObj.name as string);
           
-          // Méthode 3: Extraire toutes les clés (y compris héritées)
+          // MÃ©thode 3: Extraire toutes les clÃ©s (y compris hÃ©ritÃ©es)
           const errorKeys: string[] = [];
           for (const key in uploadError) {
             errorKeys.push(key);
           }
-          const errorValues = errorKeys.map(key => (uploadError as any)[key]);
+          const errorValues = errorKeys.map(key => (uploadError as UnsafeAny)[key]);
           
-          // Méthode 4: Stringifier avec replacer personnalisé
+          // MÃ©thode 4: Stringifier avec replacer personnalisÃ©
           let errorStringified = '';
           try {
             errorStringified = JSON.stringify(uploadError, (key, value) => {
-              // Inclure toutes les propriétés
+              // Inclure toutes les propriÃ©tÃ©s
               if (value === undefined) return 'undefined';
               if (value === null) return null;
               if (typeof value === 'function') return '[Function]';
@@ -270,7 +269,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                   message: value.message,
                   stack: value.stack,
                   ...Object.getOwnPropertyNames(value).reduce((acc, prop) => {
-                    acc[prop] = (value as any)[prop];
+                    acc[prop] = (value as UnsafeAny)[prop];
                     return acc;
                   }, {} as Record<string, unknown>),
                 };
@@ -285,7 +284,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
             }
           }
           
-          // Méthode 5: Log direct de l'erreur (peut afficher plus d'infos)
+          // MÃ©thode 5: Log direct de l'erreur (peut afficher plus d'infos)
           console.error('Upload error (direct log):', uploadError);
           console.error('Upload error (stringified):', errorStringified);
           console.error('Upload error details:', {
@@ -311,7 +310,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
           
           if (lowerMessage.includes('bucket not found') || lowerMessage.includes('not found')) {
             throw new Error(
-              'Le bucket de stockage n\'existe pas. Veuillez créer le bucket "contest_assets" dans Supabase Storage ou contacter l\'administrateur.'
+              'Le bucket de stockage n\'existe pas. Veuillez crÃ©er le bucket "contest_assets" dans Supabase Storage ou contacter l\'administrateur.'
             );
           }
           
@@ -323,7 +322,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
             lowerMessage.includes('permission denied') ||
             lowerMessage.includes('access denied')
           ) {
-            // Vérifier que le concours existe et que l'utilisateur est bien le propriétaire
+            // VÃ©rifier que le concours existe et que l'utilisateur est bien le propriÃ©taire
             try {
               const checkResponse = await fetch(`/api/contests/${data.contest_id}`, {
                 method: 'GET',
@@ -340,13 +339,13 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                 `Contest ID: ${data.contest_id}, User ID: ${user.id}. ` +
                 debugInfo +
                 `Erreur: ${errorMessage}. ` +
-                'Vérifiez que les politiques RLS sont correctement appliquées et que le concours existe avec le bon brand_id.'
+                'VÃ©rifiez que les politiques RLS sont correctement appliquÃ©es et que le concours existe avec le bon brand_id.'
               );
             } catch (checkError) {
               throw new Error(
                 `Erreur de permissions RLS. Contest ID: ${data.contest_id}, User ID: ${user.id}. ` +
                 `Erreur: ${errorMessage}. ` +
-                'Vérifiez que les politiques RLS sont correctement appliquées.'
+                'VÃ©rifiez que les politiques RLS sont correctement appliquÃ©es.'
               );
             }
           }
@@ -368,8 +367,8 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
       updateData({ productAssets: [...productAssets, ...newAssets] });
       toast({
         type: 'success',
-        title: 'Fichiers uploadés',
-        message: `${newAssets.length} fichier(s) ajouté(s) avec succès.`,
+        title: 'Fichiers uploadÃ©s',
+        message: `${newAssets.length} fichier(s) ajoutÃ©(s) avec succÃ¨s.`,
       });
     } catch (error) {
       console.error('Upload error:', error);
@@ -393,57 +392,57 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
 
   return (
     <div className="space-y-8">
-      {/* Introduction épurée */}
+      {/* Introduction Ã©purÃ©e */}
       <div className="text-center space-y-2 pb-4">
         <h2 className="text-2xl font-semibold">Parlez-nous de votre produit</h2>
         <p className="text-muted-foreground max-w-2xl mx-auto">
-          En quelques minutes, préparez tout ce dont les créateurs ont besoin pour comprendre votre produit et créer du contenu de qualité.
+          En quelques minutes, prÃ©parez tout ce dont les crÃ©ateurs ont besoin pour comprendre votre produit et crÃ©er du contenu de qualitÃ©.
         </p>
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr]">
-        {/* Formulaire à gauche */}
+        {/* Formulaire Ã  gauche */}
         <div className="space-y-6">
           {/* Bloc Produit */}
           <div className="space-y-4">
             <div>
               <h3 className="text-lg font-semibold mb-1">Informations produit</h3>
-              <p className="text-sm text-muted-foreground">Les champs marqués d'un * sont obligatoires</p>
+              <p className="text-sm text-muted-foreground">Les champs marquÃ©s d&apos;un * sont obligatoires</p>
             </div>
 
               <FieldWithTooltip
                 label="Nom du produit ou de l'offre"
-                tooltip="Le nom exact de votre produit ou offre. Les créateurs utiliseront ce nom dans leurs vidéos."
+                tooltip="Le nom exact de votre produit ou offre. Les crÃ©ateurs utiliseront ce nom dans leurs vidÃ©os."
                 required
               >
                 <Input
                   value={data.productName || ''}
                   onChange={(e) => updateData({ productName: e.target.value })}
-                  placeholder="Ex : Boisson énergisante SparkUp 250ml"
+                  placeholder="Ex : Boisson Ã©nergisante SparkUp 250ml"
                   error={errors.productName}
                 />
               </FieldWithTooltip>
 
               <FieldWithTooltip
-                label="Décrivez votre produit en une phrase"
-                tooltip="Une description courte et claire qui explique ce qu'est votre produit. Cette phrase aidera les créateurs à comprendre rapidement votre offre."
+                label="DÃ©crivez votre produit en une phrase"
+                tooltip="Une description courte et claire qui explique ce qu'est votre produit. Cette phrase aidera les crÃ©ateurs Ã  comprendre rapidement votre offre."
                 required
               >
                 <Textarea
                   value={data.productOneLiner || ''}
                   onChange={(e) => updateData({ productOneLiner: e.target.value })}
-                  placeholder="Ex : Une boisson énergisante naturelle pour étudiants et jeunes actifs."
+                  placeholder="Ex : Une boisson Ã©nergisante naturelle pour Ã©tudiants et jeunes actifs."
                   error={errors.productOneLiner}
                   rows={3}
                 />
                 <p className="mt-1.5 text-xs text-muted-foreground">
-                  Ce texte aidera les créateurs à comprendre ce que vous vendez.
+                  Ce texte aidera les crÃ©ateurs Ã  comprendre ce que vous vendez.
                 </p>
               </FieldWithTooltip>
 
               <FieldWithTooltip
-                label="Catégorie"
-                tooltip="La catégorie de votre produit. Cela aide à classer et à présenter votre concours aux créateurs appropriés."
+                label="CatÃ©gorie"
+                tooltip="La catÃ©gorie de votre produit. Cela aide Ã  classer et Ã  prÃ©senter votre concours aux crÃ©ateurs appropriÃ©s."
               >
                 <select
                   value={data.productCategory || ''}
@@ -452,7 +451,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                   }}
                   className="flex h-12 w-full rounded-xl border border-input bg-background px-4 py-3 text-sm ring-offset-background placeholder:text-muted-foreground/80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <option value="">Sélectionnez une catégorie</option>
+                  <option value="">SÃ©lectionnez une catÃ©gorie</option>
                   {PRODUCT_CATEGORIES.map((cat) => (
                     <option key={cat.value} value={cat.value}>
                       {cat.label}
@@ -462,12 +461,12 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
               </FieldWithTooltip>
           </div>
 
-          {/* Bloc Bénéfices clés */}
+          {/* Bloc BÃ©nÃ©fices clÃ©s */}
           <div className="space-y-4 pt-6 border-t">
             <div>
-              <Label className="text-base font-medium">Points clés à mettre en avant</Label>
+              <Label className="text-base font-medium">Points clÃ©s Ã  mettre en avant</Label>
               <p className="mt-1 text-sm text-muted-foreground">
-                Jusqu'à 3 bénéfices que les créateurs devraient mentionner (optionnel mais recommandé)
+                Jusqu&apos;Ã  3 bÃ©nÃ©fices que les crÃ©ateurs devraient mentionner (optionnel mais recommandÃ©)
               </p>
             </div>
 
@@ -476,7 +475,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                   <Input
                     value={benefit}
                     onChange={(e) => updateBenefit(index, e.target.value)}
-                    placeholder="Ex : Donne de l'énergie sans crash"
+                    placeholder="Ex : Donne de l&apos;Ã©nergie sans crash"
                   />
                   {productBenefits.length > 0 && (
                     <Button
@@ -500,10 +499,10 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
               )}
           </div>
 
-          {/* Bloc Cible / Public visé */}
+          {/* Bloc Cible / Public visÃ© */}
           <div className="space-y-4 pt-6 border-t">
             <div>
-              <Label className="text-base font-medium">Public visé</Label>
+              <Label className="text-base font-medium">Public visÃ©</Label>
               <p className="mt-1 text-sm text-muted-foreground">
                 Qui est votre cible principale ? (optionnel)
               </p>
@@ -531,7 +530,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                 <Input
                   value={otherTarget}
                   onChange={(e) => setOtherTarget(e.target.value)}
-                  placeholder="Autre (précisez)"
+                  placeholder="Autre (prÃ©cisez)"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -568,12 +567,12 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
               )}
           </div>
 
-          {/* Bloc Ressources pour les créateurs */}
+          {/* Bloc Ressources pour les crÃ©ateurs */}
           <div className="space-y-4 pt-6 border-t">
             <div>
               <Label className="text-base font-medium">Ressources visuelles</Label>
               <p className="mt-1 text-sm text-muted-foreground">
-                Ajoutez des photos, vidéos ou votre logo pour aider les créateurs (optionnel)
+                Ajoutez des photos, vidÃ©os ou votre logo pour aider les crÃ©ateurs (optionnel)
               </p>
             </div>
 
@@ -586,7 +585,8 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                 className="hidden"
               />
 
-              <div
+              <button
+                type="button"
                 onClick={() => {
                   if (!data.contest_id) {
                     toast({
@@ -598,7 +598,8 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                   }
                   fileInputRef.current?.click();
                 }}
-                className={`border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all ${
+                aria-disabled={!data.contest_id}
+                className={`w-full border-2 border-dashed rounded-xl p-12 text-center cursor-pointer transition-all ${
                   uploading
                     ? 'border-primary bg-primary/5'
                     : 'border-muted-foreground/30 hover:border-primary/50 hover:bg-muted/30 hover:shadow-sm'
@@ -615,13 +616,13 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                       <Upload className="h-6 w-6 text-muted-foreground" />
                     </div>
                     <div>
-                      <p className="text-sm font-medium">Cliquez pour sélectionner</p>
-                      <p className="text-xs text-muted-foreground mt-1">ou glissez-déposez vos fichiers</p>
+                      <p className="text-sm font-medium">Cliquez pour sÃ©lectionner</p>
+                      <p className="text-xs text-muted-foreground mt-1">ou glissez-dÃ©posez vos fichiers</p>
                     </div>
-                    <p className="text-xs text-muted-foreground">JPG, PNG, MP4 – max 200 Mo</p>
+                    <p className="text-xs text-muted-foreground">JPG, PNG, MP4 â€“ max 200 Mo</p>
                   </div>
                 )}
-              </div>
+              </button>
 
               {productAssets.length > 0 && (
                 <div className="grid grid-cols-2 gap-4 mt-4">
@@ -629,6 +630,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                     <div key={index} className="relative group">
                       <div className="aspect-video rounded-lg border overflow-hidden bg-muted">
                         {asset.type === 'image' ? (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img src={asset.url} alt={asset.name || `Asset ${index + 1}`} className="w-full h-full object-cover" />
                         ) : asset.type === 'video' ? (
                           <div className="w-full h-full flex items-center justify-center">
@@ -657,13 +659,13 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
           </div>
         </div>
 
-        {/* Aperçu côté créateurs à droite */}
+        {/* AperÃ§u cÃ´tÃ© crÃ©ateurs Ã  droite */}
         <div className="lg:sticky lg:top-8 lg:self-start">
           <div className="bg-muted/30 rounded-xl border p-6 space-y-6">
             <div>
-              <h3 className="text-lg font-semibold mb-2">Aperçu créateur</h3>
+              <h3 className="text-lg font-semibold mb-2">AperÃ§u crÃ©ateur</h3>
               <p className="text-sm text-muted-foreground">
-                Voici ce que les créateurs verront sur la page du concours
+                Voici ce que les crÃ©ateurs verront sur la page du concours
               </p>
             </div>
             <div className="space-y-4">
@@ -677,11 +679,11 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                 )}
                 {productBenefits.length > 0 && (
                   <div>
-                    <h5 className="text-sm font-semibold mb-2">Points clés :</h5>
+                    <h5 className="text-sm font-semibold mb-2">Points clÃ©s :</h5>
                     <ul className="space-y-1">
                       {productBenefits.filter((b) => b.trim()).map((benefit, index) => (
                         <li key={index} className="text-sm flex items-start gap-2">
-                          <span className="text-primary mt-1">•</span>
+                          <span className="text-primary mt-1">â€¢</span>
                           <span>{benefit}</span>
                         </li>
                       ))}
@@ -690,7 +692,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                 )}
                 {productTargetAudience.length > 0 && (
                   <div>
-                    <h5 className="text-sm font-semibold mb-2">Public visé :</h5>
+                    <h5 className="text-sm font-semibold mb-2">Public visÃ© :</h5>
                     <div className="flex flex-wrap gap-2">
                       {productTargetAudience.map((target) => (
                         <Badge key={target} variant="outline" className="text-xs">
@@ -707,6 +709,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                       {productAssets.slice(0, 4).map((asset, index) => (
                         <div key={index} className="aspect-video rounded border overflow-hidden bg-muted">
                           {asset.type === 'image' ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img src={asset.url} alt="" className="w-full h-full object-cover" />
                           ) : asset.type === 'video' ? (
                             <div className="w-full h-full flex items-center justify-center">
@@ -724,7 +727,7 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
                 )}
                 {!data.productName && !data.productOneLiner && (
                   <p className="text-sm text-muted-foreground italic">
-                    Remplissez les informations du produit pour voir l'aperçu.
+                    Remplissez les informations du produit pour voir l&apos;aperÃ§u.
                   </p>
                 )}
             </div>
@@ -734,4 +737,5 @@ export function Step0Product({ data, updateData, errors }: Step0ProductProps) {
     </div>
   );
 }
+
 

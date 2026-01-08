@@ -11,9 +11,9 @@ import { getAllowedTaskTypes, taskHref } from '@/lib/admin/admin-tasks';
 type SupabaseErrorLike = { message?: string; code?: string } | null | undefined;
 
 function isMissingTable(error: SupabaseErrorLike, tableName: string) {
-  const code = String((error as any)?.code || '').toUpperCase();
+  const code = String((error as UnsafeAny)?.code || '').toUpperCase();
   if (code === '42P01') return true;
-  const msg = String((error as any)?.message || '').toLowerCase();
+  const msg = String((error as UnsafeAny)?.message || '').toLowerCase();
   if (!msg.includes(tableName.toLowerCase())) return false;
   return msg.includes('does not exist') || msg.includes('could not find') || msg.includes('schema cache');
 }
@@ -30,7 +30,7 @@ const QuerySchema = z.object({
 export async function GET(req: NextRequest) {
   try {
     const { user, access } = await requireAdminPermission('tasks.read');
-    await enforceAdminRateLimit(req, { route: 'admin:tasks:list', max: 60, windowMs: 60_000 });
+    await enforceAdminRateLimit(req, { route: 'admin:tasks:list', max: 60, windowMs: 60_000 }, user.id);
 
     const parsed = QuerySchema.safeParse(Object.fromEntries(req.nextUrl.searchParams.entries()));
     const query = parsed.success ? parsed.data : QuerySchema.parse({});
@@ -46,13 +46,13 @@ export async function GET(req: NextRequest) {
     const from = (query.page - 1) * query.limit;
     const to = from + query.limit - 1;
 
-    let q: any = admin
+    let q: UnsafeAny = admin
       .from('admin_tasks')
       .select(
         'id, source_table, source_id, task_type, title, description, priority, status, assigned_to, due_at, metadata, created_at, updated_at, assigned:profiles(id, display_name, email)',
         { count: 'exact' }
       )
-      .in('task_type', allowedTypes as any)
+      .in('task_type', allowedTypes as UnsafeAny)
       .order('created_at', { ascending: true })
       .range(from, to);
 
@@ -82,8 +82,8 @@ export async function GET(req: NextRequest) {
 
     const canWriteTasks = hasAdminPermission(access, 'tasks.write');
 
-    const items = (data ?? []).map((row: any) => {
-      const meta = (row.metadata ?? {}) as any;
+    const items = (data ?? []).map((row: UnsafeAny) => {
+      const meta = (row.metadata ?? {}) as UnsafeAny;
       const countValue = typeof meta.count === 'number' ? meta.count : 1;
       const href = typeof meta.href === 'string' ? meta.href : taskHref(row.task_type);
       return {
@@ -113,3 +113,4 @@ export async function GET(req: NextRequest) {
     return formatErrorResponse(error);
   }
 }
+
