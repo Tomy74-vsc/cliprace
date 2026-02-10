@@ -13,6 +13,26 @@ type MfaStatusResponse = {
   currentLevel: string;
 };
 
+type AnyFactor = {
+  id?: string;
+  factor_type?: string;
+  factorType?: string;
+};
+
+function extractTotpFactors(raw: unknown): AnyFactor[] {
+  const factors = raw as { totp?: unknown[]; all?: unknown[] } | null;
+  const totp = Array.isArray(factors?.totp) ? (factors?.totp as AnyFactor[]) : [];
+  const all = Array.isArray(factors?.all) ? (factors?.all as AnyFactor[]) : [];
+  const totpFromAll = all.filter((f) => (f?.factor_type ?? f?.factorType) === 'totp');
+  const byId = new Map<string, AnyFactor>();
+  for (const f of [...totp, ...totpFromAll]) {
+    const id = String(f?.id || '');
+    if (!id) continue;
+    byId.set(id, f);
+  }
+  return [...byId.values()];
+}
+
 export function AdminMfaSettings({ canWrite }: { canWrite: boolean }) {
   const { toast } = useToastContext();
   const [status, setStatus] = useState<MfaStatusResponse | null>(null);
@@ -23,7 +43,7 @@ export function AdminMfaSettings({ canWrite }: { canWrite: boolean }) {
     try {
       const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
       if (factorsError) throw factorsError;
-      const hasTotp = Boolean((factors?.totp ?? []).length > 0);
+      const hasTotp = extractTotpFactors(factors).length > 0;
 
       const { data: aal, error: aalError } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
       if (aalError || !aal) throw aalError ?? new Error('Impossible de charger le niveau AAL.');
@@ -45,7 +65,7 @@ export function AdminMfaSettings({ canWrite }: { canWrite: boolean }) {
   const disable = async () => {
     const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
     if (factorsError) throw factorsError;
-    const factorId = (factors?.totp ?? [])[0]?.id ?? '';
+    const factorId = extractTotpFactors(factors)[0]?.id ?? '';
     if (!factorId) throw new Error('Aucun facteur TOTP trouvé.');
 
     const { error: unenrollError } = await supabase.auth.mfa.unenroll({ factorId });

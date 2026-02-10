@@ -1,17 +1,15 @@
 import { ReactNode } from 'react';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { User } from 'lucide-react';
 
 import { getSession, getUserRole } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { BrandNav, type BrandNavItem } from './layout_nav';
-import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { Banner } from '@/components/creator/banner';
 import { AdminImpersonationBanner } from '@/components/admin/admin-impersonation-banner';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
-import { NotificationsDropdown } from '@/components/notifications/notifications-dropdown';
-import { BrandBreadcrumbs } from '@/components/navigation/brand-breadcrumbs';
+import { BrandHeader } from './brand-header';
+import { BrandPageTransition } from './brand-page-transition';
 
 /**
  * Shell marque
@@ -48,13 +46,17 @@ export default async function BrandLayout({ children }: { children: ReactNode })
     .eq('user_id', user.id)
     .eq('read', false);
 
-  // Récupérer les concours de la marque pour compter les soumissions en attente
+  // Récupérer les concours de la marque (actifs pour le switcher + tous pour les comptes)
   const { data: contests } = await supabase
     .from('contests')
-    .select('id')
+    .select('id, title, status')
     .eq('brand_id', user.id);
 
   const contestIds = contests?.map((c) => c.id) || [];
+  const activeCampaigns = (contests ?? [])
+    .filter((c) => c.status === 'active')
+    .map((c) => ({ id: c.id, title: c.title ?? 'Sans titre' }));
+  const companyName = profileBrand?.company_name ?? null;
 
   // Compter les soumissions en attente de modération
   let pendingSubmissionsCount = 0;
@@ -124,23 +126,7 @@ export default async function BrandLayout({ children }: { children: ReactNode })
 
         <div className="flex-1 flex flex-col">
           <AdminImpersonationBanner />
-          <header className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur-xl">
-            <div className="flex h-14 items-center justify-between px-4 lg:px-8">
-              <div className="flex items-center gap-3 overflow-hidden">
-                <BrandBreadcrumbs />
-              </div>
-              <div className="flex items-center gap-2">
-                <ThemeToggle />
-                <NotificationsDropdown />
-                <Button asChild variant="ghost" size="sm" className="h-12 w-12 rounded-full">
-                  <Link href="/app/brand/settings">
-                    <User className="h-10 w-10" />
-                    <span className="sr-only">Profil</span>
-                  </Link>
-                </Button>
-              </div>
-            </div>
-          </header>
+          <BrandHeader activeCampaigns={activeCampaigns} companyName={companyName} />
 
           <main className="flex-1 w-full max-w-6xl mx-auto px-4 lg:px-8 py-6 space-y-4">
             {profileIncomplete && (
@@ -167,7 +153,7 @@ export default async function BrandLayout({ children }: { children: ReactNode })
                 }
               />
             )}
-            {children}
+            <BrandPageTransition>{children}</BrandPageTransition>
           </main>
 
           <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/95 backdrop-blur-xl">

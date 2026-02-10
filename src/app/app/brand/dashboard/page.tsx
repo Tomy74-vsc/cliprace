@@ -1,17 +1,19 @@
 /*
-Page: Brand dashboard
-Objectifs: KPIs, concours en cours, graphiques (vues 7j, répartition plateformes), ROI, CTA "Créer un concours"
+Page: Brand dashboard — "War Room" (Command Center B2B)
+KPIs 2.0, graphique ROI, carte créateurs live, concours en cours.
 */
 import Link from 'next/link';
 import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
-import { StatCard } from '@/components/creator/stat-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BrandEmptyState } from '@/components/brand/empty-state-enhanced';
+import { SmartStatCard } from '@/components/brand/smart-stat-card';
+import { RoiPerformanceChart } from '@/components/brand/roi-performance-chart';
+import { LiveCreatorMap } from '@/components/brand/live-creator-map';
 import { formatCurrency } from '@/lib/formatters';
-import { Trophy, Plus, TrendingUp, Eye, DollarSign, AlertCircle } from 'lucide-react';
+import { Plus, AlertCircle } from 'lucide-react';
 import { TrackOnView } from '@/components/analytics/track-once';
 import { PlatformBadge } from '@/components/creator/platform-badge';
 import { ContestMetricsChart } from '@/components/brand/contest-metrics-chart';
@@ -44,125 +46,138 @@ export default async function BrandDashboard() {
   const companyName = data.profileBrand?.company_name || 'Marque';
   const firstName = (user.display_name || companyName).split(' ')[0] || 'Marque';
 
+  // Données pour ROI chart (7 derniers jours : vues + budget réparti)
+  const roiChartData = data.daily_views.map((d) => ({
+    date: d.date,
+    label: new Date(d.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }),
+    views: d.views,
+    budget_cents: Math.round(data.stats.budget_spent_cents / Math.max(1, data.daily_views.length)),
+  }));
+
+  // Tendance 7j : première moitié vs deuxième moitié des vues
+  const mid = Math.floor(data.daily_views.length / 2);
+  const firstHalfSum = data.daily_views.slice(0, mid).reduce((s, d) => s + d.views, 0);
+  const secondHalfSum = data.daily_views.slice(mid).reduce((s, d) => s + d.views, 0);
+  const trendPct =
+    firstHalfSum > 0
+      ? Math.round(((secondHalfSum - firstHalfSum) / firstHalfSum) * 100)
+      : 0;
+  const trendStr = trendPct !== 0 ? (trendPct > 0 ? `+${trendPct}%` : `${trendPct}%`) : undefined;
+  const trendDir: 'up' | 'down' | 'neutral' =
+    trendPct > 0 ? 'up' : trendPct < 0 ? 'down' : 'neutral';
+
+  const cpv =
+    data.stats.total_views > 0
+      ? Math.round((data.stats.budget_spent_cents / data.stats.total_views) * 1000)
+      : 0;
+
   return (
-    <main className="space-y-8">
+    <main className="min-h-0 space-y-6 bg-muted/20 rounded-2xl p-4 md:p-6 -m-2 md:-m-4">
       <TrackOnView event="view_brand_dashboard" payload={{ role: 'brand' }} />
 
-      {/* Phrase d'accroche */}
-      {data.stats.total_views > 0 && (
-        <Card className="border-primary/20 bg-gradient-to-r from-primary/10 via-accent/5 to-background">
-          <CardContent className="pt-6">
-            <div className="space-y-2">
-              <p className="text-xl font-semibold leading-relaxed">
-                ClipRace attire des créateurs pour vous.{' '}
-                {(() => {
-                  const last7DaysViews = data.daily_views.reduce((sum, d) => sum + d.views, 0);
-                  const last7DaysSpent = data.stats.budget_spent_cents;
-                  const cpv = last7DaysViews > 0 ? Math.round((last7DaysSpent / last7DaysViews) * 1000) : 0;
-                  return last7DaysViews > 0
-                    ? `Cette semaine, vos campagnes ont généré ${last7DaysViews.toLocaleString()} vues pour ${formatCurrency(last7DaysSpent, 'EUR')}, soit ${formatCurrency(cpv, 'EUR')} pour 1 000 vues.`
-                    : `Vos campagnes ont généré ${data.stats.total_views.toLocaleString()} vues au total pour ${formatCurrency(data.stats.budget_spent_cents, 'EUR')}, soit ${formatCurrency(Math.round((data.stats.budget_spent_cents / data.stats.total_views) * 1000), 'EUR')} pour 1 000 vues.`;
-                })()}
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Plus vous augmentez votre cashprize, plus vous attirez de créateurs et de vues.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Carte "Créer un concours" - CTA primaire */}
-      <section className="rounded-3xl border border-border bg-gradient-to-r from-primary/10 via-accent/5 to-background p-6 md:p-8 shadow-card transition-all duration-300 hover:shadow-card-hover hover:from-primary/15 hover:via-accent/8">
-        <div className="grid gap-6 md:grid-cols-[2fr,1.1fr] md:items-center">
-          <div className="space-y-3">
-            <p className="text-sm text-muted-foreground">Espace marque</p>
-            <h1 className="text-3xl font-semibold">Bienvenue, {firstName}</h1>
-            <p className="text-base text-muted-foreground">
-              Crée et pilote tes concours UGC, modère les participations, suivez les performances.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg" className="transition-all duration-200 hover:scale-105 hover:shadow-lg">
-                <Link href="/app/brand/contests/new">
-                  <Plus className="h-5 w-5 mr-2" />
-                  Créer un concours
-                </Link>
-              </Button>
-              <Button asChild variant="secondary" size="lg" className="transition-all duration-200 hover:scale-105">
-                <Link href="/app/brand/contests">Voir mes concours</Link>
-              </Button>
-            </div>
-          </div>
-          <Card className="bg-card/80 backdrop-blur-xl border-dashed border-border">
-            <CardHeader className="pb-2">
-              <CardTitle>État global</CardTitle>
-              <p className="text-sm text-muted-foreground">Vue d&apos;ensemble de tes concours.</p>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <p className="text-xs text-muted-foreground">Concours actifs</p>
-                  <p className="text-2xl font-semibold">{data.stats.active_contests}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Soumissions en attente</p>
-                  <p className="text-2xl font-semibold text-warning">
-                    {data.stats.pending_submissions}
-                  </p>
-                </div>
-              </div>
-              <div className="pt-2 border-t border-border">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Budget engagé</span>
-                  <span className="font-semibold">
-                    {formatCurrency(data.stats.budget_engaged_cents, 'EUR')}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm mt-1">
-                  <span className="text-muted-foreground">Vues cumulées</span>
-                  <span className="font-semibold">{data.stats.total_views.toLocaleString()}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+      {/* En-tête War Room + CTA */}
+      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-semibold text-foreground">Tableau de bord</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Bienvenue, {firstName} · Vue d&apos;ensemble de tes campagnes
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button asChild size="md" className="shadow-sm">
+            <Link href="/app/brand/contests/new">
+              <Plus className="h-4 w-4 mr-2" />
+              Créer un concours
+            </Link>
+          </Button>
+          <Button asChild variant="secondary" size="md">
+            <Link href="/app/brand/contests">Voir mes concours</Link>
+          </Button>
         </div>
       </section>
 
-      {/* KPIs */}
-      <section>
-        <div className="grid gap-4 md:grid-cols-4">
-          <StatCard
-            label="Vues cumulées"
-            value={data.stats.total_views.toLocaleString()}
-            hint="Tous concours confondus"
-            icon={<Eye className="h-4 w-4" />}
-          />
-          <StatCard
-            label="Engagement"
-            value={data.stats.total_likes.toLocaleString()}
-            hint="Likes total"
-            icon={<TrendingUp className="h-4 w-4" />}
-          />
-          <StatCard
-            label="CPV"
-            value={
-              data.stats.total_views > 0
-                ? formatCurrency(
-                    Math.round((data.stats.budget_spent_cents / data.stats.total_views) * 1000),
-                    'EUR',
-                  )
-                : '—'
-            }
-            hint="Coût pour 1000 vues"
-            icon={<DollarSign className="h-4 w-4" />}
-          />
-          <StatCard
-            label="Budget dépensé"
-            value={formatCurrency(data.stats.budget_spent_cents, 'EUR')}
-            hint="Total"
-            icon={<Trophy className="h-4 w-4" />}
-          />
-        </div>
+      {/* KPI Cards 2.0 — SmartStatCard avec sparkline et tendance */}
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <SmartStatCard
+          title="Total vues"
+          value={data.stats.total_views.toLocaleString()}
+          trend={trendStr}
+          trendDirection={trendDir}
+          sparklineData={data.daily_views.map((d) => ({ value: d.views }))}
+        />
+        <SmartStatCard
+          title="Budget engagé"
+          value={formatCurrency(data.stats.budget_engaged_cents, 'EUR')}
+          sparklineData={data.daily_views.map(() => ({
+            value: Math.round(data.stats.budget_engaged_cents / Math.max(1, data.daily_views.length)),
+          }))}
+        />
+        <SmartStatCard
+          title="CPV moyen (pour 1 000 vues)"
+          value={data.stats.total_views > 0 ? formatCurrency(cpv, 'EUR') : '—'}
+          sparklineData={data.daily_views.map((day) => ({
+            value: day.views > 0 ? Math.round((data.stats.budget_spent_cents / data.daily_views.length) / day.views * 1000) : 0,
+          }))}
+        />
+        <SmartStatCard
+          title="Vidéos en attente"
+          value={data.stats.pending_submissions}
+          trend={data.stats.pending_submissions > 0 ? 'À modérer' : undefined}
+          trendDirection="neutral"
+        />
+      </section>
+
+      {/* Graphique Performance ROI (barres budget + ligne vues) */}
+      <Card className="border-border bg-card shadow-sm">
+        <CardHeader>
+          <CardTitle className="text-lg">Performance & ROI</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Budget dépensé et vues sur les 7 derniers jours
+          </p>
+        </CardHeader>
+        <CardContent>
+          <RoiPerformanceChart data={roiChartData} currency="EUR" />
+        </CardContent>
+      </Card>
+
+      {/* Live Creator Map + Vues 7j / Plateformes côte à côte */}
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Card className="border-border bg-card shadow-sm overflow-hidden">
+          <CardHeader>
+            <CardTitle className="text-lg">Créateurs actifs</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Répartition géographique des créateurs participants
+            </p>
+          </CardHeader>
+          <CardContent className="pt-0">
+            <LiveCreatorMap />
+          </CardContent>
+        </Card>
+        <Card className="border-border bg-card shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Vues des 7 derniers jours</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Évolution quotidienne des vues
+            </p>
+          </CardHeader>
+          <CardContent>
+            <ContestMetricsChart data={data.daily_views} />
+          </CardContent>
+        </Card>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-2">
+        <Card className="border-border bg-card shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg">Répartition par plateforme</CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Distribution des soumissions
+            </p>
+          </CardHeader>
+          <CardContent>
+            <PlatformDistributionChart data={data.platform_distribution} />
+          </CardContent>
+        </Card>
       </section>
 
       {/* Section "Concours en cours" */}

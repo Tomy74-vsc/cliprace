@@ -1,9 +1,9 @@
 /*
-Source: Page Discover - Phase 2 (SEO + filtres server-side)
+Source: Page Discover - Netflix-style hero, category pills, glass cards.
 */
 import Link from "next/link";
 import { getSupabaseSSR } from "@/lib/supabase/ssr";
-import { DiscoverPageClient } from "@/components/contest/discover-page-client";
+import { DiscoverNetflixClient } from "@/components/contest/discover-netflix-client";
 import type { ContestCardData } from "@/components/contest/contest-card";
 import type { Platform } from "@/lib/validators/platforms";
 import { TrackOnView } from "@/components/analytics/track-once";
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { CreatorCoach } from "@/components/creator/creator-coach";
 import { Sparkles } from "lucide-react";
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 40;
 const PLATFORM_VALUES: Platform[] = ["tiktok", "instagram", "youtube"];
 const STATUS_VALUES = ["active", "upcoming", "ended"] as const;
 const SORT_VALUES = ["ending_soon", "prize_desc", "newest"] as const;
@@ -44,7 +44,7 @@ export default async function DiscoverContestsPage({ searchParams }: DiscoverPag
   const rawSort = typeof params.sort === "string" ? params.sort : null;
   const sortParam: (typeof SORT_VALUES)[number] = SORT_VALUES.includes(rawSort as (typeof SORT_VALUES)[number])
     ? (rawSort as (typeof SORT_VALUES)[number])
-    : "ending_soon";
+    : "prize_desc";
 
   const { contests, total, profileIncomplete } = await fetchContests({
     search,
@@ -98,15 +98,8 @@ export default async function DiscoverContestsPage({ searchParams }: DiscoverPag
         />
       </div>
 
-      <section id="liste-concours" className="space-y-8">
-        <DiscoverPageClient
-          contests={contests}
-          total={total}
-          page={page}
-          pageSize={PAGE_SIZE}
-          profileIncomplete={profileIncomplete}
-          filters={{ search, platforms: selectedPlatforms, status: statusParam, sort: sortParam }}
-        />
+      <section id="liste-concours" className="space-y-6">
+        <DiscoverNetflixClient contests={contests} />
       </section>
     </main>
   );
@@ -153,6 +146,8 @@ async function fetchContests({
       end_at,
       networks,
       status,
+      min_followers,
+      min_views,
       brand:brand_id (
         display_name,
         avatar_url
@@ -214,8 +209,8 @@ async function fetchContests({
         end_at: contest.end_at,
         networks: contest.networks || [],
         status: contest.status as ContestCardData["status"],
-        min_followers: undefined,
-        min_views: undefined,
+        min_followers: (contest as { min_followers?: number | null }).min_followers ?? undefined,
+        min_views: (contest as { min_views?: number | null }).min_views ?? undefined,
         eligibility,
         brand: contest.brand as ContestCardData["brand"],
       };

@@ -10,7 +10,7 @@ Page: Wizard création concours (5 étapes)
 import { Suspense } from 'react';
 import { getSession } from '@/lib/auth';
 import { redirect } from 'next/navigation';
-import { ContestWizardClient } from '@/components/brand/contest-wizard-client';
+import { ContestWizard } from '@/components/brand/wizard/ContestWizard';
 
 export default async function NewContestWizardPage() {
   const { user } = await getSession();
@@ -19,9 +19,9 @@ export default async function NewContestWizardPage() {
   }
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
+    <main className="mx-auto max-w-6xl px-4 py-8">
       <Suspense fallback={<div>Chargement...</div>}>
-        <ContestWizardClient brandId={user.id} />
+        <ContestWizard />
       </Suspense>
     </main>
   );

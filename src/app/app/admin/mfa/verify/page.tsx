@@ -8,7 +8,32 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 
-type TotpFactor = { id: string; factor_type?: string };
+type AnyFactor = {
+  id?: string;
+  factor_type?: string;
+  factorType?: string;
+  friendly_name?: string;
+  friendlyName?: string;
+  created_at?: string;
+  createdAt?: string;
+};
+
+function extractTotpFactors(raw: unknown): AnyFactor[] {
+  const factors = raw as { totp?: unknown[]; all?: unknown[] } | null;
+  const totp = Array.isArray(factors?.totp) ? (factors?.totp as AnyFactor[]) : [];
+  const all = Array.isArray(factors?.all) ? (factors?.all as AnyFactor[]) : [];
+  const totpFromAll = all.filter((f) => (f?.factor_type ?? f?.factorType) === 'totp');
+  const byId = new Map<string, AnyFactor>();
+  for (const f of [...totp, ...totpFromAll]) {
+    const id = String(f?.id || '');
+    if (!id) continue;
+    byId.set(id, f);
+  }
+  return [...byId.values()];
+}
+
+const STORAGE_FACTOR_ID = 'cliprace_admin_totp_factor_id';
+const FRIENDLY_NAME = 'ClipRace Admin';
 
 export default function AdminMfaVerifyPage() {
   const router = useRouter();
@@ -51,16 +76,39 @@ export default function AdminMfaVerifyPage() {
           return;
         }
 
-        const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
-        if (factorsError) throw factorsError;
+        const qsFactorId = String(searchParams.get('factorId') ?? '').trim();
+        let resolved = qsFactorId;
+        if (!resolved) {
+          try {
+            resolved = String(sessionStorage.getItem(STORAGE_FACTOR_ID) ?? '').trim();
+          } catch {
+            // ignore
+          }
+        }
 
-        const totpFactor = ((factors?.totp ?? [])[0] ?? null) as TotpFactor | null;
-        if (!totpFactor?.id) {
+        if (!resolved) {
+          const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
+          if (factorsError) throw factorsError;
+
+          const totpFactors = extractTotpFactors(factors);
+          const preferred =
+            totpFactors.find((f) => String(f.friendly_name ?? f.friendlyName ?? '') === FRIENDLY_NAME) ?? null;
+
+          const newest = [...totpFactors].sort((a, b) => {
+            const da = Date.parse(String(a.created_at ?? a.createdAt ?? '')) || 0;
+            const db = Date.parse(String(b.created_at ?? b.createdAt ?? '')) || 0;
+            return db - da;
+          })[0];
+
+          resolved = String((preferred?.id ?? newest?.id ?? '') || '');
+        }
+
+        if (!resolved) {
           router.replace('/app/admin/mfa/setup');
           return;
         }
 
-        if (!cancelled) setFactorId(totpFactor.id);
+        if (!cancelled) setFactorId(resolved);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : 'Erreur inconnue');
       } finally {
@@ -72,7 +120,7 @@ export default function AdminMfaVerifyPage() {
     return () => {
       cancelled = true;
     };
-  }, [router]);
+  }, [router, searchParams]);
 
   const submit = async () => {
     setVerifying(true);
@@ -93,6 +141,12 @@ export default function AdminMfaVerifyPage() {
         code,
       });
       if (verifyError || !data) throw verifyError ?? new Error('Vérification impossible.');
+
+      try {
+        sessionStorage.removeItem(STORAGE_FACTOR_ID);
+      } catch {
+        // ignore
+      }
 
       router.replace(destination);
       router.refresh();

@@ -76,6 +76,11 @@ export async function POST(req: NextRequest) {
     const slug = await ensureUniqueSlug(admin, slugBase);
     const currency = (payload.currency || 'EUR').toUpperCase();
 
+    // DÃ©terminer le prize pool et les frais plateforme en fonction du type de concours
+    const isProductContest = payload.contest_type === 'product';
+    const prizePoolCents = isProductContest ? 0 : payload.total_prize_pool_cents || 0;
+    const platformFeeCents = payload.platform_fee ?? (isProductContest ? 5000 : 0);
+
     // Préparer les paramètres pour la fonction RPC
     // Supabase convertit automatiquement les objets JS en JSONB
     // S'assurer que les tableaux ne sont jamais undefined
@@ -87,7 +92,7 @@ export async function POST(req: NextRequest) {
       p_cover_url: payload.cover_url || null,
       p_start_at: payload.start_at,
       p_end_at: payload.end_at,
-      p_prize_pool_cents: payload.total_prize_pool_cents || 0,
+      p_prize_pool_cents: prizePoolCents,
       p_currency: currency,
       p_networks: allowedPlatforms.length > 0 ? allowedPlatforms : [],
       p_max_winners: maxWinners,
@@ -96,7 +101,12 @@ export async function POST(req: NextRequest) {
       p_terms_url: payload.terms_url || null,
       p_assets: normalizedAssets.length > 0 ? normalizedAssets : [],
       p_prizes: normalizedPrizes.length > 0 ? normalizedPrizes : [],
-      p_budget_cents: payload.total_prize_pool_cents || 0,
+      p_budget_cents: prizePoolCents + platformFeeCents,
+      // Nouveau modÃ¨le cash vs produit
+      p_contest_type: payload.contest_type,
+      p_product_details: payload.product_details ?? null,
+      p_shipping_info: payload.shipping_info ?? null,
+      p_platform_fee: platformFeeCents,
     };
 
     console.log('Calling RPC create_contest_complete with params:', {

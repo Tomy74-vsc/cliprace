@@ -82,7 +82,8 @@ export async function POST(req: NextRequest) {
       type: 'signup',
       email,
       options: {
-        emailRedirectTo: `${siteUrl}/auth/verify?email=${encodeURIComponent(email)}`,
+        // Keep redirect URL stable (avoid query params that may not be allowlisted in Supabase)
+        emailRedirectTo: `${siteUrl}/auth/verify`,
       },
     });
 

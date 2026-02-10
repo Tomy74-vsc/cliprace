@@ -104,19 +104,37 @@ export default function SignupPage() {
         body: JSON.stringify(payload),
       });
 
-      const result = await response.json();
+      // Robust parsing: backend might return non-JSON on unexpected failures
+      const contentType = response.headers.get('content-type') || '';
+      const rawText = await response.text();
+      let result: unknown = null;
+      try {
+        result = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        result = null;
+      }
 
-      if (!response.ok || !result.ok) {
-        const errorMessage = result.message || 'Une erreur est survenue';
-        const errorDetails = result.details || result.errors;
-        const errorCode = result.code || 'UNKNOWN';
+      const resultObj = (result && typeof result === 'object') ? (result as Record<string, unknown>) : null;
+      const resultOk = !!(resultObj && resultObj.ok);
+
+      if (!response.ok || !resultOk) {
+        const errorMessage =
+          (resultObj?.message as string | undefined) ||
+          (rawText && !contentType.includes('application/json') ? rawText : undefined) ||
+          response.statusText ||
+          'Une erreur est survenue';
+        const errorDetails = resultObj?.details || resultObj?.errors;
+        const errorCode = (resultObj?.code as string | undefined) || 'UNKNOWN';
 
         // Log détaillé pour le debugging (format lisible)
         console.error('Signup error response:', {
           status: response.status,
+          statusText: response.statusText,
+          contentType,
           code: errorCode,
           message: errorMessage,
           details: errorDetails,
+          rawText: rawText?.slice(0, 2000),
           fullResponse: result,
         });
 

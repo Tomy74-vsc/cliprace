@@ -62,7 +62,8 @@ export async function POST(req: NextRequest) {
     });
 
     const siteUrl = env.NEXT_PUBLIC_SITE_URL || env.APP_URL || 'http://localhost:3000';
-    const redirectUrl = `${siteUrl}/auth/verify?email=${encodeURIComponent(email)}`;
+    // Keep redirect URL stable (avoid query params that may not be allowlisted in Supabase)
+    const redirectUrl = `${siteUrl}/auth/verify`;
     
     console.log('Attempting signup for:', { 
       email, 
@@ -98,6 +99,18 @@ export async function POST(req: NextRequest) {
       if (errorMsg.includes('rate limit') || errorMsg.includes('email rate limit')) {
         return formatErrorResponse(
           createError('RATE_LIMIT', 'Trop d\'emails ont été envoyés récemment. Veuillez attendre quelques minutes avant de réessayer.', 429, signUpError)
+        );
+      }
+
+      // Erreur d'envoi d'email de confirmation (configuration Supabase Auth / SMTP)
+      if (errorMsg.includes('confirmation email') || errorMsg.includes('error sending confirmation email')) {
+        return formatErrorResponse(
+          createError(
+            'CONFIG_ERROR',
+            'Supabase n\'arrive pas à envoyer l\'email de confirmation. Vérifiez dans Supabase: Authentication → Settings/Email (SMTP) et que votre "Site URL" / redirect URLs sont bien configurés.',
+            500,
+            signUpError
+          )
         );
       }
       

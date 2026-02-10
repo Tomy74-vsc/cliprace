@@ -1,4 +1,4 @@
-﻿/*
+/*
 Source: PATCH /api/submissions/[id]/moderate
 Tables: submissions, moderation_actions, notifications, audit_logs
 Rules:
@@ -10,6 +10,8 @@ import { z } from 'zod';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { getUserRole } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
+import { rateLimit } from '@/lib/rateLimit';
+import { assertCsrf } from '@/lib/csrf';
 
 const BodySchema = z.object({
   status: z.enum(['approved', 'rejected', 'removed']),
@@ -21,6 +23,13 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF
+    try {
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
+    } catch {
+      return NextResponse.json({ ok: false, message: 'CSRF invalide' }, { status: 403 });
+    }
+
     const { id: submissionId } = await context.params;
     const supabaseSSR = await getSupabaseSSR();
     const {
@@ -30,6 +39,22 @@ export async function PATCH(
 
     const role = await getUserRole(user.id);
     if (!role) return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
+
+    // Rate limit: 50 modérations / min par utilisateur+IP
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    const rlKey = `submissions:moderate:${user.id}:${ip}`;
+    const allowed = await rateLimit({
+      key: rlKey,
+      route: 'submissions:moderate',
+      windowMs: 60_000,
+      max: 50,
+    });
+    if (!allowed) {
+      return NextResponse.json(
+        { ok: false, message: 'Trop de tentatives de modération, réessayez plus tard' },
+        { status: 429 }
+      );
+    }
 
     const json = await req.json();
     const parsed = BodySchema.safeParse(json);
@@ -55,7 +80,9 @@ export async function PATCH(
 
     const isOwner = contest.brand_id === user.id;
     const isAdmin = role === 'admin';
-    if (!isOwner && !isAdmin) return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
+    }
 
     const { status, reason } = parsed.data;
     if ((status === 'rejected' || status === 'removed') && !reason) {

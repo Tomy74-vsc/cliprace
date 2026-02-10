@@ -55,14 +55,51 @@ export function AdminCashoutQueue({ items, canWrite = true }: AdminCashoutQueueP
     setLoadingKey(`${id}:${action}`);
     try {
       const token = await getCsrfToken();
-      const res = await fetch(`/api/admin/cashouts/${id}/${action}`, {
+      const isReviewAction = action === 'approve' || action === 'reject';
+      const endpoint = isReviewAction
+        ? `/api/admin/cashouts/${id}/review`
+        : `/api/admin/cashouts/${id}/hold`;
+
+      const payload =
+        isReviewAction
+          ? {
+              decision: action,
+              // Motif par défaut pour approve si aucun n'est fourni
+              reason:
+                reason ||
+                (action === 'approve'
+                  ? 'Approved from admin cashout queue'
+                  : 'No reason provided'),
+            }
+          : {
+              reason,
+            };
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'content-type': 'application/json', 'x-csrf': token },
-        body: action === 'approve' ? undefined : JSON.stringify({ reason }),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) {
-        const payload = await res.json().catch(() => ({}));
-        throw new Error(payload?.message || 'Action failed.');
+        const errorPayload = (await res.json().catch(() => ({}))) as {
+          message?: string;
+          code?: string;
+        };
+
+        let message = errorPayload?.message || 'Action failed.';
+
+        if (res.status === 403) {
+          message = "Accès refusé. Vous n'avez pas les droits nécessaires pour cette action.";
+        } else if (res.status === 409) {
+          const lower = (errorPayload?.message || '').toLowerCase();
+          if (lower.includes('already paid')) {
+            message = 'Ce cashout a déjà été payé.';
+          } else {
+            message = "Ce cashout ne peut pas être modifié dans son état actuel.";
+          }
+        }
+
+        throw new Error(message);
       }
 
       toast({
@@ -141,7 +178,20 @@ export function AdminCashoutQueue({ items, canWrite = true }: AdminCashoutQueueP
                         <Button
                           size="sm"
                           variant="primary"
-                          onClick={() => runAction(cashout.id, 'approve')}
+                          onClick={async () => {
+                            try {
+                              await runAction(cashout.id, 'approve');
+                            } catch (error) {
+                              toast({
+                                type: 'error',
+                                title: 'Action impossible',
+                                message:
+                                  error instanceof Error
+                                    ? error.message
+                                    : "Une erreur s'est produite.",
+                              });
+                            }
+                          }}
                           loading={loadingKey === `${cashout.id}:approve`}
                           disabled={!canWrite}
                         >

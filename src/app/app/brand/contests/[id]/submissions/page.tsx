@@ -15,6 +15,10 @@ import { SubmissionsModerationTable } from '@/components/brand/submissions-moder
 import { SubmissionsReviewView } from '@/components/brand/submissions-review-view';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Platform } from '@/lib/validators/platforms';
+import {
+  FocusModerationLauncher,
+  type FocusModerationSubmission,
+} from '@/components/brand/moderation/FocusModeration';
 
 const PAGE_SIZE = 20;
 const STATUS_VALUES = ['all', 'pending', 'approved', 'rejected'] as const;
@@ -94,6 +98,11 @@ export default async function BrandContestSubmissionsPage({
     pageSize: PAGE_SIZE,
   });
 
+  const focusParam = paramsData.focus;
+  const focusInitialOpen =
+    (typeof focusParam === 'string' && (focusParam === '1' || focusParam === 'true')) ||
+    (Array.isArray(focusParam) && focusParam.includes('1'));
+
   return (
     <main className="space-y-8">
       <TrackOnView
@@ -116,6 +125,13 @@ export default async function BrandContestSubmissionsPage({
           <p className="text-muted-foreground">
             {contest.title} • {total} soumission{total > 1 ? 's' : ''}
           </p>
+        </div>
+        <div className="flex items-center gap-2">
+          <FocusModerationLauncher
+            contestId={id}
+            submissions={submissions as FocusModerationSubmission[]}
+            initialOpen={focusInitialOpen}
+          />
         </div>
       </div>
 

@@ -8,6 +8,8 @@ import { z } from 'zod';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { getUserRole } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
+import { rateLimit } from '@/lib/rateLimit';
+import { assertCsrf } from '@/lib/csrf';
 
 const BodySchema = z.object({ force: z.boolean().optional() });
 
@@ -16,12 +18,35 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
+    // CSRF
+    try {
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
+    } catch {
+      return NextResponse.json({ ok: false, message: 'CSRF invalide' }, { status: 403 });
+    }
+
     const { id: contestId } = await context.params;
     const supabaseSSR = await getSupabaseSSR();
     const { data: { user } } = await supabaseSSR.auth.getUser();
     if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
     const role = await getUserRole(user.id);
     if (!role) return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
+
+    // Rate limit: 10 close / min par utilisateur+IP
+    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    const rlKey = `contests:close:${user.id}:${ip}`;
+    const allowed = await rateLimit({
+      key: rlKey,
+      route: 'contests:close',
+      windowMs: 60_000,
+      max: 10,
+    });
+    if (!allowed) {
+      return NextResponse.json(
+        { ok: false, message: 'Trop de tentatives de clôture, réessayez plus tard' },
+        { status: 429 }
+      );
+    }
 
     const admin = getSupabaseAdmin();
     const { data: contest, error: cErr } = await admin
@@ -32,7 +57,9 @@ export async function POST(
     if (cErr || !contest) return NextResponse.json({ ok: false, message: 'Contest not found' }, { status: 404 });
     const isOwner = contest.brand_id === user.id;
     const isAdmin = role === 'admin';
-    if (!isOwner && !isAdmin) return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
+    if (!isOwner && !isAdmin) {
+      return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
+    }
 
     const body = await req.json().catch(() => ({}));
     const parsed = BodySchema.safeParse(body);

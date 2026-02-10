@@ -21,9 +21,14 @@ export async function POST(
 ) {
   try {
     const { id } = await context.params;
+
+    // Vérification stricte: nécessite un utilisateur avec rôle "admin"
+    // (enforcée par requireAdminPermission -> requireAdminUser)
     const { user } = await requireAdminPermission('finance.write');
+
     await enforceNotReadOnly(req, user.id);
     await enforceAdminRateLimit(req, { route: 'admin:cashouts:review', max: 20, windowMs: 60_000 }, user.id);
+
     try {
       assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf'));
     } catch (csrfError) {
@@ -38,122 +43,115 @@ export async function POST(
     }
 
     const { decision, reason, reason_code } = parsed.data;
-
     const admin = getAdminClient();
 
-    // Vérifier que le cashout existe et est en attente
-    const { data: cashout, error: cashoutError } = await admin
+    // Charger l'état courant pour meilleures erreurs + audit
+    const { data: beforeCashout, error: loadError } = await admin
       .from('cashouts')
       .select('id, status, review_state, amount_cents, creator_id')
       .eq('id', id)
-      .single();
-
-    if (cashoutError || !cashout) {
-      throw createError('NOT_FOUND', 'Cashout not found', 404, cashoutError?.message);
-    }
-
-    if (cashout.status !== 'requested' && cashout.status !== 'failed') {
-      throw createError('CONFLICT', `Cashout cannot be reviewed from status: ${cashout.status}`, 409);
-    }
-
-    // Vérifier si l'admin a déjà approuvé/rejeté ce cashout
-    const { data: existingReview } = await admin
-      .from('cashout_reviews')
-      .select('id, decision')
-      .eq('cashout_id', id)
-      .eq('admin_id', user.id)
       .maybeSingle();
 
-    if (existingReview) {
-      throw createError('CONFLICT', 'Vous avez déjà donné votre avis sur ce cashout', 409);
+    if (loadError) {
+      throw createError('DATABASE_ERROR', 'Failed to load cashout', 500, loadError.message);
     }
 
-    // Enregistrer la review
-    const { error: reviewError } = await admin
-      .from('cashout_reviews')
-      .insert({
-        cashout_id: id,
-        admin_id: user.id,
-        decision,
-        reason,
-      });
-
-    if (reviewError) {
-      throw createError('DATABASE_ERROR', 'Failed to record review', 500, reviewError.message);
+    if (!beforeCashout) {
+      throw createError('NOT_FOUND', 'Cashout not found', 404);
     }
 
-    // Compter les reviews
-    const { data: reviews } = await admin
-      .from('cashout_reviews')
-      .select('admin_id, decision')
-      .eq('cashout_id', id);
+    if (beforeCashout.status === 'paid') {
+      throw createError('CONFLICT', 'Cashout already paid', 409);
+    }
+
+    // Appel RPC transactionnel: centralise la logique métier côté DB
+    const { error: rpcError } = await admin.rpc('admin_review_cashout', {
+      p_cashout_id: id,
+      p_actor_id: user.id,
+      p_decision: decision,
+      p_reason: reason,
+    });
+
+    if (rpcError) {
+      const message = (rpcError.message || '').toLowerCase();
+
+      if (message.includes('cashout not found')) {
+        throw createError('NOT_FOUND', 'Cashout not found', 404, rpcError.message);
+      }
+      if (message.includes('actor is not admin')) {
+        throw createError('FORBIDDEN', 'Accès admin requis', 403, rpcError.message);
+      }
+      if (message.includes('already') || message.includes('paid')) {
+        throw createError('CONFLICT', 'Cashout cannot be reviewed in its current state', 409, rpcError.message);
+      }
+
+      throw createError('DATABASE_ERROR', 'Failed to review cashout', 500, rpcError.message);
+    }
+
+    // Récupérer l'état après + les reviews pour la réponse et l'audit
+    const [{ data: afterCashout, error: afterError }, { data: reviews, error: reviewsError }] =
+      await Promise.all([
+        admin
+          .from('cashouts')
+          .select('id, status, review_state, amount_cents')
+          .eq('id', id)
+          .maybeSingle(),
+        admin
+          .from('cashout_reviews')
+          .select('admin_id, decision')
+          .eq('cashout_id', id),
+      ]);
+
+    if (afterError) {
+      throw createError('DATABASE_ERROR', 'Failed to load cashout after review', 500, afterError.message);
+    }
+    if (reviewsError) {
+      throw createError('DATABASE_ERROR', 'Failed to load cashout reviews', 500, reviewsError.message);
+    }
 
     const approveCount = (reviews || []).filter((r) => r.decision === 'approve').length;
     const rejectCount = (reviews || []).filter((r) => r.decision === 'reject').length;
     const totalReviews = (reviews || []).length;
 
-    // Si 2 approvals distincts → approved
-    // Si 1 reject → rejected (mais on peut continuer si pas encore 2 approvals)
-    let newReviewState = 'pending';
-    if (approveCount >= 2) {
-      newReviewState = 'approved';
-      // Approuver le cashout
-      await admin.rpc('admin_approve_cashout', {
-        p_cashout_id: id,
-        p_actor_id: user.id,
-        p_reason: reason,
-      });
-    } else if (rejectCount >= 1 && totalReviews >= 2) {
-      newReviewState = 'rejected';
-      // Rejeter le cashout
-      const { error: rejectError } = await admin
-        .from('cashouts')
-        .update({
-          status: 'failed',
-          review_state: 'rejected',
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', id);
+    const reviewState =
+      afterCashout?.review_state ?? beforeCashout.review_state ?? 'pending';
 
-      if (rejectError) {
-        throw createError('DATABASE_ERROR', 'Failed to reject cashout', 500, rejectError.message);
-      }
-    }
-
-    // Mettre à jour review_state si nécessaire
-    if (newReviewState !== 'pending') {
-      await admin
-        .from('cashouts')
-        .update({ review_state: newReviewState })
-        .eq('id', id);
-    }
-
-    // Audit
+    // Audit complet de l'action
     await auditAdminAction({
       actorId: user.id,
       action: `cashout_review_${decision}`,
       entity: 'cashouts',
       entityId: id,
-      before: { review_state: cashout.review_state || 'pending' },
-      after: {
-        review_state: newReviewState,
-        approve_count: approveCount,
-        reject_count: rejectCount,
-        total_reviews: totalReviews,
-      },
+      before: beforeCashout
+        ? {
+            status: beforeCashout.status,
+            review_state: beforeCashout.review_state ?? 'pending',
+          }
+        : null,
+      after: afterCashout
+        ? {
+            status: afterCashout.status,
+            review_state: reviewState,
+          }
+        : null,
       reason,
       reasonCode: reason_code,
       ip: req.headers.get('x-forwarded-for') ?? undefined,
       userAgent: req.headers.get('user-agent') ?? undefined,
-      metadata: breakGlass.required ? { break_glass: breakGlass } : undefined,
+      metadata: {
+        approve_count: approveCount,
+        reject_count: rejectCount,
+        total_reviews: totalReviews,
+        ...(breakGlass.required ? { break_glass: breakGlass } : {}),
+      },
     });
 
     return NextResponse.json({
       ok: true,
-      review_state: newReviewState,
+      review_state: reviewState,
       approve_count: approveCount,
       reject_count: rejectCount,
-      needs_more_approvals: newReviewState === 'pending' && approveCount < 2,
+      total_reviews: totalReviews,
     });
   } catch (error) {
     return formatErrorResponse(error);

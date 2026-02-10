@@ -1,15 +1,14 @@
 /*
-Page Wallet - récap gains + retraits, empty state si aucun gain.
+Page Wallet - Ultimate Creator Wallet (Revolut/N26 style).
+Bento: Carte hero + Graphique + Liste transactions.
 */
 import { getSupabaseSSR } from "@/lib/supabase/ssr";
 import { getSession } from "@/lib/auth";
-import { WalletBalance, type WalletData } from "@/components/wallet/wallet-balance";
 import { EmptyState } from "@/components/creator/empty-state";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/creator/skeletons";
 import { TrackOnView } from "@/components/analytics/track-once";
-import { CreatorCoach } from "@/components/creator/creator-coach";
-import { Trophy } from "lucide-react";
+import { UltimateCreatorWallet } from "@/components/wallet/ultimate-creator-wallet";
+import type { WalletData } from "@/components/wallet/wallet-balance";
 
 async function getWalletData(userId: string): Promise<{ wallet?: WalletData; error?: string }> {
   try {
@@ -57,38 +56,23 @@ async function getWalletData(userId: string): Promise<{ wallet?: WalletData; err
       (sum, w) => sum + w.payout_cents,
       0,
     );
-    const withdrawn_cents = (cashouts || [])
-      .filter((c) => c.status === "paid")
-      .reduce((sum, c) => sum + c.amount_cents, 0);
-
-    const delays: number[] = (cashouts || [])
-      .filter((c) => c.processed_at)
-      .map(
-        (c) =>
-          (new Date(c.processed_at as string).getTime() -
-            new Date(c.requested_at).getTime()) /
-          (1000 * 60 * 60 * 24),
-      );
-
-    const average_processing_days = delays.length
-      ? Math.round(delays.reduce((a, b) => a + b, 0) / delays.length)
-      : null;
 
     return {
       wallet: {
         balance_cents,
         total_earnings_cents,
-        withdrawn_cents,
+        withdrawn_cents: (cashouts || [])
+          .filter((c) => c.status === "paid")
+          .reduce((sum, c) => sum + c.amount_cents, 0),
         pending_cents: unpaidWinnings,
         currency: "EUR",
-        average_processing_days,
+        average_processing_days: null,
         winnings: (winnings || []).map((w) => {
           const contestRel = w.contest as unknown;
           const contestTitle =
             (Array.isArray(contestRel)
               ? (contestRel[0] as { title?: string } | undefined)?.title
               : (contestRel as { title?: string } | null | undefined)?.title) || "Concours inconnu";
-
           return {
             id: w.id,
             contest_id: w.contest_id,
@@ -122,33 +106,45 @@ async function getWalletData(userId: string): Promise<{ wallet?: WalletData; err
 function WalletSkeleton() {
   return (
     <div className="space-y-6">
-      <Card>
-        <CardContent className="py-8 space-y-3">
-          <Skeleton className="h-6 w-40" />
-          <Skeleton className="h-10 w-32" />
-        </CardContent>
-      </Card>
-      <Card>
-        <CardContent className="py-8 space-y-3">
-          <Skeleton className="h-5 w-32" />
-          {[...Array(3)].map((_, i) => (
-            <Skeleton key={i} className="h-14 w-full" />
-          ))}
-        </CardContent>
-      </Card>
+      <div className="h-[200px] rounded-3xl bg-zinc-800/50" />
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2" />
+        <div className="h-[220px] rounded-2xl bg-zinc-800/50" />
+      </div>
+      <div className="h-[240px] rounded-2xl bg-zinc-800/50" />
     </div>
   );
+}
+
+async function getStripeConnectStatus(userId: string): Promise<boolean> {
+  try {
+    const supabase = await getSupabaseSSR();
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("stripe_account_id, stripe_details_submitted")
+      .eq("id", userId)
+      .single();
+    if (error) return false;
+    const row = data as { stripe_account_id?: string | null; stripe_details_submitted?: boolean } | null;
+    return Boolean(row?.stripe_account_id && row?.stripe_details_submitted);
+  } catch {
+    return false;
+  }
 }
 
 export default async function WalletPage() {
   const { user } = await getSession();
   if (!user) return null;
 
-  const { wallet, error } = await getWalletData(user.id);
+  const [walletResult, stripeConnected] = await Promise.all([
+    getWalletData(user.id),
+    getStripeConnectStatus(user.id),
+  ]);
+  const { wallet, error } = walletResult;
 
   if (error) {
     return (
-      <main className="mx-auto max-w-6xl px-4 py-8 space-y-6">
+      <main className="min-h-screen bg-zinc-950 px-4 py-8 text-white">
         <WalletSkeleton />
         <EmptyState
           title="Erreur de chargement"
@@ -161,14 +157,16 @@ export default async function WalletPage() {
 
   if (!wallet) {
     return (
-      <main className="mx-auto max-w-6xl px-4 py-8">
+      <main className="min-h-screen bg-zinc-950 px-4 py-8">
         <WalletSkeleton />
       </main>
     );
   }
 
+  const hasAnyData = wallet.winnings.length > 0 || wallet.cashouts.length > 0;
+
   return (
-    <main className="mx-auto max-w-6xl px-4 py-8 space-y-6 animate-fadeUpSoft">
+    <main className="min-h-screen bg-zinc-950 px-4 py-8 text-white">
       <TrackOnView
         event="view_wallet"
         payload={{
@@ -178,36 +176,26 @@ export default async function WalletPage() {
           pending_cents: wallet.pending_cents,
         }}
       />
-      <div>
-        <h1 className="display-2 mb-2">Mon portefeuille</h1>
-        <p className="text-muted-foreground">Gère tes gains et demande des retraits.</p>
+      <div className="mx-auto max-w-6xl">
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold tracking-tight text-white md:text-3xl">
+            Mon portefeuille
+          </h1>
+          <p className="mt-1 text-sm text-white/60">
+            Gère tes gains et demande des retraits.
+          </p>
+        </div>
+
+        {!hasAnyData ? (
+          <EmptyState
+            title="Aucun gain pour l'instant"
+            description="Participe à des concours pour débloquer des récompenses."
+            action={{ label: "Découvrir les concours", href: "/app/creator/contests" }}
+          />
+        ) : (
+          <UltimateCreatorWallet wallet={wallet} stripeConnected={stripeConnected} />
+        )}
       </div>
-
-      <CreatorCoach
-        accent="Confiance & gains"
-        title={
-          wallet.total_earnings_cents > 0
-            ? "Tu as déjà débloqué des gains sur ClipRace"
-            : "Ton prochain objectif : débloquer ton premier gain"
-        }
-        description={
-          wallet.total_earnings_cents > 0
-            ? "Suis tes gains, planifie tes retraits et garde un œil sur l’historique de tes cashouts."
-            : "Participe à un concours qui te ressemble, décroche ton premier cashprize puis demande un retrait ici."
-        }
-        icon={<Trophy className="h-4 w-4" />}
-      />
-
-      {!wallet.winnings.length && !wallet.cashouts.length ? (
-        <EmptyState
-          title="Aucun gain pour l'instant"
-          description="Participe à des concours pour débloquer des récompenses."
-          action={{ label: "Découvrir les concours", href: "/app/creator/contests" }}
-        />
-      ) : (
-        <WalletBalance wallet={wallet} />
-      )}
     </main>
   );
 }
-

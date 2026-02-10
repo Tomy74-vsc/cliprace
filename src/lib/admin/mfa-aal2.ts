@@ -11,6 +11,26 @@ export type AdminMfaState = {
   hasTotp: boolean;
 };
 
+type AnyFactor = {
+  id?: string;
+  factor_type?: string;
+  factorType?: string;
+};
+
+function extractTotpFactors(raw: unknown): AnyFactor[] {
+  const factors = raw as { totp?: unknown[]; all?: unknown[] } | null;
+  const totp = Array.isArray(factors?.totp) ? (factors?.totp as AnyFactor[]) : [];
+  const all = Array.isArray(factors?.all) ? (factors?.all as AnyFactor[]) : [];
+  const totpFromAll = all.filter((f) => (f?.factor_type ?? f?.factorType) === 'totp');
+  const byId = new Map<string, AnyFactor>();
+  for (const f of [...totp, ...totpFromAll]) {
+    const id = String(f?.id || '');
+    if (!id) continue;
+    byId.set(id, f);
+  }
+  return [...byId.values()];
+}
+
 export async function getAdminMfaState(): Promise<AdminMfaState> {
   const supabase = await getSupabaseSSR();
 
@@ -24,7 +44,9 @@ export async function getAdminMfaState(): Promise<AdminMfaState> {
     throw createError('UNAUTHORIZED', 'Authentification requise', 401, factorsError.message);
   }
 
-  const hasTotp = Boolean((factors?.totp ?? []).length > 0);
+  // Supabase peut renvoyer des facteurs "TOTP" via `all` selon l'état (en cours, etc.).
+  // On regarde donc `totp` ET `all` pour éviter une boucle setup→enroll→erreur "already exists".
+  const hasTotp = extractTotpFactors(factors).length > 0;
   return {
     currentLevel: aal.currentLevel ?? 'unknown',
     nextLevel: aal.nextLevel ?? 'unknown',

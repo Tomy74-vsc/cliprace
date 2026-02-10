@@ -1,4 +1,4 @@
-﻿/*
+/*
 Page: Brand contest detail
 Objectifs: statistiques, UGC (submissions), leaderboard, actions (modifier, dupliquer, promouvoir)
 */
@@ -22,6 +22,7 @@ import {
   Share2,
   MessageSquare,
   Download,
+  PlayCircle,
 } from 'lucide-react';
 import { TrackOnView } from '@/components/analytics/track-once';
 import { PlatformBadge } from '@/components/creator/platform-badge';
@@ -57,7 +58,10 @@ export default async function BrandContestDetailPage({
   const isDraft = contest.status === 'draft';
   const isActive = contest.status === 'active';
   const isEnded = contest.status === 'ended' || contest.status === 'archived';
-  const cpv = metrics.total_views > 0 ? Math.round((contest.prize_pool_cents / metrics.total_views) * 1000) : 0;
+  const isProductContest = contest.contest_type === 'product';
+  const cpv = !isProductContest && metrics.total_views > 0
+    ? Math.round((contest.prize_pool_cents / metrics.total_views) * 1000)
+    : 0;
 
   return (
     <main className="space-y-8">
@@ -122,7 +126,7 @@ export default async function BrandContestDetailPage({
           <StatCard
             label="CPV"
             value={cpv > 0 ? formatCurrency(cpv, contest.currency) : 'â€”'}
-            hint="CoÃ»t pour 1000 vues"
+            hint={isProductContest ? 'Non applicable pour les concours produit' : 'CoÃ»t pour 1000 vues'}
             icon={<DollarSign className="h-4 w-4" />}
           />
           <StatCard
@@ -161,12 +165,20 @@ export default async function BrandContestDetailPage({
               {submissions.pending === 0 && 'Toutes les soumissions sont modÃ©rÃ©es'}
             </p>
           </div>
-          <Button asChild>
-            <Link href={`/app/brand/contests/${id}/submissions`}>
-              <FileText className="h-4 w-4 mr-2" />
-              Voir toutes les soumissions
-            </Link>
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button asChild variant="secondary">
+              <Link href={`/app/brand/contests/${id}/submissions`}>
+                <FileText className="h-4 w-4 mr-2" />
+                Voir toutes les soumissions
+              </Link>
+            </Button>
+            <Button asChild>
+              <Link href={`/app/brand/contests/${id}/submissions?status=pending&focus=1`}>
+                <PlayCircle className="h-4 w-4 mr-2" />
+                Lancer le Focus Mode
+              </Link>
+            </Button>
+          </div>
         </div>
 
         {submissions.recent.length === 0 ? (
@@ -377,7 +389,7 @@ async function fetchContestData(contestId: string, userId: string) {
   const { data: contest, error: contestError } = await supabase
     .from('contests')
     .select(
-      'id, title, brief_md, cover_url, status, prize_pool_cents, currency, start_at, end_at, networks, brand_id'
+      'id, title, brief_md, cover_url, status, prize_pool_cents, currency, start_at, end_at, networks, brand_id, contest_type, product_details, platform_fee'
     )
     .eq('id', contestId)
     .eq('brand_id', userId)

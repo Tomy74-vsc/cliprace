@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const admin = getSupabaseAdmin();
     const { data: contest, error: cErr } = await admin
       .from('contests')
-      .select('id, brand_id, title, prize_pool_cents, currency, status')
+      .select('id, brand_id, title, prize_pool_cents, currency, status, contest_type, platform_fee')
       .eq('id', contest_id)
       .single();
     if (cErr || !contest) return NextResponse.json({ ok: false, message: 'Contest not found' }, { status: 404 });
@@ -62,10 +62,23 @@ export async function POST(req: NextRequest) {
     }
 
     const currency = contest.currency || 'EUR';
-    const prize = contest.prize_pool_cents ?? 0;
-    if (prize <= 0) return NextResponse.json({ ok: false, message: 'Prize pool must be > 0' }, { status: 409 });
-    // Commission 15%
-    const amount_cents = Math.round(prize * 1.15);
+    const isProductContest = contest.contest_type === 'product';
+
+    // Montant ŕ payer :
+    // - Concours cash : prize_pool_cents (montant cash)
+    // - Concours produit : platform_fee (forfait plateforme)
+    const baseAmountCents = isProductContest
+      ? contest.platform_fee ?? 0
+      : contest.prize_pool_cents ?? 0;
+
+    if (baseAmountCents <= 0) {
+      return NextResponse.json(
+        { ok: false, message: 'Montant ŕ payer invalide pour ce concours' },
+        { status: 409 }
+      );
+    }
+
+    const amount_cents = baseAmountCents;
 
     // Create Checkout Session
     const stripe = getStripe();
@@ -88,6 +101,7 @@ export async function POST(req: NextRequest) {
         contest_id,
         brand_id: contest.brand_id,
         actor_user_id: user.id,
+        contest_type: contest.contest_type,
       },
     });
 
@@ -99,7 +113,9 @@ export async function POST(req: NextRequest) {
       amount_cents,
       currency,
       status: 'requires_payment',
-      metadata: { commission_rate: 0.15 },
+      metadata: {
+        model: isProductContest ? 'product' : 'cash',
+      },
     });
     if (insErr) return NextResponse.json({ ok: false, message: 'Insert payment failed', error: insErr.message }, { status: 500 });
 

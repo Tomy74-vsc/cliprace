@@ -13,6 +13,30 @@ type TotpEnrollData = {
   uri?: string;
 };
 
+type AnyFactor = {
+  id?: string;
+  factor_type?: string;
+  factorType?: string;
+  friendly_name?: string;
+  friendlyName?: string;
+  created_at?: string;
+  createdAt?: string;
+};
+
+function extractTotpFactors(raw: unknown): AnyFactor[] {
+  const factors = raw as { totp?: unknown[]; all?: unknown[] } | null;
+  const totp = Array.isArray(factors?.totp) ? (factors?.totp as AnyFactor[]) : [];
+  const all = Array.isArray(factors?.all) ? (factors?.all as AnyFactor[]) : [];
+  const totpFromAll = all.filter((f) => (f?.factor_type ?? f?.factorType) === 'totp');
+  const byId = new Map<string, AnyFactor>();
+  for (const f of [...totp, ...totpFromAll]) {
+    const id = String(f?.id || '');
+    if (!id) continue;
+    byId.set(id, f);
+  }
+  return [...byId.values()];
+}
+
 function isSvgMarkup(value: string) {
   return value.trim().startsWith('<svg');
 }
@@ -21,6 +45,9 @@ function isDataUrl(value: string) {
   return value.trim().startsWith('data:');
 }
 
+const STORAGE_FACTOR_ID = 'cliprace_admin_totp_factor_id';
+const FRIENDLY_NAME = 'ClipRace Admin';
+
 export default function AdminMfaSetupPage() {
   const router = useRouter();
 
@@ -28,6 +55,7 @@ export default function AdminMfaSetupPage() {
   const [enrolling, setEnrolling] = useState(false);
   const [error, setError] = useState<string>('');
   const [totp, setTotp] = useState<TotpEnrollData | null>(null);
+  const [factorId, setFactorId] = useState<string>('');
 
   const qr = totp?.qr_code ?? '';
   const canContinue = Boolean(totp?.qr_code);
@@ -74,24 +102,50 @@ export default function AdminMfaSetupPage() {
         const { data: factors, error: factorsError } = await supabase.auth.mfa.listFactors();
         if (factorsError) throw factorsError;
 
-        const hasTotp = Boolean((factors?.totp ?? []).length > 0);
-        if (hasTotp) {
+        const totpFactors = extractTotpFactors(factors);
+        if (totpFactors.length > 0) {
           router.replace('/app/admin/mfa/verify');
           return;
         }
 
         setEnrolling(true);
-        const { data: enrollData, error: enrollError } = await supabase.auth.mfa.enroll({ factorType: 'totp' });
+        const { data: enrollData, error: enrollError } = await supabase.auth.mfa.enroll({
+          factorType: 'totp',
+          friendlyName: FRIENDLY_NAME,
+        });
         if (enrollError) throw enrollError;
 
-        const nextTotp = (enrollData as unknown as { totp?: TotpEnrollData } | null)?.totp ?? null;
+        const anyEnroll = enrollData as unknown as { id?: unknown; factorId?: unknown; totp?: TotpEnrollData } | null;
+        const enrolledFactorId = String((anyEnroll?.id ?? anyEnroll?.factorId ?? '') || '');
+        const nextTotp = anyEnroll?.totp ?? null;
         if (!nextTotp?.qr_code) {
           throw new Error('Impossible de récupérer le QR code TOTP.');
         }
 
-        if (!cancelled) setTotp(nextTotp);
+        if (!cancelled) {
+          setTotp(nextTotp);
+          setFactorId(enrolledFactorId);
+          if (enrolledFactorId) {
+            try {
+              sessionStorage.setItem(STORAGE_FACTOR_ID, enrolledFactorId);
+            } catch {
+              // ignore storage failures
+            }
+          }
+        }
       } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : 'Erreur inconnue');
+        const message = e instanceof Error ? e.message : 'Erreur inconnue';
+        // If a factor exists already (often after a refresh), send user to verify step.
+        const lower = String(message || '').toLowerCase();
+        if (
+          lower.includes('already exists') ||
+          (lower.includes('friendly name') && lower.includes('exists')) ||
+          (lower.includes('factor') && lower.includes('exists'))
+        ) {
+          router.replace('/app/admin/mfa/verify');
+          return;
+        }
+        if (!cancelled) setError(message);
       } finally {
         if (!cancelled) {
           setEnrolling(false);
@@ -152,7 +206,13 @@ export default function AdminMfaSetupPage() {
           <Button variant="secondary" onClick={() => router.replace('/auth/login')}>
             Changer de compte
           </Button>
-          <Button onClick={() => router.replace('/app/admin/mfa/verify')} disabled={!canContinue}>
+          <Button
+            onClick={() => {
+              const qs = factorId ? `?factorId=${encodeURIComponent(factorId)}` : '';
+              router.replace(`/app/admin/mfa/verify${qs}`);
+            }}
+            disabled={!canContinue}
+          >
             Continuer
           </Button>
         </CardFooter>

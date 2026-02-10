@@ -1,5 +1,10 @@
-﻿// Source: Validation Zod pour concours
+// Source: Validation Zod pour concours
 import { z } from 'zod';
+import {
+  contestTypeEnum,
+  productDetailsSchema,
+  shippingInfoSchema,
+} from './contest-wizard';
 
 const prizeRangeSchema = z
   .object({
@@ -54,7 +59,17 @@ const contestCreateBaseSchema = z.object({
   min_views: z.number().int().min(0).optional(),
   country: z.string().length(2).optional(), // ISO 3166-1 alpha-2
   category: z.string().max(50).optional(),
+
+  // Nouveau modèle cash vs produit
+  contest_type: contestTypeEnum.default('cash'),
+  product_details: productDetailsSchema.optional(),
+  shipping_info: shippingInfoSchema.optional(),
+
+  // Pour compatibilité, on garde total_prize_pool_cents comme champ principal de pool cash
   total_prize_pool_cents: z.number().int().min(0),
+  // Frais plateforme (en cents) pour les concours produit
+  platform_fee: z.number().int().min(0).default(0),
+
   prizes: z.array(prizeRangeSchema).max(30).optional(),
   assets: z.array(contestAssetSchema).max(10).optional(),
   terms_markdown: z.string().max(20000).optional(),
@@ -72,14 +87,54 @@ export const contestCreateSchema = contestCreateBaseSchema
     (data) => new Date(data.end_at) > new Date(data.start_at),
     { message: 'La date de fin doit Ãªtre aprÃ¨s la date de dÃ©but', path: ['end_at'] }
   )
-  .refine(
-    (data) => {
-      if (!data.prizes) return true;
+  .superRefine((data, ctx) => {
+    // RÃ¨gles spÃ©cifiques par type de concours
+    if (data.contest_type === 'cash') {
+      if (data.total_prize_pool_cents < 100 * 100) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Le montant du lot cash doit Ãªtre au moins de 100€',
+          path: ['total_prize_pool_cents'],
+        });
+      }
+    }
+
+    if (data.contest_type === 'product') {
+      if (!data.product_details) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Les dÃ©tails du produit sont requis pour un concours produit',
+          path: ['product_details'],
+        });
+      }
+      if (!data.shipping_info) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Les informations de livraison sont requises pour un concours produit',
+          path: ['shipping_info'],
+        });
+      }
+      if ((data.platform_fee ?? 0) <= 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Les frais plateforme doivent Ãªtre supÃ©rieurs Ã  0 pour un concours produit',
+          path: ['platform_fee'],
+        });
+      }
+    }
+
+    // CohÃ©rence prize pool / prizes pour les concours cash
+    if (data.contest_type === 'cash' && data.prizes && data.prizes.length > 0) {
       const total = data.prizes.reduce((sum, p) => sum + (p.amount_cents ?? 0), 0);
-      return total <= data.total_prize_pool_cents;
-    },
-    { message: 'La somme des prix ne peut pas dÃ©passer le total du prize pool', path: ['prizes'] }
-  );
+      if (total > data.total_prize_pool_cents) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'La somme des prix ne peut pas dÃ©passer le total du prize pool',
+          path: ['prizes'],
+        });
+      }
+    }
+  });
 
 // SchÃ©ma de mise Ã  jour : tous les champs sont optionnels
 export const contestUpdateSchema = contestCreateBaseSchema.partial();

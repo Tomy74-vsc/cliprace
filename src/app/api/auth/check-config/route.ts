@@ -69,7 +69,7 @@ export async function GET(_req: NextRequest) {
 
     // Check redirect URL format
     const siteUrl = env.NEXT_PUBLIC_SITE_URL || env.APP_URL || 'http://localhost:3000';
-    const redirectUrl = `${siteUrl}/auth/verify?email=test@example.com`;
+    const redirectUrl = `${siteUrl}/auth/verify`;
     
     checks.redirectUrl = {
       status: 'ok',

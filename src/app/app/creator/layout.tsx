@@ -6,6 +6,8 @@ import { User } from "lucide-react";
 import { getSession, getUserRole } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { CreatorNav, type CreatorNavItem } from "./layout_nav";
+import { CreatorBottomNav } from "./creator-bottom-nav";
+import { CreatorPageTransition } from "./creator-page-transition";
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { Banner } from "@/components/creator/banner";
 import { AdminImpersonationBanner } from "@/components/admin/admin-impersonation-banner";
@@ -90,21 +92,21 @@ export default async function CreatorLayout({ children }: { children: ReactNode 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <div className="flex min-h-screen">
-        <aside className="hidden lg:flex w-64 flex-col border-r border-border bg-card/60 backdrop-blur-xl px-4 py-6">
-          <Link href="/app/creator/dashboard" className="flex items-center gap-3 px-2">
-            <div className="h-10 w-10 rounded-2xl bg-gradient-to-br from-primary to-accent shadow-card transition-transform duration-200 hover:-translate-y-0.5" />
-            <span className="text-xl font-extrabold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+        <aside className="hidden lg:flex w-56 flex-col border-r border-border/50 bg-transparent px-3 py-5">
+          <Link href="/app/creator/dashboard" className="flex items-center gap-3 px-2 py-1 rounded-xl hover:bg-muted/30 transition-colors duration-200">
+            <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-primary to-accent shadow-card transition-transform duration-200 hover:-translate-y-0.5" />
+            <span className="text-lg font-extrabold tracking-tight bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
               ClipRace
             </span>
           </Link>
-          <div className="mt-6 flex-1 space-y-1">
+          <div className="mt-8 flex-1 min-h-0">
             <CreatorNav nav={nav} />
           </div>
-          <div className="mt-auto text-xs text-muted-foreground px-2 space-y-2">
-            <Link href="/app/creator/faq" className="hover:text-primary transition-colors">
+          <div className="mt-auto pt-4 border-t border-border/40 space-y-2 px-2">
+            <Link href="/app/creator/faq" className="block text-xs text-muted-foreground hover:text-primary transition-colors py-1 rounded-lg">
               Support / FAQ
             </Link>
-            <p className="text-muted-foreground/70">v1.0 créateur</p>
+            <p className="text-[11px] text-muted-foreground/70">v1.0 créateur</p>
           </div>
         </aside>
 
@@ -128,7 +130,7 @@ export default async function CreatorLayout({ children }: { children: ReactNode 
             </div>
           </header>
 
-          <main className="flex-1 w-full max-w-6xl mx-auto px-4 lg:px-8 pt-6 pb-[calc(6rem+env(safe-area-inset-bottom))] lg:pb-6 space-y-4">
+          <main className="flex-1 w-full max-w-6xl mx-auto px-4 lg:px-8 pt-6 pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-6 space-y-4 min-h-0">
             {profileIncomplete && (
               <Banner
                 variant="warning"
@@ -141,12 +143,10 @@ export default async function CreatorLayout({ children }: { children: ReactNode 
                 }
               />
             )}
-            {children}
+            <CreatorPageTransition>{children}</CreatorPageTransition>
           </main>
 
-          <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-card/95 backdrop-blur-xl pb-[env(safe-area-inset-bottom)]">
-            <CreatorNav nav={nav} variant="bottom" />
-          </nav>
+          <CreatorBottomNav nav={nav} />
         </div>
       </div>
     </div>
