@@ -1,4 +1,4 @@
-﻿/*
+/*
 Source: GET/POST /api/messages/threads
 Tables: messages_threads, audit_logs
 Rules:
@@ -12,6 +12,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { getUserRole } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
 import { assertCsrf } from '@/lib/csrf';
+import { buildRateLimitKey } from '@/lib/safe-ip';
 
 export async function GET() {
   const supabaseSSR = await getSupabaseSSR();
@@ -35,11 +36,16 @@ const CreateSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate limit: 10 requests/min per user
-    const ip = req.headers.get('x-forwarded-for') || (req as UnsafeAny).ip || 'unknown';
-    const rlKey = `messages:threads:create:${ip}`;
+    const supabaseSSR = await getSupabaseSSR();
+    const { data: { user } } = await supabaseSSR.auth.getUser();
+    if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
+    const role = await getUserRole(user.id);
+    if (!role || role === 'admin') return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
+
+    // Rate limit: keyed by userId + ip + ua to prevent spoofing (P0/P1 security)
+    const rlKey = buildRateLimitKey('messages:threads:create', user.id, req);
     if (!(await rateLimit({ key: rlKey, route: 'messages:threads:create', windowMs: 60 * 1000, max: 10 }))) {
-      return NextResponse.json({ ok: false, message: 'Trop de requÃªtes, rÃ©essayez plus tard.' }, { status: 429 });
+      return NextResponse.json({ ok: false, message: 'Trop de requêtes, réessayez plus tard.' }, { status: 429 });
     }
 
     // CSRF check (double submit)
@@ -48,11 +54,6 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json({ ok: false, message: 'CSRF invalide' }, { status: 403 });
     }
-    const supabaseSSR = await getSupabaseSSR();
-    const { data: { user } } = await supabaseSSR.auth.getUser();
-    if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
-    const role = await getUserRole(user.id);
-    if (!role || role === 'admin') return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
 
     const body = await req.json();
     const parsed = CreateSchema.safeParse(body);
@@ -65,13 +66,37 @@ export async function POST(req: NextRequest) {
     const brand_id = role === 'brand' ? user.id : participant_id;
     const creator_id = role === 'creator' ? user.id : participant_id;
 
-    // Check contest exists
+    // ── Authz: verify contest exists AND brand owns the contest ──
     const { data: contest, error: cErr } = await admin
       .from('contests')
-      .select('id')
+      .select('id, brand_id')
       .eq('id', contest_id)
       .single();
-    if (cErr || !contest) return NextResponse.json({ ok: false, message: 'Contest not found' }, { status: 404 });
+    if (cErr || !contest) {
+      return NextResponse.json({ ok: false, message: 'Contest not found' }, { status: 404 });
+    }
+    if (contest.brand_id !== brand_id) {
+      return NextResponse.json(
+        { ok: false, message: 'La marque ne possède pas ce concours.' },
+        { status: 403 }
+      );
+    }
+
+    // ── Authz: verify creator is related to the contest (has a submission or participation) ──
+    const { count: creatorSubmissions, error: subErr } = await admin
+      .from('submissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('contest_id', contest_id)
+      .eq('creator_id', creator_id);
+    if (subErr) {
+      return NextResponse.json({ ok: false, message: 'Erreur vérification créateur' }, { status: 500 });
+    }
+    if (!creatorSubmissions || creatorSubmissions === 0) {
+      return NextResponse.json(
+        { ok: false, message: 'Le créateur n\'a pas participé à ce concours.' },
+        { status: 403 }
+      );
+    }
 
     // Upsert-like: try insert; if conflict on unique (contest_id,brand_id,creator_id) return existing
     const { data: inserted, error: insErr } = await admin

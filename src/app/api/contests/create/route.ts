@@ -10,6 +10,7 @@ import { rateLimit } from '@/lib/rateLimit';
 import { assertCsrf } from '@/lib/csrf';
 import { contestCreateSchema, type ContestCreateInput } from '@/lib/validators/contests';
 import { createError, type AppError } from '@/lib/errors';
+import { getClientIp, buildRateLimitKey } from '@/lib/safe-ip';
 
 type AllowedPlatform = 'tiktok' | 'instagram' | 'youtube';
 type NormalizedPrize = {
@@ -37,8 +38,7 @@ export async function POST(req: NextRequest) {
 
     // Rate limit: 5 créations / 5 min par utilisateur (augmenté pour permettre l'auto-save des brouillons)
     // Note: Une fois le brouillon créé, les mises à jour utilisent /update qui n'a pas de rate limit strict
-    const ip = req.headers.get('x-forwarded-for') || 'unknown';
-    const rlKey = `contests:create:${user.id}:${ip}`;
+    const rlKey = buildRateLimitKey('contests:create', user.id, req);
     if (!(await rateLimit({ key: rlKey, route: 'contests:create', windowMs: 5 * 60 * 1000, max: 5 }))) {
       throw createError('RATE_LIMIT', 'Trop de tentatives de création, réessayez plus tard', 429);
     }
@@ -152,7 +152,7 @@ export async function POST(req: NextRequest) {
       slug,
     };
 
-    const ipHeader = req.headers.get('x-forwarded-for') ?? undefined;
+    const ipHeader = getClientIp(req);
     const ua = req.headers.get('user-agent') ?? undefined;
     const { error: auditError } = await admin.from('audit_logs').insert({
       actor_id: user.id,

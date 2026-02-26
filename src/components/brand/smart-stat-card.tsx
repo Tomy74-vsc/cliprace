@@ -1,18 +1,66 @@
 'use client';
 
-import { AreaChart, Area, ResponsiveContainer } from 'recharts';
+import type { ReactNode } from 'react';
+import {
+  Activity,
+  Clock3,
+  Eye,
+  Wallet,
+  type LucideIcon,
+} from 'lucide-react';
+import {
+  Line,
+  LineChart,
+  ResponsiveContainer,
+} from 'recharts';
 import { cn } from '@/lib/utils';
 
 export interface SmartStatCardProps {
   title: string;
-  value: string | number;
-  /** e.g. "+15%" or "-8%" — optional */
+  value: ReactNode;
   trend?: string;
-  /** 'up' | 'down' | 'neutral' for badge color */
   trendDirection?: 'up' | 'down' | 'neutral';
-  /** Sparkline data: array of { value: number } (or any with numeric value) */
   sparklineData?: Array<{ value: number; [k: string]: unknown }>;
   className?: string;
+  valueClassName?: string;
+}
+
+type VisualConfig = {
+  icon: LucideIcon;
+  iconClassName: string;
+};
+
+function getVisualConfig(title: string): VisualConfig {
+  const normalized = title
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+
+  if (normalized.includes('budget') || normalized.includes('cout') || normalized.includes('cpv')) {
+    return {
+      icon: Wallet,
+      iconClassName: 'bg-emerald-500/10 text-emerald-500 border border-current/10',
+    };
+  }
+
+  if (normalized.includes('attente') || normalized.includes('video')) {
+    return {
+      icon: Clock3,
+      iconClassName: 'bg-amber-500/10 text-amber-500 border border-current/10',
+    };
+  }
+
+  if (normalized.includes('vue')) {
+    return {
+      icon: Eye,
+      iconClassName: 'bg-blue-500/10 text-blue-500 border border-current/10',
+    };
+  }
+
+  return {
+    icon: Activity,
+    iconClassName: 'bg-violet-500/10 text-violet-500 border border-current/10',
+  };
 }
 
 export function SmartStatCard({
@@ -22,62 +70,67 @@ export function SmartStatCard({
   trendDirection = 'neutral',
   sparklineData = [],
   className,
+  valueClassName,
 }: SmartStatCardProps) {
+  const visual = getVisualConfig(title);
+  const Icon = visual.icon;
+
   const trendClass = {
-    up: 'text-emerald-600 bg-emerald-500/10',
-    down: 'text-red-600 bg-red-500/10',
-    neutral: 'text-muted-foreground bg-muted/50',
+    up: 'bg-emerald-500/15 text-emerald-500 border border-emerald-500/20',
+    down: 'bg-rose-500/15 text-rose-400 border border-rose-500/20',
+    neutral: 'bg-zinc-500/15 text-zinc-300 border border-zinc-500/20',
   }[trendDirection];
+
+  const sparklineColor = trendDirection === 'down' ? '#f43f5e' : '#10b981';
 
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-xl border border-border bg-card p-5 shadow-sm transition-shadow hover:shadow-md',
+        'relative overflow-hidden rounded-[2rem] bg-white/5 backdrop-blur-3xl border border-white/10 shadow-[0_8px_40px_-12px_rgba(0,0,0,0.3)] ring-1 ring-inset ring-white/5 p-6',
         className
       )}
     >
-      {/* Sparkline en arrière-plan */}
-      {sparklineData.length > 1 && (
-        <div className="absolute inset-0 flex items-end opacity-[0.08] pointer-events-none">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={sparklineData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="sparkline-fill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke="hsl(var(--primary))"
-                fill="url(#sparkline-fill)"
-                strokeWidth={1}
-                isAnimationActive={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+      <div className="relative z-10">
+        <div className="flex items-center gap-3">
+          <div className={cn('size-10 rounded-xl grid place-items-center', visual.iconClassName)}>
+            <Icon className="h-5 w-5" />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground">{title}</p>
         </div>
-      )}
 
-      <div className="relative">
-        <p className="text-sm font-medium text-muted-foreground">{title}</p>
-        <div className="mt-1 flex items-baseline gap-2 flex-wrap">
-          <span className="text-2xl font-semibold tracking-tight text-foreground">
+        <div className="mt-4 flex flex-wrap items-end gap-2">
+          <span
+            className={cn(
+              'text-5xl font-bold tracking-[-0.05em] tabular-nums text-foreground',
+              valueClassName
+            )}
+          >
             {value}
           </span>
-          {trend != null && (
-            <span
-              className={cn(
-                'inline-flex items-center rounded-md px-1.5 py-0.5 text-xs font-medium',
-                trendClass
-              )}
-            >
+          {trend ? (
+            <span className={cn('rounded-full px-2.5 py-0.5 text-xs font-medium', trendClass)}>
               {trend}
             </span>
-          )}
+          ) : null}
         </div>
       </div>
+
+      {sparklineData.length > 1 ? (
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[30%]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={sparklineData} margin={{ top: 0, right: 0, left: 0, bottom: 0 }}>
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke={sparklineColor}
+                strokeWidth={2}
+                dot={false}
+                isAnimationActive={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      ) : null}
     </div>
   );
 }

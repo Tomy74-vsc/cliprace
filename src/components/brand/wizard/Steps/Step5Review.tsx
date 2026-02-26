@@ -9,23 +9,71 @@ import { useCsrfToken } from '@/hooks/use-csrf-token';
 import { AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 
 export function Step5Review() {
-  const { data, totalPriceCents, platformFeeCents } = useContestWizard();
+  const { data, totalPriceCents, platformFeeCents, editContestId, reset } = useContestWizard();
   const csrfToken = useCsrfToken();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const isEditMode = !!editContestId;
 
-  const handlePay = async () => {
+  const buildContestPayload = () => ({
+    contest_type: data.contest_type,
+    product_details: data.product_details,
+    shipping_info: data.shipping_info,
+    platform_fee: platformFeeCents,
+    title: data.title,
+    brief_md: data.description,
+    cover_url: data.product_details?.image_url || undefined,
+    start_at: data.start_at,
+    end_at: data.end_at,
+    allowed_platforms: {
+      tiktok: data.platforms.includes('tiktok'),
+      instagram: data.platforms.includes('instagram'),
+      youtube: data.platforms.includes('youtube'),
+    },
+    total_prize_pool_cents: data.contest_type === 'cash' ? data.prize_amount ?? 0 : 0,
+    currency: 'EUR',
+  });
+
+  /** Edit mode: update the existing draft without re-payment */
+  const handleSaveDraft = async () => {
     setError(null);
-
     try {
-      if (!csrfToken) {
-        throw new Error('Token CSRF manquant. Recharge la page.');
-      }
-
+      if (!csrfToken) throw new Error('Token CSRF manquant. Recharge la page.');
       setIsLoading(true);
 
-      // 1) Créer le concours (brouillon + paramètres)
+      const res = await fetch(`/api/contests/${editContestId}/update`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-csrf': csrfToken,
+        },
+        credentials: 'include',
+        body: JSON.stringify(buildContestPayload()),
+      });
+
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.message || 'Erreur lors de la mise \u00e0 jour du concours');
+      }
+
+      // Reset wizard store and redirect to contest detail
+      reset();
+      window.location.href = `/app/brand/contests/${editContestId}`;
+    } catch (e) {
+      setIsLoading(false);
+      setError(e instanceof Error ? e.message : 'Une erreur est survenue');
+    }
+  };
+
+  /** Create mode: create contest draft + initiate Stripe payment */
+  const handlePay = async () => {
+    setError(null);
+    try {
+      if (!csrfToken) throw new Error('Token CSRF manquant. Recharge la page.');
+      setIsLoading(true);
+
+      // 1) Create contest draft
       const createRes = await fetch('/api/contests/create', {
         method: 'POST',
         headers: {
@@ -33,38 +81,18 @@ export function Step5Review() {
           'x-csrf': csrfToken,
         },
         credentials: 'include',
-        body: JSON.stringify({
-          contest_type: data.contest_type,
-          product_details: data.product_details,
-          shipping_info: data.shipping_info,
-          platform_fee: platformFeeCents,
-          title: data.title,
-          brief_md: data.description,
-          cover_url: data.product_details?.image_url || undefined,
-          start_at: data.start_at,
-          end_at: data.end_at,
-          allowed_platforms: {
-            tiktok: data.platforms.includes('tiktok'),
-            instagram: data.platforms.includes('instagram'),
-            youtube: data.platforms.includes('youtube'),
-          },
-          total_prize_pool_cents: data.contest_type === 'cash' ? data.prize_amount ?? 0 : 0,
-          currency: 'EUR',
-          // Les détails fins (répartition, shipping, etc.) seront affinés côté backend plus tard.
-        }),
+        body: JSON.stringify(buildContestPayload()),
       });
 
       const createJson = await createRes.json();
       if (!createRes.ok || !createJson.ok) {
-        throw new Error(createJson.message || 'Erreur lors de la création du concours');
+        throw new Error(createJson.message || 'Erreur lors de la cr\u00e9ation du concours');
       }
 
       const contestId = createJson.contest_id as string | undefined;
-      if (!contestId) {
-        throw new Error('ID concours manquant dans la réponse serveur');
-      }
+      if (!contestId) throw new Error('ID concours manquant dans la r\u00e9ponse serveur');
 
-      // 2) Initier le paiement Stripe
+      // 2) Initiate Stripe payment
       const paymentRes = await fetch('/api/payments/brand/fund', {
         method: 'POST',
         headers: {
@@ -77,13 +105,12 @@ export function Step5Review() {
 
       const paymentJson = await paymentRes.json();
       if (!paymentRes.ok || !paymentJson.ok) {
-        throw new Error(paymentJson.message || 'Erreur lors de la création du paiement');
+        throw new Error(paymentJson.message || 'Erreur lors de la cr\u00e9ation du paiement');
       }
 
-      if (!paymentJson.checkout_url) {
-        throw new Error('URL de paiement non reçue');
-      }
+      if (!paymentJson.checkout_url) throw new Error('URL de paiement non re\u00e7ue');
 
+      reset();
       window.location.href = paymentJson.checkout_url as string;
     } catch (e) {
       setIsLoading(false);
@@ -98,10 +125,13 @@ export function Step5Review() {
   return (
     <div className="space-y-8">
       <div className="space-y-2">
-        <h2 className="text-2xl font-semibold tracking-tight">Vérifie et paie ton concours</h2>
+        <h2 className="text-2xl font-semibold tracking-tight">
+          {isEditMode ? 'V\u00e9rifie et enregistre les modifications' : 'V\u00e9rifie et paie ton concours'}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Un dernier coup d’œil avant de lancer la machine. Tu pourras toujours affiner certains
-          réglages ensuite.
+          {isEditMode
+            ? 'Passe en revue les modifications avant de sauvegarder le brouillon.'
+            : 'Un dernier coup d\u2019\u0153il avant de lancer la machine. Tu pourras toujours affiner certains r\u00e9glages ensuite.'}
         </p>
       </div>
 
@@ -124,22 +154,23 @@ export function Step5Review() {
             <div className="border-t border-dashed my-2" />
 
             <LineItem
-              label="Total à payer"
+              label={isEditMode ? 'Total' : 'Total \u00e0 payer'}
               value={formatCurrency(total, 'EUR')}
               strong
             />
 
             <p className="text-[11px] text-muted-foreground mt-3">
-              Le paiement est sécurisé via Stripe. Le concours sera activé automatiquement après
-              confirmation.
+              {isEditMode
+                ? 'Le paiement sera initi\u00e9 apr\u00e8s validation du brouillon.'
+                : 'Le paiement est s\u00e9curis\u00e9 via Stripe. Le concours sera activ\u00e9 automatiquement apr\u00e8s confirmation.'}
             </p>
           </CardContent>
         </Card>
 
         <Card className="bg-muted/40">
           <CardContent className="pt-5 space-y-3">
-            <p className="text-sm font-medium mb-1">Récapitulatif express</p>
-            <SummaryRow label="Titre" value={data.title || '—'} />
+            <p className="text-sm font-medium mb-1">R\u00e9capitulatif express</p>
+            <SummaryRow label="Titre" value={data.title || '\u2014'} />
             <SummaryRow
               label="Type"
               value={data.contest_type === 'cash' ? 'Cashprize' : 'Produit'}
@@ -162,36 +193,66 @@ export function Step5Review() {
 
       <Card className="border-primary/30 bg-primary/5">
         <CardContent className="pt-4 flex flex-col gap-3 text-sm">
-          <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-4 w-4 text-primary mt-[2px]" />
-            <p>
-              Ton concours sera créé en statut <span className="font-semibold">draft</span> puis
-              automatiquement activé après le paiement.
-            </p>
-          </div>
-          <div className="flex items-start gap-2">
-            <CheckCircle2 className="h-4 w-4 text-primary mt-[2px]" />
-            <p>Paiement traité par Stripe, aucun moyen de paiement n’est stocké chez ClipRace.</p>
-          </div>
+          {isEditMode ? (
+            <div className="flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-primary mt-[2px]" />
+              <p>
+                Le brouillon sera mis \u00e0 jour. Tu pourras initier le paiement apr\u00e8s
+                avoir v\u00e9rifi\u00e9 tous les d\u00e9tails.
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary mt-[2px]" />
+                <p>
+                  Ton concours sera cr\u00e9\u00e9 en statut <span className="font-semibold">draft</span> puis
+                  automatiquement activ\u00e9 apr\u00e8s le paiement.
+                </p>
+              </div>
+              <div className="flex items-start gap-2">
+                <CheckCircle2 className="h-4 w-4 text-primary mt-[2px]" />
+                <p>Paiement trait\u00e9 par Stripe, aucun moyen de paiement n&apos;est stock\u00e9 chez ClipRace.</p>
+              </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
       <div className="flex justify-end">
-        <Button
-          size="lg"
-          className="min-w-[180px]"
-          onClick={handlePay}
-          loading={isLoading}
-        >
-          {isLoading ? (
-            <>
-              <Loader2 className="h-4 w-4 animate-spin" />
-              Redirection en cours...
-            </>
-          ) : (
-            `Payer ${formatCurrency(total, 'EUR')}`
-          )}
-        </Button>
+        {isEditMode ? (
+          <Button
+            size="lg"
+            className="min-w-[180px]"
+            onClick={handleSaveDraft}
+            loading={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Enregistrement...
+              </>
+            ) : (
+              'Enregistrer le brouillon'
+            )}
+          </Button>
+        ) : (
+          <Button
+            size="lg"
+            className="min-w-[180px]"
+            onClick={handlePay}
+            loading={isLoading}
+          >
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Redirection en cours...
+              </>
+            ) : (
+              `Payer ${formatCurrency(total, 'EUR')}`
+            )}
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -246,4 +307,3 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
     </div>
   );
 }
-

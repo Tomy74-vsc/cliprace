@@ -12,6 +12,7 @@ import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { rateLimit } from '@/lib/rateLimit';
 import { assertCsrf } from '@/lib/csrf';
+import { getClientIp, buildRateLimitKey } from '@/lib/safe-ip';
 
 const BodySchema = z.object({
   contest_id: z.string().uuid(),
@@ -44,15 +45,14 @@ function validPlatformUrl(platform: 'tiktok' | 'instagram' | 'youtube', url: str
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate limit: 1/min per user
-    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    // Rate limit: 1/min per user+ip+ua
     const supabaseSSR = await getSupabaseSSR();
     const {
       data: { user },
     } = await supabaseSSR.auth.getUser();
     if (!user) return NextResponse.json({ ok: false, message: 'Non autorisé' }, { status: 401 });
 
-    const rlKey = `submissions:create:${user.id}:${ip}`;
+    const rlKey = buildRateLimitKey('submissions:create', user.id, req);
     if (!(await rateLimit({ key: rlKey, route: 'submissions:create', windowMs: 60_000, max: 1 }))) {
       return NextResponse.json({ ok: false, message: 'Trop de tentatives, réessaie dans une minute.' }, { status: 429 });
     }
@@ -140,13 +140,13 @@ export async function POST(req: NextRequest) {
         .eq('contest_terms_id', contestRow.contest_terms_id)
         .maybeSingle();
       if (!acceptance) {
-        const ip = req.headers.get('x-forwarded-for') ?? undefined;
+        const acceptIp = getClientIp(req);
         const ua = req.headers.get('user-agent') ?? undefined;
         await admin.from('contest_terms_acceptances').insert({
           contest_id,
           user_id: user.id,
           contest_terms_id: contestRow.contest_terms_id,
-          ip_address: ip,
+          ip_address: acceptIp,
           user_agent: ua,
         });
       }
@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
     });
 
     // Audit log
-    const ip2 = req.headers.get('x-forwarded-for') ?? undefined;
+    const auditIp = getClientIp(req);
     const ua = req.headers.get('user-agent') ?? undefined;
     await admin.from('audit_logs').insert({
       actor_id: user.id,
@@ -212,7 +212,7 @@ export async function POST(req: NextRequest) {
       table_name: 'submissions',
       row_pk: sub.id,
       new_values: insertPayload,
-      ip: ip2,
+      ip: auditIp,
       user_agent: ua,
     });
 

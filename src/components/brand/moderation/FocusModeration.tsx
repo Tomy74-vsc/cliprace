@@ -301,8 +301,8 @@ export function FocusModeration({
                       </div>
                       <Button
                         variant="outline"
-                        size="icon"
-                        className="rounded-full bg-black/70 border-white/30 text-white hover:bg-white/10"
+                        size="sm"
+                        className="h-9 w-9 rounded-full px-0 bg-black/70 border-white/30 text-white hover:bg-white/10"
                         onClick={togglePlay}
                       >
                         {isPlaying ? (

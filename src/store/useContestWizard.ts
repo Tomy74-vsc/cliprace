@@ -22,10 +22,14 @@ type ContestWizardState = {
   platformFeeCents: number;
   totalPriceCents: number;
   errors: WizardErrors;
+  /** When set, the wizard is in "edit" mode — Step5 calls PATCH update instead of POST create+pay */
+  editContestId: string | null;
   setData: (partial: Partial<ContestWizardData>) => void;
   nextStep: () => void;
   prevStep: () => void;
   reset: () => void;
+  /** Load contest data from the server response into the store (for edit/duplicate) */
+  loadContest: (contestId: string | null, contestData: Partial<ContestWizardData>) => void;
 };
 
 const DEFAULT_DATA: ContestWizardData = {
@@ -120,6 +124,23 @@ export const useContestWizard = create<ContestWizardState>()(
       platformFeeCents: computePlatformFeeCents(DEFAULT_DATA),
       totalPriceCents: computeTotalPriceCents(DEFAULT_DATA),
       errors: {},
+      editContestId: null,
+
+      loadContest(contestId, contestData) {
+        const nextData = { ...DEFAULT_DATA, ...contestData };
+        const platformFeeCents = computePlatformFeeCents(nextData);
+        const totalPriceCents = computeTotalPriceCents(nextData);
+        const validation = validateWizardStep(1, nextData);
+        set({
+          currentStep: 1,
+          data: nextData,
+          editContestId: contestId,
+          platformFeeCents,
+          totalPriceCents,
+          isValid: validation.valid,
+          errors: validation.errors,
+        });
+      },
 
       setData(partial) {
         set((state) => {
@@ -190,16 +211,18 @@ export const useContestWizard = create<ContestWizardState>()(
           platformFeeCents: computePlatformFeeCents(DEFAULT_DATA),
           totalPriceCents: computeTotalPriceCents(DEFAULT_DATA),
           errors: {},
+          editContestId: null,
         });
       },
     }),
     {
-      name: 'contest-wizard-v1',
+      name: 'contest-wizard-v2',
       partialize: (state) =>
         ({
           currentStep: state.currentStep,
           data: state.data,
-        } satisfies Pick<ContestWizardState, 'currentStep' | 'data'>),
+          editContestId: state.editContestId,
+        } satisfies Pick<ContestWizardState, 'currentStep' | 'data' | 'editContestId'>),
     }
   )
 );

@@ -1,74 +1,112 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
-
+/**
+ * Loading skeleton for Brand Contests List.
+ * Matches the final layout (header + chips + filters + table/cards) to avoid CLS.
+ */
 export default function BrandContestsLoading() {
   return (
-    <main className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="mx-auto max-w-7xl space-y-6 px-6 py-8">
+      {/* ── Header ── */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="space-y-2">
-          <Skeleton className="h-8 w-48" />
-          <Skeleton className="h-4 w-96" />
+          <div className="h-7 w-36 animate-pulse rounded-lg bg-[var(--surface-2)]" />
+          <div className="h-4 w-72 animate-pulse rounded bg-[var(--surface-2)]" />
         </div>
-        <Skeleton className="h-10 w-40 rounded-full" />
+        <div className="h-10 w-44 animate-pulse rounded-[var(--r2)] bg-[var(--surface-2)]" />
       </div>
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        {[...Array(4)].map((_, i) => (
-          <Card key={i} className="transition-all hover:-translate-y-[2px] hover:shadow-card-hover">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-6 w-12" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* ── KPI Chips ── */}
+      <div className="flex items-center gap-3">
+        <div className="h-7 w-20 animate-pulse rounded-[var(--r-pill)] bg-[var(--surface-2)]" />
+        <div className="h-7 w-28 animate-pulse rounded-[var(--r-pill)] bg-[var(--surface-2)]" />
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="pt-6">
-          <div className="flex flex-wrap gap-3">
-            <Skeleton className="h-9 w-24 rounded-full" />
-            <Skeleton className="h-9 w-32 rounded-full" />
-            <Skeleton className="h-9 w-28 rounded-full" />
-            <Skeleton className="h-9 w-36 rounded-full" />
-            <Skeleton className="h-9 w-40 rounded-full" />
+      {/* ── Filters Row ── */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="h-10 w-full animate-pulse rounded-[var(--r2)] bg-[var(--surface-2)] sm:max-w-xs" />
+        <div className="flex items-center gap-3">
+          <div className="h-9 w-60 animate-pulse rounded-[var(--r2)] bg-[var(--surface-2)]" />
+          <div className="h-9 w-32 animate-pulse rounded-[var(--r2)] bg-[var(--surface-2)]" />
+        </div>
+      </div>
+
+      {/* ── Desktop Table Skeleton ── */}
+      <div className="hidden lg:block">
+        <div className="overflow-hidden rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)]/80">
+          {/* Table header */}
+          <div className="flex items-center border-b border-[var(--border-1)] px-4 py-3">
+            <div className="flex-1">
+              <div className="h-3 w-20 animate-pulse rounded bg-[var(--surface-2)]" />
+            </div>
+            <div className="w-20 px-4">
+              <div className="h-3 w-12 animate-pulse rounded bg-[var(--surface-2)]" />
+            </div>
+            <div className="w-16 px-4">
+              <div className="ml-auto h-3 w-10 animate-pulse rounded bg-[var(--surface-2)]" />
+            </div>
+            <div className="w-20 px-4">
+              <div className="ml-auto h-3 w-14 animate-pulse rounded bg-[var(--surface-2)]" />
+            </div>
+            <div className="hidden xl:block w-16 px-4">
+              <div className="ml-auto h-3 w-8 animate-pulse rounded bg-[var(--surface-2)]" />
+            </div>
+            <div className="w-20 px-4">
+              <div className="mx-auto h-3 w-16 animate-pulse rounded bg-[var(--surface-2)]" />
+            </div>
+            <div className="w-12 px-2">
+              <div className="h-3 w-4 animate-pulse rounded bg-[var(--surface-2)]" />
+            </div>
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Contest List */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {[...Array(6)].map((_, i) => (
-          <Card key={i} className="transition-all hover:-translate-y-[2px] hover:shadow-card-hover">
-            <CardHeader>
-              <div className="flex items-start justify-between">
-                <Skeleton className="h-5 w-3/4" />
-                <Skeleton className="h-5 w-16 rounded-full" />
+          {/* Table rows */}
+          {Array.from({ length: 6 }).map((_, i) => (
+            <div
+              key={i}
+              className="flex items-center border-b border-[var(--border-1)] px-4 py-3.5 last:border-0"
+            >
+              <div className="flex-1 space-y-1.5">
+                <div className="h-4 w-44 animate-pulse rounded bg-[var(--surface-2)]" />
+                <div className="h-3 w-20 animate-pulse rounded bg-[var(--surface-2)]" />
               </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex gap-2">
-                <Skeleton className="h-6 w-16 rounded-full" />
-                <Skeleton className="h-6 w-20 rounded-full" />
+              <div className="w-20 px-4">
+                <div className="h-5 w-16 animate-pulse rounded-[var(--r-pill)] bg-[var(--surface-2)]" />
               </div>
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-4 w-36" />
+              <div className="w-16 px-4">
+                <div className="ml-auto h-4 w-10 animate-pulse rounded bg-[var(--surface-2)]" />
               </div>
-              <div className="flex gap-2 pt-2">
-                <Skeleton className="h-8 w-24 rounded-lg" />
-                <Skeleton className="h-8 w-28 rounded-lg" />
+              <div className="w-20 px-4">
+                <div className="ml-auto h-4 w-14 animate-pulse rounded bg-[var(--surface-2)]" />
               </div>
-            </CardContent>
-          </Card>
+              <div className="hidden xl:block w-16 px-4">
+                <div className="ml-auto h-4 w-10 animate-pulse rounded bg-[var(--surface-2)]" />
+              </div>
+              <div className="w-20 px-4">
+                <div className="mx-auto h-5 w-6 animate-pulse rounded-[var(--r-pill)] bg-[var(--surface-2)]" />
+              </div>
+              <div className="w-12 px-2">
+                <div className="h-6 w-6 animate-pulse rounded bg-[var(--surface-2)]" />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── Mobile Cards Skeleton ── */}
+      <div className="lg:hidden space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div
+            key={i}
+            className="rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)]/80 p-4"
+          >
+            <div className="flex items-center justify-between">
+              <div className="space-y-1.5">
+                <div className="h-4 w-40 animate-pulse rounded bg-[var(--surface-2)]" />
+                <div className="h-3 w-28 animate-pulse rounded bg-[var(--surface-2)]" />
+              </div>
+              <div className="h-5 w-14 animate-pulse rounded-[var(--r-pill)] bg-[var(--surface-2)]" />
+            </div>
+          </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }
-

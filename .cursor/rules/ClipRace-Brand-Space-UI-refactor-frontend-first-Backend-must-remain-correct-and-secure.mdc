@@ -1,0 +1,47 @@
+---
+alwaysApply: true
+---
+
+PROJECT: ClipRace — Brand Space UI refactor (frontend-first). Backend must remain correct and secure.
+
+LOCKED STACK / LIBS (MANDATORY):
+Next.js 16 App Router, React 19, Tailwind v4, shadcn/ui + Radix, lucide-react.
+Supabase Auth/DB/Realtime (@supabase/ssr + supabase-js).
+Stripe (MCP) + Supabase (MCP) + Shadcn MCP + GitHub integration.
+UX libs to use (do not replace): framer-motion, lenis, cobe, @number-flow/react, sonner, cmdk, vaul, cva, recharts, react-hook-form, zod.
+Perf dev: react-scan (dev only).
+
+DESIGN CONSTITUTION:
+- BRAND_UI_SPEC.md is the source of truth for tokens and components.
+- BRAND_UI_PATTERNS.md is the source of truth for layouts/interactions/states.
+
+CLIPRACE VISUAL IDENTITY (must be recognizable):
+- Race Light (emerald edge light) for live/focus/highlight (subtle).
+- Track Pattern (subtle track texture) in select panels/headers (2–4% opacity).
+- Clip Notch (minimal cut-corner) for premium surfaces (KPI hero, key panels).
+Accent rule: emerald visible area must remain under 10% per screen.
+Glass: only for shell/overlays (topbar, command palette). Not for all cards.
+
+ARCHITECTURE / OWNERSHIP:
+- Brand-specific UI components MUST live in: src/components/brand-ui/*
+- Brand pages MUST live in: src/app/brand/**
+- Pages compose brand-ui components; avoid one-off markup and ad-hoc styling.
+
+DATA & PERFORMANCE:
+- Prefer RPC/views for aggregates (avoid heavy JS aggregation and huge .in([...]) lists).
+- Realtime filters must match actual schema (no phantom columns).
+- Promise.all for independent fetches. Skeletons to prevent CLS.
+- Prefer reduced motion: respect prefers-reduced-motion.
+- framer-motion and lenis must not be imported globally if avoidable; isolate them.
+
+SECURITY:
+- CSRF tokens must be crypto-strong; never Math.random fallback.
+- Messages thread creation must verify: brand owns contest AND creator is related to contest.
+- Rate limiting: key by (userId + ip + ua); avoid spoofable IP headers unless platform headers.
+
+UX QUALITY BAR:
+- 1 primary CTA per screen.
+- Premium Loading/Empty/Error states everywhere.
+- Use sonner for toasts.
+- Use cmdk for global command palette.
+- Use vaul drawers for mobile detail panels.

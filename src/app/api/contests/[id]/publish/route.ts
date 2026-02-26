@@ -10,6 +10,7 @@ import { getUserRole } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { rateLimit } from '@/lib/rateLimit';
 import { assertCsrf } from '@/lib/csrf';
+import { getClientIp, buildRateLimitKey } from '@/lib/safe-ip';
 
 const BodySchema = z.object({ force: z.boolean().optional() });
 
@@ -34,9 +35,8 @@ export async function POST(
     const role = await getUserRole(user.id);
     if (!role) return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
 
-    // Rate limit: 10 publish / min par utilisateur+IP
-    const ip = req.headers.get('x-forwarded-for') || 'unknown';
-    const rlKey = `contests:publish:${user.id}:${ip}`;
+    // Rate limit: 10 publish / min par utilisateur+IP+UA
+    const rlKey = buildRateLimitKey('contests:publish', user.id, req);
     const allowed = await rateLimit({
       key: rlKey,
       route: 'contests:publish',
@@ -95,7 +95,7 @@ export async function POST(
       changed_by: user.id,
     });
 
-    const ip2 = req.headers.get('x-forwarded-for') ?? undefined;
+    const auditIp = getClientIp(req);
     const ua = req.headers.get('user-agent') ?? undefined;
     await admin.from('audit_logs').insert({
       actor_id: user.id,
@@ -104,7 +104,7 @@ export async function POST(
       row_pk: contestId,
       old_values: { status: oldStatus },
       new_values: { status: 'active' },
-      ip: ip2,
+      ip: auditIp,
       user_agent: ua,
     });
 

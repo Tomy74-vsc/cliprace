@@ -5,6 +5,7 @@ import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { rateLimit } from '@/lib/rateLimit';
 import { formatErrorResponse, createError } from '@/lib/errors';
 import { assertCsrf } from '@/lib/csrf';
+import { buildAnonRateLimitKey } from '@/lib/safe-ip';
 import { z } from 'zod';
 import { env } from '@/lib/env';
 import { createClient } from '@supabase/supabase-js';
@@ -15,9 +16,8 @@ const resendVerificationSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate limiting: 3 req/min par IP
-    const ip = req.headers.get('x-forwarded-for') || 'unknown';
-    const rlKey = `auth:resend-verification:${ip}`;
+    // Rate limiting: 3 req/min par IP+UA
+    const rlKey = buildAnonRateLimitKey('auth:resend-verification', req);
     if (
       !(await rateLimit({ key: rlKey, route: 'auth:resend-verification', windowMs: 60 * 1000, max: 3 }))
     ) {

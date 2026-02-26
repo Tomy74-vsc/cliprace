@@ -1,107 +1,126 @@
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton';
+/**
+ * Dashboard loading skeleton — "Mission Control" layout.
+ * Matches final page structure to prevent CLS.
+ * Uses brand Ink tokens (inherited from BrandShell in layout).
+ *
+ * The Hero skeleton uses a generic shape that works for both:
+ *   - Onboarding variant (title + chips + 3 steps) — taller
+ *   - Active campaign variant (status + title + KPI row + actions) — shorter
+ * We use the taller onboarding shape to avoid content-push CLS for new users.
+ * Returning users see a brief shrink, which is less jarring than a push-down.
+ *
+ * Structure: Header → 12-col grid (Main 8 + Side 4)
+ *   Main: Hero (notched) → Analytics
+ *   Side: Live Queue → Insights
+ *
+ * animate-pulse respects prefers-reduced-motion via Tailwind defaults.
+ */
+
+const skeletonBlock = 'bg-[var(--surface-2)] animate-pulse';
+const cardBase = 'rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)]/80 p-6';
 
 export default function BrandDashboardLoading() {
   return (
-    <main className="space-y-8">
-      {/* CTA Section */}
-      <section className="rounded-3xl border border-border bg-gradient-to-r from-primary/10 via-accent/5 to-background p-6 md:p-8 shadow-card">
-        <div className="grid gap-6 md:grid-cols-[2fr,1.1fr] md:items-center">
-          <div className="space-y-3">
-            <Skeleton className="h-4 w-32" />
-            <Skeleton className="h-8 w-48" />
-            <Skeleton className="h-4 w-96" />
-            <div className="flex flex-wrap gap-3">
-              <Skeleton className="h-10 w-40 rounded-full" />
-              <Skeleton className="h-10 w-36 rounded-full" />
+    <div
+      className="mx-auto max-w-7xl px-4 lg:px-6 py-6 space-y-6"
+      aria-busy="true"
+      aria-label="Chargement du dashboard"
+    >
+      {/* ── Header skeleton ── */}
+      <div className="space-y-2">
+        <div className={`h-7 w-48 rounded-lg ${skeletonBlock}`} />
+        <div className={`h-4 w-56 rounded ${skeletonBlock}`} />
+      </div>
+
+      {/* ── Grid skeleton ── */}
+      <div className="grid grid-cols-12 gap-6">
+
+        {/* ──── Main (8 cols) ──── */}
+        <div className="col-span-12 lg:col-span-8 space-y-6">
+
+          {/* Hero skeleton (notched) — generic shape for both states */}
+          <div className={`${cardBase} clip-notch space-y-5`}>
+            {/* Row 1: Status badge + title (active) / Title + subtitle (onboarding) */}
+            <div className="space-y-2">
+              <div className={`h-5 w-16 rounded-full ${skeletonBlock}`} />
+              <div className={`h-6 w-64 rounded-lg ${skeletonBlock}`} />
+              <div className={`h-4 w-80 rounded ${skeletonBlock}`} />
+            </div>
+
+            {/* Row 2: KPI area / Trust chips + first step */}
+            <div className="flex flex-col sm:flex-row sm:items-end gap-6">
+              <div className="flex-1 space-y-2">
+                <div className={`h-12 w-40 rounded-lg ${skeletonBlock}`} />
+                <div className={`h-4 w-24 rounded ${skeletonBlock}`} />
+              </div>
+              <div className="flex gap-6 sm:gap-8">
+                <div className="space-y-2">
+                  <div className={`h-3 w-24 rounded ${skeletonBlock}`} />
+                  <div className={`h-6 w-20 rounded ${skeletonBlock}`} />
+                </div>
+                <div className="space-y-2">
+                  <div className={`h-3 w-16 rounded ${skeletonBlock}`} />
+                  <div className={`h-6 w-16 rounded ${skeletonBlock}`} />
+                </div>
+              </div>
+            </div>
+
+            {/* Row 3: Action buttons */}
+            <div className="flex gap-3 pt-1">
+              <div className={`h-10 w-40 rounded-[var(--r2)] ${skeletonBlock}`} />
+              <div className={`h-10 w-36 rounded-[var(--r2)] ${skeletonBlock}`} />
             </div>
           </div>
-          <Card className="bg-card/80 backdrop-blur-xl border-dashed border-border">
-            <CardHeader className="pb-2">
-              <Skeleton className="h-5 w-32" />
-              <Skeleton className="h-3 w-48 mt-2" />
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-8 w-24" />
-              </div>
-              <div className="pt-2 border-t border-border space-y-2">
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-28" />
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
 
-      {/* KPIs */}
-      <section>
-        <div className="grid gap-4 md:grid-cols-4">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="transition-all hover:-translate-y-[2px] hover:shadow-card-hover">
-              <CardHeader className="flex flex-row items-start justify-between">
-                <Skeleton className="h-4 w-24" />
-                <Skeleton className="h-4 w-4 rounded" />
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Skeleton className="h-8 w-20" />
-                <Skeleton className="h-3 w-32" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
-
-      {/* Active Contests */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div>
-            <Skeleton className="h-6 w-40 mb-2" />
-            <Skeleton className="h-4 w-64" />
+          {/* Analytics skeleton */}
+          <div className={cardBase}>
+            <div className="flex items-center justify-between mb-4">
+              <div className={`h-5 w-32 rounded ${skeletonBlock}`} />
+              <div className={`h-7 w-40 rounded-[var(--r2)] ${skeletonBlock}`} />
+            </div>
+            <div className={`h-48 rounded-[var(--r2)] ${skeletonBlock}`} />
           </div>
-          <Skeleton className="h-8 w-24 rounded-full" />
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[...Array(3)].map((_, i) => (
-            <Card key={i} className="transition-all hover:-translate-y-[2px] hover:shadow-card-hover">
-              <CardHeader>
-                <Skeleton className="h-5 w-3/4 mb-2" />
-                <Skeleton className="h-5 w-16 rounded-full" />
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-3">
-                  <Skeleton className="h-6 w-16" />
-                  <Skeleton className="h-6 w-20" />
-                  <Skeleton className="h-6 w-14" />
-                  <Skeleton className="h-6 w-18" />
-                </div>
-                <div className="flex gap-2">
-                  <Skeleton className="h-6 w-16 rounded-full" />
-                  <Skeleton className="h-6 w-20 rounded-full" />
-                </div>
-                <Skeleton className="h-9 w-full rounded-lg" />
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      </section>
 
-      {/* Charts */}
-      <section className="grid gap-4 md:grid-cols-2">
-        {[...Array(2)].map((_, i) => (
-          <Card key={i}>
-            <CardHeader>
-              <Skeleton className="h-5 w-48" />
-              <Skeleton className="h-3 w-64 mt-2" />
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-64 w-full rounded-lg" />
-            </CardContent>
-          </Card>
-        ))}
-      </section>
-    </main>
+        {/* ──── Side rail (4 cols) ──── */}
+        <aside className="col-span-12 lg:col-span-4 space-y-6">
+
+          {/* Live Queue skeleton */}
+          <div className={`${cardBase} space-y-4`}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className={`h-4 w-4 rounded ${skeletonBlock}`} />
+                <div className={`h-3 w-16 rounded ${skeletonBlock}`} />
+              </div>
+              <div className={`h-5 w-20 rounded-[var(--r2)] ${skeletonBlock}`} />
+            </div>
+            <div className="space-y-2 py-2">
+              <div className={`h-4 w-44 rounded ${skeletonBlock}`} />
+              <div className="flex items-center gap-1.5">
+                <div className={`h-1.5 w-1.5 rounded-full ${skeletonBlock}`} />
+                <div className={`h-3 w-56 rounded ${skeletonBlock}`} />
+              </div>
+            </div>
+          </div>
+
+          {/* Insights skeleton */}
+          <div className={`${cardBase} space-y-3`}>
+            <div className={`h-3 w-16 rounded ${skeletonBlock} mb-4`} />
+            {[...Array(4)].map((_, i) => (
+              <div key={i}>
+                <div className="flex items-center justify-between py-1">
+                  <div className={`h-4 w-36 rounded ${skeletonBlock}`} />
+                  <div className={`h-4 w-16 rounded ${skeletonBlock}`} />
+                </div>
+                {i === 2 && (
+                  <div className={`mt-1.5 h-0.5 w-full rounded-full ${skeletonBlock}`} />
+                )}
+                {i < 3 && <div className="h-px bg-[var(--border-1)] mt-3" />}
+              </div>
+            ))}
+          </div>
+        </aside>
+      </div>
+    </div>
   );
 }
-

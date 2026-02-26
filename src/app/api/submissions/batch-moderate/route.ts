@@ -1,4 +1,4 @@
-﻿/*
+/*
 Source: POST /api/submissions/batch-moderate
 Tables: submissions, moderation_actions, notifications, audit_logs
 Rules:
@@ -13,6 +13,7 @@ import { getUserRole } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { assertCsrf } from '@/lib/csrf';
 import { createError, formatErrorResponse } from '@/lib/errors';
+import { getClientIp } from '@/lib/safe-ip';
 
 const BodySchema = z.object({
   submission_ids: z.array(z.string().uuid()).min(1, 'Au moins une soumission requise'),
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest) {
 
     const admin = getSupabaseAdmin();
     const now = new Date().toISOString();
-    const ip = req.headers.get('x-forwarded-for') ?? undefined;
+    const ip = getClientIp(req);
     const ua = req.headers.get('user-agent') ?? undefined;
 
     // VÃ©rifier que toutes les soumissions appartiennent Ã  des concours de la marque

@@ -13,7 +13,6 @@ import { StatCard } from '@/components/creator/stat-card';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import {
   Edit,
-  Copy,
   ExternalLink,
   Eye,
   TrendingUp,
@@ -27,6 +26,8 @@ import {
 import { TrackOnView } from '@/components/analytics/track-once';
 import { PlatformBadge } from '@/components/creator/platform-badge';
 import { ContestMetricsChart } from '@/components/brand/contest-metrics-chart';
+import { ExportCSVButton } from '@/components/brand/export-csv-button';
+import { DuplicateContestButton } from '@/components/brand/duplicate-contest-button';
 import type { Platform } from '@/lib/validators/platforms';
 
 export const revalidate = 60;
@@ -48,7 +49,7 @@ export default async function BrandContestDetailPage({
         <BrandEmptyState
           type="no-results"
           title="Concours introuvable"
-          description="Ce concours n'existe plus ou tu n'as pas les droits pour y accÃ©der."
+          description="Ce concours n'existe plus ou tu n'as pas les droits pour y accéder."
           action={{ label: 'Retour aux concours', href: '/app/brand/contests', variant: 'secondary' }}
         />
       </main>
@@ -67,7 +68,7 @@ export default async function BrandContestDetailPage({
     <main className="space-y-8">
       <TrackOnView event="view_brand_contest_detail" payload={{ contest_id: id, status: contest.status }} />
 
-      {/* En-tÃªte */}
+      {/* En-tête */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
           <div className="flex items-center gap-2 flex-wrap">
@@ -77,11 +78,11 @@ export default async function BrandContestDetailPage({
                 isDraft ? 'secondary' : isActive ? 'success' : isEnded ? 'warning' : 'info'
               }
             >
-              {isDraft ? 'Brouillon' : isActive ? 'Actif' : isEnded ? 'TerminÃ©' : contest.status}
+              {isDraft ? 'Brouillon' : isActive ? 'Actif' : isEnded ? 'Terminé' : contest.status}
             </Badge>
           </div>
           <p className="text-muted-foreground">
-            {contest.start_at && formatDate(contest.start_at)} â†’ {formatDate(contest.end_at)}
+            {contest.start_at && formatDate(contest.start_at)} ? {formatDate(contest.end_at)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -99,12 +100,8 @@ export default async function BrandContestDetailPage({
               Voir page publique
             </Link>
           </Button>
-          <Button asChild variant="secondary">
-            <Link href={`/app/brand/contests/new?duplicate=${id}`}>
-              <Copy className="h-4 w-4 mr-2" />
-              Dupliquer
-            </Link>
-          </Button>
+          <DuplicateContestButton contestId={id} />
+          <ExportCSVButton contestId={id} contestTitle={contest.title} />
         </div>
       </div>
 
@@ -125,8 +122,8 @@ export default async function BrandContestDetailPage({
           />
           <StatCard
             label="CPV"
-            value={cpv > 0 ? formatCurrency(cpv, contest.currency) : 'â€”'}
-            hint={isProductContest ? 'Non applicable pour les concours produit' : 'CoÃ»t pour 1000 vues'}
+            value={cpv > 0 ? formatCurrency(cpv, contest.currency) : '-'}
+            hint={isProductContest ? 'Non applicable pour les concours produit' : 'Coût pour 1000 vues'}
             icon={<DollarSign className="h-4 w-4" />}
           />
           <StatCard
@@ -138,12 +135,12 @@ export default async function BrandContestDetailPage({
         </div>
       </section>
 
-      {/* Graphique croissance journaliÃ¨re */}
+      {/* Graphique croissance journalière */}
       <Card>
         <CardHeader>
-          <CardTitle>Croissance journaliÃ¨re</CardTitle>
+          <CardTitle>Croissance journalière</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Ã‰volution des vues quotidiennes depuis le dÃ©but du concours
+            ?volution des vues quotidiennes depuis le début du concours
           </p>
         </CardHeader>
         <CardContent>
@@ -159,10 +156,10 @@ export default async function BrandContestDetailPage({
             <p className="text-sm text-muted-foreground">
               {submissions.pending > 0 && (
                 <span className="text-warning">
-                  {submissions.pending} en attente de modÃ©ration
+                  {submissions.pending} en attente de modération
                 </span>
               )}
-              {submissions.pending === 0 && 'Toutes les soumissions sont modÃ©rÃ©es'}
+              {submissions.pending === 0 && 'Toutes les soumissions sont modérées'}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -187,7 +184,7 @@ export default async function BrandContestDetailPage({
               <BrandEmptyState
                 type="no-submissions"
                 title="Aucune soumission"
-                description="Les crÃ©ateurs n'ont pas encore participÃ© Ã  ce concours."
+                description="Les créateurs n'ont pas encore participé à ce concours."
                 action={{
                   label: 'Promouvoir le concours',
                   href: '#',
@@ -210,7 +207,7 @@ export default async function BrandContestDetailPage({
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-xl font-semibold">Classement</h2>
-            <p className="text-sm text-muted-foreground">Top crÃ©ateurs par vues pondÃ©rÃ©es</p>
+            <p className="text-sm text-muted-foreground">Top créateurs par vues pondérées</p>
           </div>
           <div className="flex gap-2">
             <Button asChild variant="secondary" size="sm">
@@ -254,9 +251,9 @@ export default async function BrandContestDetailPage({
                         {index + 1}
                       </div>
                       <div>
-                        <p className="font-medium">{entry.creator_name || 'CrÃ©ateur anonyme'}</p>
+                        <p className="font-medium">{entry.creator_name || 'Créateur anonyme'}</p>
                         <p className="text-xs text-muted-foreground">
-                          {entry.total_views.toLocaleString()} vues â€¢ {entry.total_likes.toLocaleString()} likes
+                          {entry.total_views.toLocaleString()} vues ⬢ {entry.total_likes.toLocaleString()} likes
                         </p>
                       </div>
                     </div>
@@ -264,7 +261,7 @@ export default async function BrandContestDetailPage({
                       <p className="font-semibold">
                         {formatCurrency(entry.estimated_payout_cents, contest.currency)}
                       </p>
-                      <p className="text-xs text-muted-foreground">Gain estimÃ©</p>
+                      <p className="text-xs text-muted-foreground">Gain estimé</p>
                     </div>
                   </div>
                 ))}
@@ -285,10 +282,10 @@ export default async function BrandContestDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Partage le concours sur tes rÃ©seaux pour attirer plus de crÃ©ateurs.
+              Partage le concours sur tes réseaux pour attirer plus de créateurs.
             </p>
             <Button variant="secondary" className="w-full" disabled>
-              GÃ©nÃ©rer le lien de partage
+              Générer le lien de partage
             </Button>
           </CardContent>
         </Card>
@@ -302,7 +299,7 @@ export default async function BrandContestDetailPage({
           </CardHeader>
           <CardContent>
             <p className="text-sm text-muted-foreground mb-4">
-              Envoie un message Ã  tous les crÃ©ateurs qui ont participÃ©.
+              Envoie un message à tous les créateurs qui ont participé.
             </p>
             <Button variant="secondary" className="w-full" disabled>
               Envoyer un message
@@ -333,7 +330,7 @@ function SubmissionCard({ submission, contestId }: SubmissionCardProps) {
       <CardHeader>
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <p className="font-medium line-clamp-1">{submission.creator_name || 'CrÃ©ateur'}</p>
+            <p className="font-medium line-clamp-1">{submission.creator_name || 'Créateur'}</p>
             <PlatformBadge platform={submission.platform as Platform} className="mt-1" />
           </div>
           <Badge
@@ -346,9 +343,9 @@ function SubmissionCard({ submission, contestId }: SubmissionCardProps) {
             }
           >
             {submission.status === 'approved'
-              ? 'ApprouvÃ©'
+              ? 'Approuvé'
               : submission.status === 'rejected'
-                ? 'RefusÃ©'
+                ? 'Refusé'
                 : 'En attente'}
           </Badge>
         </div>
@@ -374,7 +371,7 @@ function SubmissionCard({ submission, contestId }: SubmissionCardProps) {
         </div>
         <Button asChild size="sm" variant="secondary" className="w-full transition-all duration-200 hover:scale-[1.02]">
           <Link href={`/app/brand/contests/${contestId}/submissions?submission=${submission.id}`}>
-            {submission.status === 'pending' ? 'ModÃ©rer' : 'Voir dÃ©tails'}
+            {submission.status === 'pending' ? 'Modérer' : 'Voir détails'}
           </Link>
         </Button>
       </CardContent>
@@ -385,7 +382,7 @@ function SubmissionCard({ submission, contestId }: SubmissionCardProps) {
 async function fetchContestData(contestId: string, userId: string) {
   const supabase = await getSupabaseSSR();
 
-  // RÃ©cupÃ©rer le concours (vÃ©rification ownership via RLS)
+  // Récupérer le concours (vérification ownership via RLS)
   const { data: contest, error: contestError } = await supabase
     .from('contests')
     .select(
@@ -399,7 +396,7 @@ async function fetchContestData(contestId: string, userId: string) {
     return { error: 'Contest not found', contest: null, metrics: null, submissions: null, leaderboard: null };
   }
 
-  // RÃ©cupÃ©rer toutes les soumissions du concours pour les mÃ©triques
+  // Récupérer toutes les soumissions du concours pour les métriques
   const { data: allSubmissions } = await supabase
     .from('submissions')
     .select('id')
@@ -407,12 +404,12 @@ async function fetchContestData(contestId: string, userId: string) {
   
   const allSubmissionIds = allSubmissions?.map((s) => s.id) || [];
 
-  // RÃ©cupÃ©rer les mÃ©triques via RPC
+  // Récupérer les métriques via RPC
   const { data: metricsData } = await supabase.rpc('get_contest_metrics', {
     p_contest_id: contestId,
   });
 
-  // RÃ©cupÃ©rer les vues quotidiennes depuis metrics_daily
+  // Récupérer les vues quotidiennes depuis metrics_daily
   const dailyViews: Array<{ date: string; views: number }> = [];
   if (allSubmissionIds.length > 0) {
     const { data: dailyMetrics } = await supabase
@@ -421,7 +418,7 @@ async function fetchContestData(contestId: string, userId: string) {
       .in('submission_id', allSubmissionIds)
       .order('metric_date', { ascending: true });
 
-    // AgrÃ©ger par date
+    // Agréger par date
     const viewsByDate = new Map<string, number>();
     dailyMetrics?.forEach((m: { metric_date: string; views: number }) => {
       const date = m.metric_date;
@@ -450,7 +447,7 @@ async function fetchContestData(contestId: string, userId: string) {
         daily_views: dailyViews,
       };
 
-  // RÃ©cupÃ©rer les soumissions rÃ©centes
+  // Récupérer les soumissions récentes
   const { data: submissionsData } = await supabase
     .from('submissions')
     .select(
@@ -467,36 +464,48 @@ async function fetchContestData(contestId: string, userId: string) {
     .eq('contest_id', contestId)
     .eq('status', 'pending');
 
-  // RÃ©cupÃ©rer les mÃ©triques des soumissions
-  const submissionsWithMetrics = await Promise.all(
-    (submissionsData || []).map(async (submission) => {
-      const { data: metrics } = await supabase
-        .from('metrics_daily')
-        .select('views, likes')
-        .eq('submission_id', submission.id);
+  // Récupérer les métriques des soumissions
+  const recentSubmissionIds = (submissionsData || []).map((submission) => submission.id);
+  const metricsBySubmission = new Map<string, { views: number; likes: number }>();
+  if (recentSubmissionIds.length > 0) {
+    const { data: metricsRows } = await supabase
+      .from('metrics_daily')
+      .select('submission_id, views:sum(views), likes:sum(likes)')
+      .in('submission_id', recentSubmissionIds);
 
-      const totalViews = metrics?.reduce((sum, m) => sum + (m.views || 0), 0) || 0;
-      const totalLikes = metrics?.reduce((sum, m) => sum + (m.likes || 0), 0) || 0;
+    (metricsRows || []).forEach((row: UnsafeAny) => {
+      const viewsValue = Array.isArray(row.views)
+        ? Number((row.views[0] as UnsafeAny)?.views || 0)
+        : Number(row.views || 0);
+      const likesValue = Array.isArray(row.likes)
+        ? Number((row.likes[0] as UnsafeAny)?.likes || 0)
+        : Number(row.likes || 0);
+      metricsBySubmission.set(String(row.submission_id), {
+        views: viewsValue,
+        likes: likesValue,
+      });
+    });
+  }
 
-      return {
-        id: submission.id,
-        external_url: submission.external_url,
-        platform: submission.platform,
-        status: submission.status,
-        creator_name: (submission.creator as { display_name?: string | null } | null)?.display_name || null,
-        views: totalViews,
-        likes: totalLikes,
-      };
-    })
-  );
+  const submissionsWithMetrics = (submissionsData || []).map((submission) => {
+    const metrics = metricsBySubmission.get(submission.id) || { views: 0, likes: 0 };
+    return {
+      id: submission.id,
+      external_url: submission.external_url,
+      platform: submission.platform,
+      status: submission.status,
+      creator_name: (submission.creator as { display_name?: string | null } | null)?.display_name || null,
+      views: metrics.views,
+      likes: metrics.likes,
+    };
+  });
 
-  // RÃ©cupÃ©rer le leaderboard
   const { data: leaderboardData } = await supabase.rpc('get_contest_leaderboard', {
     p_contest_id: contestId,
     p_limit: 30,
   });
 
-  // RÃ©cupÃ©rer les crÃ©ateurs pour le leaderboard
+  // Récupérer les créateurs pour le leaderboard
   const creatorIds = leaderboardData?.map((l: { creator_id: string }) => l.creator_id) || [];
   const { data: creators } = creatorIds.length > 0
     ? await supabase
@@ -509,7 +518,7 @@ async function fetchContestData(contestId: string, userId: string) {
     (creators || []).map((c) => [c.id, c.display_name || null])
   );
 
-  // RÃ©cupÃ©rer les prix pour calculer les gains estimÃ©s
+  // Récupérer les prix pour calculer les gains estimés
   const { data: prizes } = await supabase
     .from('contest_prizes')
     .select('position, amount_cents, percentage')
@@ -545,4 +554,3 @@ async function fetchContestData(contestId: string, userId: string) {
     error: null,
   };
 }
-

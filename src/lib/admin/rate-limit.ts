@@ -1,6 +1,7 @@
 import { NextRequest } from 'next/server';
 import { rateLimit } from '@/lib/rateLimit';
 import { createError } from '@/lib/errors';
+import { getClientIp } from '@/lib/safe-ip';
 
 type AdminRateLimitOptions = {
   route: string;
@@ -32,9 +33,11 @@ export async function enforceAdminRateLimit(
     }
   }
 
-  // Limite par route
-  const ip = req.headers.get('x-forwarded-for') || (req as UnsafeAny).ip || 'unknown';
-  const key = `${options.route}:${ip}`;
+  // Limite par route — keyed by userId + safe IP + UA (anti-spoof)
+  const ip = getClientIp(req);
+  const ua = (req.headers.get('user-agent') || 'unknown').slice(0, 64);
+  const userPart = userId ? `${userId}:` : '';
+  const key = `${options.route}:${userPart}${ip}:${ua}`;
   const ok = await rateLimit({
     key,
     route: options.route,
