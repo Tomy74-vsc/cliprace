@@ -62,7 +62,7 @@ async function fetchBrandContests(
 ): Promise<{ contests: CampaignRow[]; stats: { active: number; draft: number; ended: number } }> {
   const supabase = await getSupabaseSSR();
 
-  // 1. Fetch all brand contests (capped at 200 for safety)
+  // 1. Fetch contests (filtre brand_id — ownership + RLS)
   const { data: contests, error: contestsError } = await supabase
     .from('contests')
     .select(
@@ -77,64 +77,61 @@ async function fetchBrandContests(
     return { contests: [], stats: { active: 0, draft: 0, ended: 0 } };
   }
 
-  // 2. Compute stats from same data (avoids a second query)
+  // 2. Stats depuis les données déjà chargées (zéro requête extra)
   const stats = {
     active: contests.filter((c) => c.status === 'active').length,
     draft: contests.filter((c) => c.status === 'draft').length,
     ended: contests.filter((c) => c.status === 'ended').length,
   };
 
-  // 3. Fetch submissions for all contests
   const contestIds = contests.map((c) => c.id);
-  const { data: submissions } = await supabase
-    .from('submissions')
-    .select('id, contest_id, status')
-    .in('contest_id', contestIds);
 
-  // Build submission → contest map + per-contest stats
-  const subToContest = new Map<string, string>();
-  const contestStats = new Map<
-    string,
-    { total: number; pending: number; views: number }
-  >();
+  // 3. Paralléliser: submissions (pending count) + contest_stats (views)
+  // contest_stats est une VIEW Supabase qui agrège metrics_daily — évite le waterfall
+  const [submissionsResult, contestStatsResult] = await Promise.all([
+    supabase
+      .from('submissions')
+      .select('id, contest_id, status')
+      .in('contest_id', contestIds),
+    supabase
+      .from('contest_stats')
+      .select('contest_id, total_views, total_submissions')
+      .in('contest_id', contestIds),
+  ]);
 
-  contestIds.forEach((id) =>
-    contestStats.set(id, { total: 0, pending: 0, views: 0 }),
-  );
+  // 4. Build lookup maps (O(n) — pas de nested loops)
+  const pendingByContest = new Map<string, number>();
+  const totalByContest = new Map<string, number>();
 
-  submissions?.forEach((s) => {
-    subToContest.set(s.id, s.contest_id);
-    const entry = contestStats.get(s.contest_id);
-    if (entry) {
-      entry.total++;
-      if (s.status === 'pending') entry.pending++;
-    }
+  contestIds.forEach((id) => {
+    pendingByContest.set(id, 0);
+    totalByContest.set(id, 0);
   });
 
-  // 4. Fetch views from metrics_daily
-  const submissionIds = submissions?.map((s) => s.id) || [];
+  submissionsResult.data?.forEach((s) => {
+    if (s.status === 'pending') {
+      pendingByContest.set(
+        s.contest_id,
+        (pendingByContest.get(s.contest_id) ?? 0) + 1,
+      );
+    }
+    totalByContest.set(
+      s.contest_id,
+      (totalByContest.get(s.contest_id) ?? 0) + 1,
+    );
+  });
 
-  if (submissionIds.length > 0) {
-    const { data: metrics } = await supabase
-      .from('metrics_daily')
-      .select('submission_id, views')
-      .in('submission_id', submissionIds);
+  const viewsByContest = new Map<string, number>();
+  contestStatsResult.data?.forEach((cs) => {
+    viewsByContest.set(cs.contest_id, Number(cs.total_views ?? 0));
+  });
 
-    metrics?.forEach((m: { submission_id: string; views: number }) => {
-      const contestId = subToContest.get(m.submission_id);
-      if (contestId) {
-        const entry = contestStats.get(contestId);
-        if (entry) entry.views += m.views || 0;
-      }
-    });
-  }
-
-  // 5. Enrich contests with computed stats
+  // 5. Enrich contests — type CampaignRow inchangé
   const enrichedContests: CampaignRow[] = contests.map((c) => ({
     ...c,
-    submissions_count: contestStats.get(c.id)?.total || 0,
-    pending_submissions_count: contestStats.get(c.id)?.pending || 0,
-    views: contestStats.get(c.id)?.views || 0,
+    submissions_count: totalByContest.get(c.id) ?? 0,
+    pending_submissions_count: pendingByContest.get(c.id) ?? 0,
+    views: viewsByContest.get(c.id) ?? 0,
   }));
 
   return { contests: enrichedContests, stats };

@@ -73,6 +73,8 @@ export function contestStatusVariant(
       return 'success';
     case 'draft':
       return 'neutral';
+    case 'paused':
+      return 'warning';
     case 'ended':
       return 'warning';
     case 'archived':
@@ -88,6 +90,8 @@ export function contestStatusLabel(status: string): string {
       return 'Live';
     case 'draft':
       return 'Brouillon';
+    case 'paused':
+      return 'En pause';
     case 'ended':
       return 'Terminé';
     case 'archived':
