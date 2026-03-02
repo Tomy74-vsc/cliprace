@@ -5,11 +5,7 @@ Objectifs: statistiques, UGC (submissions), leaderboard, actions (modifier, dupl
 import Link from 'next/link';
 import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { BrandEmptyState } from '@/components/brand/empty-state-enhanced';
-import { StatCard } from '@/components/creator/stat-card';
 import { formatCurrency, formatDate } from '@/lib/formatters';
 import {
   Edit,
@@ -28,6 +24,12 @@ import { PlatformBadge } from '@/components/creator/platform-badge';
 import { ContestMetricsChart } from '@/components/brand/contest-metrics-chart';
 import { ExportCSVButton } from '@/components/brand/export-csv-button';
 import { DuplicateContestButton } from '@/components/brand/duplicate-contest-button';
+import {
+  GlassCard,
+  StatusBadge,
+  contestStatusVariant,
+  contestStatusLabel,
+} from '@/components/brand-ui';
 import type { Platform } from '@/lib/validators/platforms';
 
 export const revalidate = 60;
@@ -71,35 +73,39 @@ export default async function BrandContestDetailPage({
       {/* En-tête */}
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="space-y-2">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="text-3xl font-semibold">{contest.title}</h1>
-            <Badge
-              variant={
-                isDraft ? 'secondary' : isActive ? 'success' : isEnded ? 'warning' : 'info'
-              }
-            >
-              {isDraft ? 'Brouillon' : isActive ? 'Actif' : isEnded ? 'Terminé' : contest.status}
-            </Badge>
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-2xl font-semibold tracking-tight text-[var(--text-1)]">
+              {contest.title}
+            </h1>
+            <StatusBadge
+              variant={contestStatusVariant(contest.status)}
+              label={contestStatusLabel(contest.status)}
+              pulse={contest.status === 'active'}
+            />
           </div>
-          <p className="text-muted-foreground">
+          <p className="text-sm text-[var(--text-2)]">
             {contest.start_at && formatDate(contest.start_at)} ? {formatDate(contest.end_at)}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           {isDraft && (
-            <Button asChild variant="secondary">
-              <Link href={`/app/brand/contests/${id}/edit`}>
-                <Edit className="h-4 w-4 mr-2" />
-                Modifier
-              </Link>
-            </Button>
-          )}
-          <Button asChild variant="secondary">
-            <Link href={`/contests/${id}`} target="_blank">
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Voir page publique
+            <Link
+              href={`/app/brand/contests/${id}/edit`}
+              className="inline-flex items-center gap-2 rounded-[var(--r2)] bg-[var(--cta-bg)] px-4 py-2.5 text-sm font-medium text-[var(--cta-fg)] transition-colors hover:bg-white/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-void)]"
+            >
+              <Edit className="h-4 w-4" />
+              Modifier
             </Link>
-          </Button>
+          )}
+          <Link
+            href={`/contests/${id}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 rounded-[var(--r2)] border border-[var(--border-1)] px-4 py-2.5 text-sm font-medium text-[var(--text-2)] transition-colors hover:border-[var(--border-2)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+          >
+            <ExternalLink className="h-4 w-4" />
+            Voir page publique
+          </Link>
           <DuplicateContestButton contestId={id} />
           <ExportCSVButton contestId={id} contestTitle={contest.title} />
         </div>
@@ -108,91 +114,131 @@ export default async function BrandContestDetailPage({
       {/* Statistiques */}
       <section>
         <div className="grid gap-4 md:grid-cols-4">
-          <StatCard
-            label="Vues totales"
-            value={metrics.total_views.toLocaleString()}
-            hint="Toutes soumissions confondues"
-            icon={<Eye className="h-4 w-4" />}
-          />
-          <StatCard
-            label="Engagement"
-            value={metrics.total_likes.toLocaleString()}
-            hint="Likes total"
-            icon={<TrendingUp className="h-4 w-4" />}
-          />
-          <StatCard
-            label="CPV"
-            value={cpv > 0 ? formatCurrency(cpv, contest.currency) : '-'}
-            hint={isProductContest ? 'Non applicable pour les concours produit' : 'Coût pour 1000 vues'}
-            icon={<DollarSign className="h-4 w-4" />}
-          />
-          <StatCard
-            label="Soumissions"
-            value={String(metrics.approved_submissions)}
-            hint={`${submissions.pending} en attente`}
-            icon={<FileText className="h-4 w-4" />}
-          />
+          <div className="rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)]/80 p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-3)]">
+                Vues totales
+              </p>
+              <Eye className="h-4 w-4 text-[var(--text-3)]" aria-hidden="true" />
+            </div>
+            <p className="mt-2 text-2xl font-semibold tabular-nums text-[var(--text-1)]">
+              {metrics.total_views.toLocaleString('fr-FR')}
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-3)]">
+              Toutes soumissions confondues
+            </p>
+          </div>
+
+          <div className="rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)]/80 p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-3)]">
+                Engagement
+              </p>
+              <TrendingUp className="h-4 w-4 text-[var(--text-3)]" aria-hidden="true" />
+            </div>
+            <p className="mt-2 text-2xl font-semibold tabular-nums text-[var(--text-1)]">
+              {metrics.total_likes.toLocaleString('fr-FR')}
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-3)]">Likes total</p>
+          </div>
+
+          <div className="rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)]/80 p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-3)]">
+                CPV
+              </p>
+              <DollarSign className="h-4 w-4 text-[var(--text-3)]" aria-hidden="true" />
+            </div>
+            <p className="mt-2 text-2xl font-semibold tabular-nums text-[var(--text-1)]">
+              {cpv > 0 ? formatCurrency(cpv, contest.currency) : '-'}
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-3)]">
+              {isProductContest
+                ? 'Non applicable pour les concours produit'
+                : 'Coût pour 1000 vues'}
+            </p>
+          </div>
+
+          <div className="rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)]/80 p-5">
+            <div className="flex items-center justify-between">
+              <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-3)]">
+                Soumissions
+              </p>
+              <FileText className="h-4 w-4 text-[var(--text-3)]" aria-hidden="true" />
+            </div>
+            <p className="mt-2 text-2xl font-semibold tabular-nums text-[var(--text-1)]">
+              {String(metrics.approved_submissions)}
+            </p>
+            <p className="mt-1 text-xs text-[var(--text-3)]">
+              {`${submissions.pending} en attente`}
+            </p>
+          </div>
         </div>
       </section>
 
       {/* Graphique croissance journalière */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Croissance journalière</CardTitle>
-          <p className="text-sm text-muted-foreground">
-            ?volution des vues quotidiennes depuis le début du concours
+      <GlassCard className="space-y-4">
+        <div>
+          <h2 className="text-sm font-semibold text-[var(--text-1)]">
+            Croissance journalière
+          </h2>
+          <p className="mt-1 text-xs text-[var(--text-3)]">
+            Évolution des vues quotidiennes depuis le début du concours
           </p>
-        </CardHeader>
-        <CardContent>
+        </div>
+        <div className="h-[220px]">
           <ContestMetricsChart data={metrics.daily_views} />
-        </CardContent>
-      </Card>
+        </div>
+      </GlassCard>
 
       {/* UGC (Submissions) */}
       <section>
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Soumissions</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="text-lg font-semibold text-[var(--text-1)]">
+              Soumissions
+            </h2>
+            <p className="mt-1 text-sm text-[var(--text-2)]">
               {submissions.pending > 0 && (
-                <span className="text-warning">
+                <span className="font-medium text-[var(--brand-warning)]">
                   {submissions.pending} en attente de modération
                 </span>
               )}
-              {submissions.pending === 0 && 'Toutes les soumissions sont modérées'}
+              {submissions.pending === 0 &&
+                'Toutes les soumissions sont modérées'}
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <Button asChild variant="secondary">
-              <Link href={`/app/brand/contests/${id}/submissions`}>
-                <FileText className="h-4 w-4 mr-2" />
-                Voir toutes les soumissions
-              </Link>
-            </Button>
-            <Button asChild>
-              <Link href={`/app/brand/contests/${id}/submissions?status=pending&focus=1`}>
-                <PlayCircle className="h-4 w-4 mr-2" />
-                Lancer le Focus Mode
-              </Link>
-            </Button>
+            <Link
+              href={`/app/brand/contests/${id}/submissions`}
+              className="inline-flex items-center gap-2 rounded-[var(--r2)] border border-[var(--border-1)] px-3 py-2 text-sm font-medium text-[var(--text-2)] transition-colors hover:border-[var(--border-2)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            >
+              <FileText className="h-4 w-4" />
+              Voir toutes les soumissions
+            </Link>
+            <Link
+              href={`/app/brand/contests/${id}/submissions?status=pending&focus=1`}
+              className="inline-flex items-center gap-2 rounded-[var(--r2)] border border-[var(--accent)]/30 bg-[var(--accent)]/8 px-3 py-2 text-sm font-medium text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            >
+              <PlayCircle className="h-4 w-4" />
+              Lancer le Focus Mode
+            </Link>
           </div>
         </div>
 
         {submissions.recent.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6">
-              <BrandEmptyState
-                type="no-submissions"
-                title="Aucune soumission"
-                description="Les créateurs n'ont pas encore participé à ce concours."
-                action={{
-                  label: 'Promouvoir le concours',
-                  href: '#',
-                  variant: 'secondary',
-                }}
-              />
-            </CardContent>
-          </Card>
+          <GlassCard>
+            <BrandEmptyState
+              type="no-submissions"
+              title="Aucune soumission"
+              description="Les créateurs n'ont pas encore participé à ce concours."
+              action={{
+                label: 'Promouvoir le concours',
+                href: '#',
+                variant: 'secondary',
+              }}
+            />
+          </GlassCard>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {submissions.recent.map((submission) => (
@@ -204,108 +250,125 @@ export default async function BrandContestDetailPage({
 
       {/* Leaderboard */}
       <section>
-        <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-semibold">Classement</h2>
-            <p className="text-sm text-muted-foreground">Top créateurs par vues pondérées</p>
+            <h2 className="text-lg font-semibold text-[var(--text-1)]">
+              Classement
+            </h2>
+            <p className="mt-1 text-sm text-[var(--text-2)]">
+              Top créateurs par vues pondérées
+            </p>
           </div>
           <div className="flex gap-2">
-            <Button asChild variant="secondary" size="sm">
-              <Link href={`/app/brand/contests/${id}/leaderboard`}>
-                Voir le classement complet
-              </Link>
-            </Button>
-            <Button
-              asChild
-              variant="secondary"
-              size="sm"
-              className="flex items-center gap-2"
+            <Link
+              href={`/app/brand/contests/${id}/leaderboard`}
+              className="inline-flex items-center gap-2 rounded-[var(--r2)] border border-[var(--border-1)] px-3 py-2 text-xs font-medium text-[var(--text-2)] transition-colors hover:border-[var(--border-2)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
             >
-              <a href={`/api/contests/${id}/export-pdf`} target="_blank" rel="noopener noreferrer">
-                <Download className="h-4 w-4" />
-                Export PDF
-              </a>
-            </Button>
+              Voir le classement complet
+            </Link>
+            <a
+              href={`/api/contests/${id}/export-pdf`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-[var(--r2)] border border-[var(--border-1)] px-3 py-2 text-xs font-medium text-[var(--text-2)] transition-colors hover:border-[var(--border-2)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            >
+              <Download className="h-4 w-4" />
+              Export PDF
+            </a>
           </div>
         </div>
 
         {leaderboard.length === 0 ? (
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground text-center">
-                Aucun classement disponible pour le moment.
-              </p>
-            </CardContent>
-          </Card>
+          <GlassCard className="pt-6">
+            <p className="text-center text-sm text-[var(--text-2)]">
+              Aucun classement disponible pour le moment.
+            </p>
+          </GlassCard>
         ) : (
-          <Card>
-            <CardContent className="pt-6">
-              <div className="space-y-2">
-                {leaderboard.slice(0, 10).map((entry: { creator_id: string; creator_name: string | null; total_views: number; total_likes: number; estimated_payout_cents: number }, index: number) => (
-                  <div
-                    key={entry.creator_id}
-                    className="flex items-center justify-between p-3 rounded-lg border hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-semibold">
-                        {index + 1}
+          <GlassCard className="p-0 overflow-hidden">
+            <div className="divide-y divide-[var(--border-1)]">
+              {leaderboard
+                .slice(0, 10)
+                .map(
+                  (entry: {
+                    creator_id: string;
+                    creator_name: string | null;
+                    total_views: number;
+                    total_likes: number;
+                    estimated_payout_cents: number;
+                  }, index: number) => (
+                    <div
+                      key={entry.creator_id}
+                      className="flex items-center justify-between p-4 transition-colors hover:bg-[var(--surface-2)]/40"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--accent)]/10 text-xs font-semibold text-[var(--accent)]">
+                          {index + 1}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-[var(--text-1)]">
+                            {entry.creator_name || 'Créateur anonyme'}
+                          </p>
+                          <p className="text-xs text-[var(--text-3)]">
+                            {entry.total_views.toLocaleString('fr-FR')} vues ⬢{' '}
+                            {entry.total_likes.toLocaleString('fr-FR')} likes
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium">{entry.creator_name || 'Créateur anonyme'}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {entry.total_views.toLocaleString()} vues ⬢ {entry.total_likes.toLocaleString()} likes
+                      <div className="text-right">
+                        <p className="text-sm font-semibold text-[var(--text-1)]">
+                          {formatCurrency(
+                            entry.estimated_payout_cents,
+                            contest.currency,
+                          )}
+                        </p>
+                        <p className="text-xs text-[var(--text-3)]">
+                          Gain estimé
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold">
-                        {formatCurrency(entry.estimated_payout_cents, contest.currency)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">Gain estimé</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+                  ),
+                )}
+            </div>
+          </GlassCard>
         )}
       </section>
 
       {/* CTA */}
       <section className="grid gap-4 md:grid-cols-2">
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Share2 className="h-5 w-5" />
-              Promouvoir le concours
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Partage le concours sur tes réseaux pour attirer plus de créateurs.
-            </p>
-            <Button variant="secondary" className="w-full" disabled>
-              Générer le lien de partage
-            </Button>
-          </CardContent>
-        </Card>
+        <GlassCard className="space-y-4" pattern="track">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--text-1)]">
+            <Share2 className="h-4 w-4 text-[var(--accent)]" />
+            Promouvoir le concours
+          </h3>
+          <p className="text-xs text-[var(--text-3)]">
+            Partage le concours sur tes réseaux pour attirer plus de créateurs.
+          </p>
+          <button
+            type="button"
+            disabled
+            className="mt-4 w-full cursor-not-allowed rounded-[var(--r2)] border border-[var(--border-1)] px-4 py-2.5 text-sm font-medium text-[var(--text-3)] opacity-50"
+          >
+            Générer le lien de partage
+          </button>
+        </GlassCard>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Contacter les participants
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground mb-4">
-              Envoie un message à tous les créateurs qui ont participé.
-            </p>
-            <Button variant="secondary" className="w-full" disabled>
-              Envoyer un message
-            </Button>
-          </CardContent>
-        </Card>
+        <GlassCard className="space-y-4">
+          <h3 className="flex items-center gap-2 text-sm font-semibold text-[var(--text-1)]">
+            <MessageSquare className="h-4 w-4 text-[var(--accent)]" />
+            Contacter les participants
+          </h3>
+          <p className="text-xs text-[var(--text-3)]">
+            Envoie un message à tous les créateurs qui ont participé.
+          </p>
+          <button
+            type="button"
+            disabled
+            className="mt-4 w-full cursor-not-allowed rounded-[var(--r2)] border border-[var(--border-1)] px-4 py-2.5 text-sm font-medium text-[var(--text-3)] opacity-50"
+          >
+            Envoyer un message
+          </button>
+        </GlassCard>
       </section>
     </main>
   );
@@ -326,56 +389,65 @@ interface SubmissionCardProps {
 
 function SubmissionCard({ submission, contestId }: SubmissionCardProps) {
   return (
-    <Card className="group transition-all duration-200 hover:-translate-y-1 hover:shadow-card-hover border-border/60 hover:border-primary/20">
-      <CardHeader>
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <p className="font-medium line-clamp-1">{submission.creator_name || 'Créateur'}</p>
-            <PlatformBadge platform={submission.platform as Platform} className="mt-1" />
-          </div>
-          <Badge
-            variant={
-              submission.status === 'approved'
-                ? 'success'
-                : submission.status === 'rejected'
-                  ? 'danger'
-                  : 'warning'
-            }
-          >
-            {submission.status === 'approved'
+    <div className="group rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)]/80 p-4 transition-all motion-safe:hover:-translate-y-px motion-safe:hover:shadow-[var(--shadow-brand-2)] hover:border-[var(--border-2)]">
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1">
+          <p className="line-clamp-1 text-sm font-medium text-[var(--text-1)]">
+            {submission.creator_name || 'Créateur'}
+          </p>
+          <PlatformBadge
+            platform={submission.platform as Platform}
+            className="mt-1"
+          />
+        </div>
+        <StatusBadge
+          variant={
+            submission.status === 'approved'
+              ? 'success'
+              : submission.status === 'rejected'
+                ? 'danger'
+                : 'warning'
+          }
+          label={
+            submission.status === 'approved'
               ? 'Approuvé'
               : submission.status === 'rejected'
                 ? 'Refusé'
-                : 'En attente'}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
+                : 'En attente'
+          }
+        />
+      </div>
+      <div className="mt-3 space-y-3 text-sm">
         <a
           href={submission.external_url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-primary hover:underline line-clamp-1 transition-colors duration-150 hover:text-primary/80"
+          className="line-clamp-1 text-sm text-[var(--accent)] underline-offset-2 transition-colors hover:underline"
         >
           {submission.external_url}
         </a>
-        <div className="grid grid-cols-2 gap-2 text-sm">
+        <div className="grid grid-cols-2 gap-2">
           <div>
-            <p className="text-muted-foreground">Vues</p>
-            <p className="font-semibold">{submission.views.toLocaleString()}</p>
+            <p className="text-xs text-[var(--text-3)]">Vues</p>
+            <p className="text-sm font-semibold text-[var(--text-1)]">
+              {submission.views.toLocaleString('fr-FR')}
+            </p>
           </div>
           <div>
-            <p className="text-muted-foreground">Likes</p>
-            <p className="font-semibold">{submission.likes.toLocaleString()}</p>
+            <p className="text-xs text-[var(--text-3)]">Likes</p>
+            <p className="text-sm font-semibold text-[var(--text-1)]">
+              {submission.likes.toLocaleString('fr-FR')}
+            </p>
           </div>
         </div>
-        <Button asChild size="sm" variant="secondary" className="w-full transition-all duration-200 hover:scale-[1.02]">
-          <Link href={`/app/brand/contests/${contestId}/submissions?submission=${submission.id}`}>
-            {submission.status === 'pending' ? 'Modérer' : 'Voir détails'}
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
+        <Link
+          href={`/app/brand/contests/${contestId}/submissions?submission=${submission.id}`}
+          className="mt-1 inline-flex w-full items-center justify-center rounded-[var(--r2)] border border-[var(--border-1)] px-3 py-2 text-xs font-medium text-[var(--text-2)] transition-colors hover:border-[var(--border-2)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+        >
+          {submission.status === 'pending' ? 'Modérer' : 'Voir détails'}
+        </Link>
+      </div>
+    </div>
   );
 }
 
