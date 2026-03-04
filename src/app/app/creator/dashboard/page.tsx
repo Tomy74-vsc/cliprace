@@ -445,57 +445,69 @@ async function fetchDashboardData(
     const supabase = await getSupabaseSSR();
     const now = new Date().toISOString();
 
-    const { data: summary, error: summaryError } = await supabase
-      .from("creator_dashboard_summary")
-      .select("total_submissions, approved_submissions, total_views, total_earnings_cents")
-      .eq("creator_id", userId)
-      .maybeSingle();
+    // VAGUE 1 — tout ce qui est indépendant
+    const [
+      summaryResult,
+      nextContestResult,
+      notificationsResult,
+      profileCreatorResult,
+    ] = await Promise.all([
+      supabase
+        .from("creator_dashboard_summary")
+        .select("total_submissions, approved_submissions, total_views, total_earnings_cents")
+        .eq("creator_id", userId)
+        .maybeSingle(),
+      supabase
+        .from("contests")
+        .select("id, title, prize_pool_cents, currency, end_at")
+        .eq("status", "active")
+        .gte("end_at", now)
+        .order("end_at", { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("notifications")
+        .select("id, type, content, read, created_at")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(5),
+      supabase
+        .from("profile_creators")
+        .select("primary_platform, followers, avg_views")
+        .eq("user_id", userId)
+        .maybeSingle(),
+    ]);
 
-    if (summaryError) {
-      console.error("Dashboard summary error", summaryError);
+    const summary = summaryResult.data;
+    const nextContest = nextContestResult.data;
+    const notifications = notificationsResult.data;
+    const profileCreator = profileCreatorResult.data;
+
+    if (summaryResult.error) {
+      console.error("Dashboard summary error", summaryResult.error);
     }
 
-    const { data: nextContest } = await supabase
-      .from("contests")
-      .select("id, title, prize_pool_cents, currency, end_at")
-      .eq("status", "active")
-      .gte("end_at", now)
-      .order("end_at", { ascending: true })
-      .limit(1)
-      .maybeSingle();
-
-    const { data: notifications } = await supabase
-      .from("notifications")
-      .select("id, type, content, read, created_at")
-      .eq("user_id", userId)
-      .order("created_at", { ascending: false })
-      .limit(5);
-
-    const unread_notifications = notifications?.filter((n) => !n.read).length || 0;
-
-    const { data: profileCreator } = await supabase
-      .from("profile_creators")
-      .select("primary_platform, followers, avg_views")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    const { data: canSubmitRes, error: canSubmitErr } =
+    // VAGUE 2 — dépend de nextContest et profileCreator
+    const [canSubmitResult, recommended] = await Promise.all([
       nextContest?.id
-        ? await supabase.rpc("can_submit_to_contest", {
+        ? supabase.rpc("can_submit_to_contest", {
             p_contest_id: nextContest.id,
             p_user_id: userId,
           })
-        : { data: null, error: null };
+        : Promise.resolve({ data: null, error: null }),
+      fetchRecommendedContests({
+        primaryPlatform: profileCreator?.primary_platform || null,
+        followers: profileCreator?.followers ?? null,
+        avgViews: profileCreator?.avg_views ?? null,
+      }),
+    ]);
 
-    if (canSubmitErr) {
-      console.error("can_submit_to_contest error", canSubmitErr);
+    if (canSubmitResult.error) {
+      console.error("can_submit_to_contest error", canSubmitResult.error);
     }
 
-    const recommended = await fetchRecommendedContests({
-      primaryPlatform: profileCreator?.primary_platform || null,
-      followers: profileCreator?.followers ?? null,
-      avgViews: profileCreator?.avg_views ?? null,
-    });
+    // VAGUE 3 — assemblage JS pur
+    const unread_notifications = notifications?.filter((n) => !n.read).length || 0;
 
     return {
       data: {
@@ -515,7 +527,7 @@ async function fetchDashboardData(
               end_at: nextContest.end_at,
             }
           : null,
-        next_contest_can_submit: Boolean(canSubmitRes),
+        next_contest_can_submit: Boolean(canSubmitResult.data),
         profileIncomplete: !profileCreator?.primary_platform,
         notifications: notifications || [],
         recommended,

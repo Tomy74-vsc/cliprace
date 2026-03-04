@@ -454,7 +454,7 @@ function SubmissionCard({ submission, contestId }: SubmissionCardProps) {
 async function fetchContestData(contestId: string, userId: string) {
   const supabase = await getSupabaseSSR();
 
-  // Récupérer le concours (vérification ownership via RLS)
+  // VAGUE 0 — contest seul (ownership check — bloquant par design)
   const { data: contest, error: contestError } = await supabase
     .from('contests')
     .select(
@@ -468,138 +468,135 @@ async function fetchContestData(contestId: string, userId: string) {
     return { error: 'Contest not found', contest: null, metrics: null, submissions: null, leaderboard: null };
   }
 
-  // Récupérer toutes les soumissions du concours pour les métriques
-  const { data: allSubmissions } = await supabase
-    .from('submissions')
-    .select('id')
-    .eq('contest_id', contestId);
-  
-  const allSubmissionIds = allSubmissions?.map((s) => s.id) || [];
+  // VAGUE 1 — tout ce qui dépend uniquement de contestId
+  const [
+    submissionsResult,
+    metricsResult,
+    recentSubmissionsResult,
+    pendingCountResult,
+    leaderboardResult,
+    prizesResult,
+  ] = await Promise.all([
+    supabase.from('submissions').select('id').eq('contest_id', contestId),
+    supabase.rpc('get_contest_metrics', { p_contest_id: contestId }),
+    supabase
+      .from('submissions')
+      .select(
+        'id, external_url, platform, status, creator_id, submitted_at, creator:creator_id(display_name)'
+      )
+      .eq('contest_id', contestId)
+      .order('submitted_at', { ascending: false })
+      .limit(6),
+    supabase
+      .from('submissions')
+      .select('id', { count: 'exact', head: true })
+      .eq('contest_id', contestId)
+      .eq('status', 'pending'),
+    supabase.rpc('get_contest_leaderboard', { p_contest_id: contestId, p_limit: 30 }),
+    supabase
+      .from('contest_prizes')
+      .select('position, amount_cents, percentage')
+      .eq('contest_id', contestId)
+      .order('position', { ascending: true }),
+  ]);
 
-  // Récupérer les métriques via RPC
-  const { data: metricsData } = await supabase.rpc('get_contest_metrics', {
-    p_contest_id: contestId,
+  // VAGUE 2 — dépend des IDs obtenus en vague 1
+  const allSubmissionIds = submissionsResult.data?.map((s) => s.id) || [];
+  const submissionsData = recentSubmissionsResult.data || [];
+  const recentSubmissionIds = submissionsData.map((s) => s.id);
+  const leaderboardData = leaderboardResult.data || [];
+  const creatorIds = leaderboardData.map((l: { creator_id: string }) => l.creator_id);
+  const prizes = prizesResult.data || [];
+
+  const [
+    dailyMetricsResult,
+    recentMetricsResult,
+    creatorsResult,
+  ] = await Promise.all([
+    allSubmissionIds.length > 0
+      ? supabase
+          .from('metrics_daily')
+          .select('metric_date, views')
+          .in('submission_id', allSubmissionIds)
+          .order('metric_date', { ascending: true })
+      : Promise.resolve({ data: [] }),
+    recentSubmissionIds.length > 0
+      ? supabase
+          .from('metrics_daily')
+          .select('submission_id, views:sum(views), likes:sum(likes)')
+          .in('submission_id', recentSubmissionIds)
+      : Promise.resolve({ data: [] }),
+    creatorIds.length > 0
+      ? supabase.from('profiles').select('id, display_name').in('id', creatorIds)
+      : Promise.resolve({ data: [] }),
+  ]);
+
+  // VAGUE 3 — assemblage JS pur (zéro DB)
+  const dailyMetrics = dailyMetricsResult.data || [];
+  const dailyViews: Array<{ date: string; views: number }> = [];
+  const viewsByDate = new Map<string, number>();
+  dailyMetrics.forEach((m: { metric_date: string; views: number }) => {
+    const date = m.metric_date;
+    const current = viewsByDate.get(date) || 0;
+    viewsByDate.set(date, current + (m.views || 0));
+  });
+  viewsByDate.forEach((views, date) => {
+    dailyViews.push({ date, views });
+  });
+  dailyViews.sort((a, b) => a.date.localeCompare(b.date));
+
+  const metricsData = metricsResult.data;
+  const metrics =
+    metricsData && metricsData.length > 0
+      ? {
+          total_views: Number(metricsData[0].total_views || 0),
+          total_likes: Number(metricsData[0].total_likes || 0),
+          total_submissions: Number(metricsData[0].total_submissions || 0),
+          approved_submissions: Number(metricsData[0].approved_submissions || 0),
+          daily_views: dailyViews,
+        }
+      : {
+          total_views: 0,
+          total_likes: 0,
+          total_submissions: 0,
+          approved_submissions: 0,
+          daily_views: dailyViews,
+        };
+
+  const metricsRows = recentMetricsResult.data || [];
+  const metricsBySubmission = new Map<string, { views: number; likes: number }>();
+  metricsRows.forEach((row: UnsafeAny) => {
+    const viewsValue = Array.isArray(row.views)
+      ? Number((row.views[0] as UnsafeAny)?.views || 0)
+      : Number(row.views || 0);
+    const likesValue = Array.isArray(row.likes)
+      ? Number((row.likes[0] as UnsafeAny)?.likes || 0)
+      : Number(row.likes || 0);
+    metricsBySubmission.set(String(row.submission_id), {
+      views: viewsValue,
+      likes: likesValue,
+    });
   });
 
-  // Récupérer les vues quotidiennes depuis metrics_daily
-  const dailyViews: Array<{ date: string; views: number }> = [];
-  if (allSubmissionIds.length > 0) {
-    const { data: dailyMetrics } = await supabase
-      .from('metrics_daily')
-      .select('metric_date, views')
-      .in('submission_id', allSubmissionIds)
-      .order('metric_date', { ascending: true });
-
-    // Agréger par date
-    const viewsByDate = new Map<string, number>();
-    dailyMetrics?.forEach((m: { metric_date: string; views: number }) => {
-      const date = m.metric_date;
-      const current = viewsByDate.get(date) || 0;
-      viewsByDate.set(date, current + (m.views || 0));
-    });
-    viewsByDate.forEach((views, date) => {
-      dailyViews.push({ date, views });
-    });
-    dailyViews.sort((a, b) => a.date.localeCompare(b.date));
-  }
-
-  const metrics = metricsData && metricsData.length > 0
-    ? {
-        total_views: Number(metricsData[0].total_views || 0),
-        total_likes: Number(metricsData[0].total_likes || 0),
-        total_submissions: Number(metricsData[0].total_submissions || 0),
-        approved_submissions: Number(metricsData[0].approved_submissions || 0),
-        daily_views: dailyViews,
-      }
-    : {
-        total_views: 0,
-        total_likes: 0,
-        total_submissions: 0,
-        approved_submissions: 0,
-        daily_views: dailyViews,
-      };
-
-  // Récupérer les soumissions récentes
-  const { data: submissionsData } = await supabase
-    .from('submissions')
-    .select(
-      'id, external_url, platform, status, creator_id, submitted_at, creator:creator_id(display_name)'
-    )
-    .eq('contest_id', contestId)
-    .order('submitted_at', { ascending: false })
-    .limit(6);
-
-  // Compter les soumissions en attente
-  const { count: pendingCount } = await supabase
-    .from('submissions')
-    .select('id', { count: 'exact', head: true })
-    .eq('contest_id', contestId)
-    .eq('status', 'pending');
-
-  // Récupérer les métriques des soumissions
-  const recentSubmissionIds = (submissionsData || []).map((submission) => submission.id);
-  const metricsBySubmission = new Map<string, { views: number; likes: number }>();
-  if (recentSubmissionIds.length > 0) {
-    const { data: metricsRows } = await supabase
-      .from('metrics_daily')
-      .select('submission_id, views:sum(views), likes:sum(likes)')
-      .in('submission_id', recentSubmissionIds);
-
-    (metricsRows || []).forEach((row: UnsafeAny) => {
-      const viewsValue = Array.isArray(row.views)
-        ? Number((row.views[0] as UnsafeAny)?.views || 0)
-        : Number(row.views || 0);
-      const likesValue = Array.isArray(row.likes)
-        ? Number((row.likes[0] as UnsafeAny)?.likes || 0)
-        : Number(row.likes || 0);
-      metricsBySubmission.set(String(row.submission_id), {
-        views: viewsValue,
-        likes: likesValue,
-      });
-    });
-  }
-
-  const submissionsWithMetrics = (submissionsData || []).map((submission) => {
-    const metrics = metricsBySubmission.get(submission.id) || { views: 0, likes: 0 };
+  const submissionsWithMetrics = submissionsData.map((submission) => {
+    const metricsForSub = metricsBySubmission.get(submission.id) || { views: 0, likes: 0 };
     return {
       id: submission.id,
       external_url: submission.external_url,
       platform: submission.platform,
       status: submission.status,
       creator_name: (submission.creator as { display_name?: string | null } | null)?.display_name || null,
-      views: metrics.views,
-      likes: metrics.likes,
+      views: metricsForSub.views,
+      likes: metricsForSub.likes,
     };
   });
 
-  const { data: leaderboardData } = await supabase.rpc('get_contest_leaderboard', {
-    p_contest_id: contestId,
-    p_limit: 30,
-  });
+  const creators = creatorsResult.data || [];
+  const creatorMap = new Map(creators.map((c) => [c.id, c.display_name || null]));
 
-  // Récupérer les créateurs pour le leaderboard
-  const creatorIds = leaderboardData?.map((l: { creator_id: string }) => l.creator_id) || [];
-  const { data: creators } = creatorIds.length > 0
-    ? await supabase
-        .from('profiles')
-        .select('id, display_name')
-        .in('id', creatorIds)
-    : { data: null };
-
-  const creatorMap = new Map(
-    (creators || []).map((c) => [c.id, c.display_name || null])
-  );
-
-  // Récupérer les prix pour calculer les gains estimés
-  const { data: prizes } = await supabase
-    .from('contest_prizes')
-    .select('position, amount_cents, percentage')
-    .eq('contest_id', contestId)
-    .order('position', { ascending: true });
-
-  const leaderboard = (leaderboardData || []).map((entry: UnsafeAny, index: number) => {
+  const leaderboard = leaderboardData.map((entry: UnsafeAny, index: number) => {
     const rank = index + 1;
-    const prize = prizes?.find((p) => p.position === rank);
+    const prize = prizes.find((p: { position: number }) => p.position === rank);
     const estimatedPayout = prize
       ? prize.amount_cents || Math.round((contest.prize_pool_cents * (prize.percentage || 0)) / 100)
       : 0;
@@ -615,12 +612,14 @@ async function fetchContestData(contestId: string, userId: string) {
     };
   });
 
+  const pendingCount = pendingCountResult.count ?? 0;
+
   return {
     contest,
     metrics,
     submissions: {
       recent: submissionsWithMetrics,
-      pending: pendingCount || 0,
+      pending: pendingCount,
     },
     leaderboard,
     error: null,
