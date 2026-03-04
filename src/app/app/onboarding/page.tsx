@@ -1,4 +1,4 @@
-﻿/*
+/*
 Source: Page onboarding
 Purpose: Page onboarding avec formulaire multi-Ã©tapes
 */
@@ -20,6 +20,7 @@ export default async function OnboardingPage() {
 
   // RÃ©cupÃ©rer les donnÃ©es existantes pour prÃ©-remplir le formulaire
   let initialData: UnsafeAny = {};
+  let connectedPlatforms: Array<{ platform: string; handle: string | null }> = [];
 
   if (user.role === 'creator') {
     const { data: creator } = await admin
@@ -42,17 +43,10 @@ export default async function OnboardingPage() {
       .select('platform, handle')
       .eq('user_id', user.id);
 
-    if (platformAccounts?.length) {
-      initialData.platform_links = platformAccounts.reduce(
-        (acc: Record<string, string>, account) => {
-          if (account?.platform && account.handle) {
-            acc[account.platform] = account.handle;
-          }
-          return acc;
-        },
-        initialData.platform_links || {}
-      );
-    }
+    connectedPlatforms = (platformAccounts || []).map((account) => ({
+      platform: account.platform,
+      handle: account.handle || null,
+    }));
   } else if (user.role === 'brand') {
     const { data: brand } = await admin
       .from('profile_brands')
@@ -143,7 +137,11 @@ export default async function OnboardingPage() {
                 : 'Remplissez les informations suivantes pour complÃ©ter votre profil entreprise'}
             </CardDescription>
           </CardHeader>
-          <OnboardingForm role={user.role} initialData={initialData} />
+          <OnboardingForm
+            role={user.role}
+            initialData={initialData}
+            connectedPlatforms={user.role === 'creator' ? connectedPlatforms : undefined}
+          />
           <div className="p-6 border-t border-zinc-200 dark:border-zinc-800">
             {/* Footer space */}
           </div>
