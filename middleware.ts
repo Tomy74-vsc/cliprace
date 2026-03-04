@@ -105,7 +105,8 @@ export async function middleware(req: NextRequest) {
   const isApiProtected =
     pathname.startsWith('/api/') &&
     !pathname.startsWith('/api/auth/') &&
-    !pathname.startsWith('/api/payments/stripe/webhook'); // webhook uses Stripe signature, no session
+    !pathname.startsWith('/api/payments/stripe/webhook') && // webhook uses Stripe signature, no session
+    !pathname.startsWith('/api/cron/');
   if (isApiProtected) {
     const supabase = createSupabaseMiddlewareClient(req, res);
     const {
