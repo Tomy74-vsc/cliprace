@@ -4,12 +4,12 @@ import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { fetchContestLeaderboard } from '@/lib/queries/contest-leaderboard';
 import { BrandEmptyState } from '@/components/brand/empty-state-enhanced';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/formatters';
 import { TrackOnView } from '@/components/analytics/track-once';
-import { Info, Download, ArrowLeft } from 'lucide-react';
+import { Info, Download, ArrowLeft, Trophy } from 'lucide-react';
+import { GlassCard, StatusBadge } from '@/components/brand-ui';
+import { LeaderboardPodium } from '@/components/brand/leaderboard-podium';
+import { cn } from '@/lib/utils';
 
 export const revalidate = 45;
 
@@ -80,7 +80,7 @@ export default async function BrandContestLeaderboardPage({
   const refreshHref = `${baseUrl}?mode=${mode}&ts=${now.getTime()}`;
 
   return (
-    <main className="mx-auto max-w-5xl px-4 py-8 space-y-6">
+    <main className="mx-auto max-w-5xl px-4 lg:px-6 py-8 space-y-8">
       <TrackOnView
         event="view_brand_leaderboard"
         payload={{
@@ -90,202 +90,235 @@ export default async function BrandContestLeaderboardPage({
         }}
       />
 
-      <div className="flex flex-col gap-2">
+      {/* ── HEADER ── */}
+      <div className="space-y-4">
+        {/* Breadcrumb */}
         <Link
           href={`/app/brand/contests/${contest.id}`}
-          className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1"
+          className="inline-flex items-center gap-1.5 text-sm text-[var(--text-3)]
+            hover:text-[var(--text-2)] transition-colors
+            focus-visible:outline-none focus-visible:ring-2
+            focus-visible:ring-[var(--accent)]"
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-3.5 w-3.5" />
           Retour au concours
         </Link>
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div>
-            <h1 className="text-3xl font-semibold">Classement</h1>
-            <p className="text-muted-foreground text-sm">
-              Classement des créateurs pour « {contest.title} » – Prize pool{' '}
-              {formatCurrency(contest.prize_pool_cents, contest.currency || 'EUR')}
+
+        {/* Title row */}
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 className="text-2xl font-semibold brand-tracking text-[var(--text-1)]">
+                Classement
+              </h1>
+              <StatusBadge
+                variant={
+                  contest.status === 'active'
+                    ? 'success'
+                    : contest.status === 'draft'
+                      ? 'neutral'
+                      : contest.status === 'archived'
+                        ? 'muted'
+                        : 'warning'
+                }
+                label={contest.status === 'active' ? 'Live' : contest.status}
+                pulse={contest.status === 'active'}
+              />
+            </div>
+            <p className="mt-1 text-sm text-[var(--text-3)]">
+              {contest.title} · Prize pool{' '}
+              <span className="font-semibold text-[var(--text-2)]">
+                {formatCurrency(contest.prize_pool_cents, contest.currency || 'EUR')}
+              </span>
             </p>
           </div>
-          <div className="flex items-center gap-3 flex-wrap justify-end">
-            <div className="text-xs text-muted-foreground">Dernière mise à jour {lastUpdated}</div>
-            <Button asChild variant="ghost" size="sm">
-              <Link href={refreshHref}>Rafraîchir</Link>
-            </Button>
-            <Button variant="secondary" size="sm" disabled>
-              <Download className="h-4 w-4 mr-2" />
+
+          {/* Actions */}
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            <span className="text-xs text-[var(--text-3)]">
+              Mis à jour à {lastUpdated}
+            </span>
+            <Link
+              href={refreshHref}
+              className="inline-flex items-center gap-1.5 rounded-[var(--r2)]
+                border border-[var(--border-1)] px-3 py-1.5 text-xs font-medium
+                text-[var(--text-2)] transition-colors hover:border-[var(--border-2)]
+                hover:text-[var(--text-1)]"
+            >
+              Rafraîchir
+            </Link>
+            <button
+              type="button"
+              disabled
+              className="inline-flex items-center gap-1.5 rounded-[var(--r2)]
+                border border-[var(--border-1)] px-3 py-1.5 text-xs font-medium
+                text-[var(--text-3)] opacity-50 cursor-not-allowed"
+            >
+              <Download className="h-3.5 w-3.5" />
               Export CSV
-            </Button>
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-col gap-2 text-sm">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-muted-foreground">Classement par :</span>
-            <div className="inline-flex rounded-full border border-border bg-card p-0.5">
-              <Link
-                href={viewsHref}
-                className={`px-3 py-1 rounded-full transition text-xs font-medium ${
-                  mode === 'views'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Vues
-              </Link>
-              <Link
-                href={scoreHref}
-                className={`px-3 py-1 rounded-full transition text-xs font-medium ${
-                  mode === 'score'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Score pondéré
-              </Link>
-            </div>
+        {/* Mode toggle */}
+        <div className="flex items-center gap-3 flex-wrap">
+          <span className="text-xs text-[var(--text-3)]">Classement par :</span>
+          <div className="inline-flex rounded-[var(--r-pill)] border border-[var(--border-1)]
+            bg-[var(--surface-2)]/50 p-0.5">
+            <Link
+              href={viewsHref}
+              className={cn(
+                'px-3 py-1 rounded-[var(--r-pill)] text-xs font-medium transition-colors',
+                mode === 'views'
+                  ? 'bg-[var(--surface-1)] text-[var(--text-1)] shadow-sm'
+                  : 'text-[var(--text-3)] hover:text-[var(--text-2)]',
+              )}
+            >
+              Vues
+            </Link>
+            <Link
+              href={scoreHref}
+              className={cn(
+                'px-3 py-1 rounded-[var(--r-pill)] text-xs font-medium transition-colors',
+                mode === 'score'
+                  ? 'bg-[var(--surface-1)] text-[var(--text-1)] shadow-sm'
+                  : 'text-[var(--text-3)] hover:text-[var(--text-2)]',
+              )}
+            >
+              Score pondéré
+            </Link>
           </div>
-          <div className="flex items-start gap-2 text-xs text-muted-foreground">
-            <Info className="h-3.5 w-3.5 text-primary mt-0.5" />
-            <p>
-              <span className="font-medium">Vues :</span> nombre total de vues brute sur la vidéo de participation.{' '}
-              <span className="font-medium">Score pondéré :</span> vues ajustées en fonction du réseau et de la qualité
-              du trafic (période, engagement, fraude). C&apos;est ce score qui est utilisé pour départager les
-              ex‑aequo.
-            </p>
-          </div>
+
+          <p className="text-xs text-[var(--text-3)] max-w-md">
+            <span className="font-medium text-[var(--text-2)]">Score pondéré</span> : vues ajustées selon réseau,
+            engagement et qualité du trafic.
+          </p>
         </div>
       </div>
 
+      {/* ── CONTENU ── */}
       {leaderboardWithPayouts.length === 0 ? (
-        <BrandEmptyState
-          type="no-leaderboard"
-          title="Leaderboard vide pour l'instant"
-          description="Aucune participation visible pour ce concours. Revenez après les premières validations."
-          action={{
-            label: 'Voir le concours',
-            href: `/app/brand/contests/${contest.id}`,
-            variant: 'secondary',
-          }}
-        />
+        <GlassCard className="flex flex-col items-center justify-center py-20 text-center">
+          <div className="h-12 w-12 rounded-full bg-[var(--surface-2)] flex items-center justify-center mb-4">
+            <Trophy className="h-6 w-6 text-[var(--text-3)]" strokeWidth={1.5} />
+          </div>
+          <h2 className="text-base font-semibold text-[var(--text-1)]">
+            Classement vide pour l&apos;instant
+          </h2>
+          <p className="mt-2 text-sm text-[var(--text-3)] max-w-sm">
+            Aucune participation visible. Revenez après les premières soumissions.
+          </p>
+          <Link
+            href={`/app/brand/contests/${contest.id}`}
+            className="mt-6 inline-flex items-center gap-2 rounded-[var(--r2)]
+              border border-[var(--border-1)] px-4 py-2 text-sm font-medium
+              text-[var(--text-2)] hover:border-[var(--border-2)]
+              hover:text-[var(--text-1)] transition-colors"
+          >
+            Voir le concours
+          </Link>
+        </GlassCard>
       ) : (
         <>
-          <section className="grid gap-4 md:grid-cols-3">
-            {leaderboardWithPayouts.slice(0, 3).map((entry, index) => (
-              <Card
-                key={`${entry.creator_id}-${entry.rank}`}
-                className={`relative overflow-hidden ${
-                  index === 0 ? 'border-primary/60 shadow-lg shadow-primary/20' : ''
-                }`}
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-accent/10 opacity-60" />
-                <CardContent className="relative space-y-2 py-4">
-                  <div className="flex items-center justify-between">
-                    <Badge variant="success">#{entry.rank}</Badge>
-                    {entry.estimated_payout_cents > 0 && (
-                      <Badge variant="info">
-                        {formatCurrency(entry.estimated_payout_cents, contest.currency || 'EUR')}
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="text-lg font-semibold">{entry.creator_name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Vues{' '}
-                    <span className={mode === 'views' ? 'font-semibold text-foreground' : ''}>
-                      {entry.total_views?.toLocaleString('fr-FR') ?? '-'}
-                    </span>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    Score pondéré{' '}
-                    <span className={mode === 'score' ? 'font-semibold text-foreground' : ''}>
-                      {entry.total_weighted_views?.toLocaleString('fr-FR') ?? '-'}
-                    </span>
-                  </div>
-                  {entry.estimated_payout_cents > 0 && (
-                    <div className="pt-2 border-t border-border/50">
-                      <div className="text-xs text-muted-foreground">Gain estimé</div>
-                      <div className="text-sm font-semibold text-primary">
-                        {formatCurrency(entry.estimated_payout_cents, contest.currency || 'EUR')}
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </section>
+          {/* ── PODIUM CLIENT ISLAND ── */}
+          <LeaderboardPodium
+            entries={leaderboardWithPayouts.slice(0, 3)}
+            currency={contest.currency || 'EUR'}
+            mode={mode}
+          />
 
-          <Card>
-            <CardHeader className="flex items-center justify-between">
-              <CardTitle>Top participants</CardTitle>
-              <Button asChild size="sm" variant="secondary">
-                <Link href={`/app/brand/contests/${contest.id}`}>Voir le concours</Link>
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-muted-foreground">
-                      <th className="px-3 py-2 font-medium">Rang</th>
-                      <th className="px-3 py-2 font-medium">Créateur</th>
-                      <th
-                        className={`px-3 py-2 font-medium ${
-                          mode === 'views' ? 'text-foreground' : 'text-muted-foreground'
-                        }`}
-                      >
-                        Vues
-                      </th>
-                      <th
-                        className={`px-3 py-2 font-medium ${
-                          mode === 'score' ? 'text-foreground' : 'text-muted-foreground'
-                        }`}
-                      >
-                        Score pondéré
-                      </th>
-                      <th className="px-3 py-2 font-medium">Gain estimé</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leaderboardWithPayouts.map((entry) => {
-                      return (
-                        <tr
-                          key={`${entry.creator_id}-${entry.rank}`}
-                          className="border-b border-border/60 last:border-0 hover:bg-muted/50 transition"
-                        >
-                          <td className="px-3 py-2">
-                            <Badge variant={entry.rank <= 3 ? 'success' : 'default'}>#{entry.rank}</Badge>
-                          </td>
-                          <td className="px-3 py-2 font-medium text-foreground">{entry.creator_name}</td>
-                          <td
-                            className={`px-3 py-2 ${
-                              mode === 'views' ? 'text-foreground font-medium' : 'text-muted-foreground'
-                            }`}
-                          >
-                            {entry.total_views?.toLocaleString('fr-FR')}
-                          </td>
-                          <td
-                            className={`px-3 py-2 ${
-                              mode === 'score' ? 'text-foreground font-medium' : 'text-muted-foreground'
-                            }`}
-                          >
-                            {entry.total_weighted_views?.toLocaleString('fr-FR', { maximumFractionDigits: 0 })}
-                          </td>
-                          <td className="px-3 py-2">
-                            {entry.estimated_payout_cents > 0 ? (
-                              <span className="font-semibold text-primary">
-                                {formatCurrency(entry.estimated_payout_cents, contest.currency || 'EUR')}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground">—</span>
-                            )}
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+          {/* ── TABLE COMPLÈTE (#4 → fin) ── */}
+          {leaderboardWithPayouts.length > 3 && (
+            <GlassCard className="p-0 overflow-hidden">
+              <div className="px-5 py-4 border-b border-[var(--border-1)]">
+                <h2 className="text-sm font-semibold text-[var(--text-1)]">
+                  Classement complet
+                </h2>
               </div>
-            </CardContent>
-          </Card>
+
+              <div className="divide-y divide-[var(--border-1)]">
+                {leaderboardWithPayouts.slice(3).map((entry, idx) => (
+                  <div
+                    key={`${entry.creator_id}-${entry.rank}`}
+                    className="flex items-center gap-4 px-5 py-3.5
+                      transition-colors hover:bg-[var(--surface-2)]/40"
+                    style={{ animationDelay: `${idx * 30}ms` }}
+                  >
+                    {/* Rank */}
+                    <div className="w-8 shrink-0 text-right">
+                      <span className="text-sm font-semibold tabular-nums text-[var(--text-3)]">
+                        #{entry.rank}
+                      </span>
+                    </div>
+
+                    {/* Avatar + name */}
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
+                      <div className="h-8 w-8 rounded-full bg-[var(--surface-2)]
+                        border border-[var(--border-1)] flex items-center justify-center
+                        shrink-0 text-xs font-semibold text-[var(--text-3)]">
+                        {(entry.creator_name?.[0] || '?').toUpperCase()}
+                      </div>
+                      <span className="text-sm font-medium text-[var(--text-1)] truncate">
+                        {entry.creator_name}
+                      </span>
+                    </div>
+
+                    {/* Vues */}
+                    <div className="text-right shrink-0">
+                      <p
+                        className={cn(
+                          'text-sm tabular-nums font-medium',
+                          mode === 'views'
+                            ? 'text-[var(--text-1)]'
+                            : 'text-[var(--text-3)]',
+                        )}
+                      >
+                        {entry.total_views.toLocaleString('fr-FR')}
+                      </p>
+                      <p className="text-[11px] text-[var(--text-3)]">vues</p>
+                    </div>
+
+                    {/* Score */}
+                    <div className="hidden sm:block text-right shrink-0">
+                      <p
+                        className={cn(
+                          'text-sm tabular-nums font-medium',
+                          mode === 'score'
+                            ? 'text-[var(--text-1)]'
+                            : 'text-[var(--text-3)]',
+                        )}
+                      >
+                        {entry.total_weighted_views.toLocaleString('fr-FR', {
+                          maximumFractionDigits: 0,
+                        })}
+                      </p>
+                      <p className="text-[11px] text-[var(--text-3)]">score</p>
+                    </div>
+
+                    {/* Prize */}
+                    <div className="text-right shrink-0 w-20">
+                      {entry.estimated_payout_cents > 0 ? (
+                        <span className="text-sm font-semibold tabular-nums text-[var(--accent)]">
+                          {formatCurrency(entry.estimated_payout_cents, contest.currency || 'EUR')}
+                        </span>
+                      ) : (
+                        <span className="text-sm text-[var(--text-3)]">—</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="px-5 py-3 border-t border-[var(--border-1)]
+                bg-[var(--surface-2)]/30">
+                <p className="text-xs text-[var(--text-3)] flex items-center gap-1.5">
+                  <Info className="h-3.5 w-3.5 shrink-0" />
+                  Seuls les Top 30 sont soumis à modération prioritaire. Les autres participations sont prises en
+                  compte automatiquement.
+                </p>
+              </div>
+            </GlassCard>
+          )}
         </>
       )}
     </main>
