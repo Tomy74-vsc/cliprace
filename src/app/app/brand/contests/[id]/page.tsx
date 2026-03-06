@@ -30,6 +30,7 @@ import {
   contestStatusVariant,
   contestStatusLabel,
 } from '@/components/brand-ui';
+import { ReviewingBanner } from '@/components/brand/reviewing-banner';
 import type { Platform } from '@/lib/validators/platforms';
 
 export const revalidate = 60;
@@ -84,7 +85,7 @@ export default async function BrandContestDetailPage({
             />
           </div>
           <p className="text-sm text-[var(--text-2)]">
-            {contest.start_at && formatDate(contest.start_at)} ? {formatDate(contest.end_at)}
+            {contest.start_at ? formatDate(contest.start_at) : '—'} · {contest.end_at ? formatDate(contest.end_at) : '—'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -110,6 +111,14 @@ export default async function BrandContestDetailPage({
           <ExportCSVButton contestId={id} contestTitle={contest.title} />
         </div>
       </div>
+
+      {contest.status === 'reviewing' && (
+        <ReviewingBanner
+          contestId={id}
+          endsAt={contest.ends_at ?? null}
+          pendingCount={submissions.pending}
+        />
+      )}
 
       {/* Statistiques */}
       <section>
@@ -458,7 +467,7 @@ async function fetchContestData(contestId: string, userId: string) {
   const { data: contest, error: contestError } = await supabase
     .from('contests')
     .select(
-      'id, title, brief_md, cover_url, status, prize_pool_cents, currency, start_at, end_at, networks, brand_id, contest_type, product_details, platform_fee'
+      'id, title, brief_md, cover_url, status, prize_pool_cents, currency, start_at, end_at, ends_at, networks, brand_id, contest_type, product_details, platform_fee'
     )
     .eq('id', contestId)
     .eq('brand_id', userId)
