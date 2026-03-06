@@ -111,7 +111,7 @@ export async function runIngestion(platform: Platform): Promise<IngestionReport>
     )
     .in('status', ['pending', 'approved'])
     .eq('platform', platform)
-    .eq('contest.status', 'active')
+    .in('contest.status', ['active', 'reviewing'])
     .limit(500);
 
   if (error) {

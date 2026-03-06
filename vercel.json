@@ -1,42 +1,26 @@
 {
-    "framework": "nextjs",
-    "buildCommand": "next build",
-    "devCommand": "next dev --turbopack",
-    "installCommand": "npm ci",
-  
-    "crons": [
-      {
-        "path": "/api/cron/metrics/youtube",
-        "schedule": "0 */6 * * *"
-      },
-      {
-        "path": "/api/cron/metrics/tiktok",
-        "schedule": "0 */6 * * *"
-      },
-      {
-        "path": "/api/cron/metrics/instagram",
-        "schedule": "0 */6 * * *"
-      },
-      {
-        "path": "/api/cron/metrics/finalize",
-        "schedule": "0 2 * * *"
-      },
-      {
-        "path": "/api/cron/contests/archive",
-        "schedule": "0 3 * * *"
-      }
-    ],
-  
-    "headers": [
-      {
-        "source": "/api/cron/(.*)",
-        "headers": [
-          {
-            "key": "Cache-Control",
-            "value": "no-store, max-age=0"
-          }
-        ]
-      }
-    ]
-  }
-  
+  "framework": "nextjs",
+  "buildCommand": "next build",
+  "devCommand": "next dev --turbopack",
+  "installCommand": "npm ci",
+
+  "crons": [
+    { "path": "/api/cron/metrics/youtube",         "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/metrics/tiktok",          "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/metrics/instagram",       "schedule": "0 */6 * * *" },
+    { "path": "/api/cron/metrics/finalize",        "schedule": "0 2 * * *" },
+    { "path": "/api/cron/contests/archive",        "schedule": "0 3 * * *" },
+    { "path": "/api/cron/contests/activate",       "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/contests/reviewing",      "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/contests/finalize",       "schedule": "*/15 * * * *" }
+  ],
+
+  "headers": [
+    {
+      "source": "/api/cron/(.*)",
+      "headers": [
+        { "key": "Cache-Control", "value": "no-store, max-age=0" }
+      ]
+    }
+  ]
+}

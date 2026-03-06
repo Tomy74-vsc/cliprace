@@ -1,7 +1,32 @@
 import { getAdminClient } from '@/lib/admin/supabase';
 import { createError } from '@/lib/errors';
 
-export type ContestStatus = 'draft' | 'active' | 'paused' | 'ended' | 'archived';
+export type ContestStatus =
+  | 'draft'
+  | 'pending_live'   // payé, en attente activation (24h)
+  | 'active'         // 12 jours, créateurs participent
+  | 'reviewing'      // 2 jours, modération finale brand
+  | 'paused'
+  | 'ended'
+  | 'archived';
+
+/** Durées fixes du lifecycle (en millisecondes) */
+export const CONTEST_DURATIONS = {
+  PENDING_LIVE_MS: 24 * 60 * 60 * 1000,       // 24h
+  ACTIVE_MS: 12 * 24 * 60 * 60 * 1000,        // 12 jours
+  REVIEWING_MS: 2 * 24 * 60 * 60 * 1000,      // 2 jours
+} as const;
+
+/** Transitions autorisées */
+export const CONTEST_TRANSITIONS: Record<ContestStatus, ContestStatus[]> = {
+  draft:        ['pending_live'],
+  pending_live: ['active'],
+  active:       ['reviewing', 'paused'],
+  reviewing:    ['ended'],
+  paused:       ['active', 'ended'],
+  ended:        ['archived'],
+  archived:     [],
+};
 
 interface UpdateContestStatusInput {
   contestId: string;
@@ -43,16 +68,42 @@ export async function updateContestStatus({
     throw createError(
       'CONFLICT',
       `Contest cannot transition from ${oldStatus} to ${newStatus}`,
-      409
+      409,
     );
   }
   if (oldStatus === newStatus) {
     return { oldStatus, newStatus };
   }
 
+  const dateUpdates: Record<string, string> = {};
+
+  if (newStatus === 'pending_live') {
+    const liveAt = new Date(Date.now() + CONTEST_DURATIONS.PENDING_LIVE_MS);
+    dateUpdates.live_at = liveAt.toISOString();
+  }
+
+  if (newStatus === 'active') {
+    const reviewingAt = new Date(Date.now() + CONTEST_DURATIONS.ACTIVE_MS);
+    dateUpdates.start_at = new Date().toISOString();
+    dateUpdates.reviewing_at = reviewingAt.toISOString();
+  }
+
+  if (newStatus === 'reviewing') {
+    const endsAt = new Date(Date.now() + CONTEST_DURATIONS.REVIEWING_MS);
+    dateUpdates.ends_at = endsAt.toISOString();
+  }
+
+  if (newStatus === 'ended') {
+    dateUpdates.end_at = new Date().toISOString();
+  }
+
   const { error: updateError } = await admin
     .from('contests')
-    .update({ status: newStatus, updated_at: new Date().toISOString() })
+    .update({
+      status: newStatus,
+      updated_at: new Date().toISOString(),
+      ...dateUpdates,
+    })
     .eq('id', contestId);
 
   if (updateError) {
