@@ -10,7 +10,7 @@ import Link from 'next/link';
 import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { Plus, Trophy, Zap } from 'lucide-react';
+import { Plus, Trophy, Zap, Clock } from 'lucide-react';
 import { TrackOnView } from '@/components/analytics/track-once';
 import { BrandEmptyState } from '@/components/brand/empty-state-enhanced';
 import { StatusBadge } from '@/components/brand-ui';
@@ -425,6 +425,20 @@ function ContestCard({
                 className={secondarySmallClass}
               >
                 Continuer →
+              </Link>
+            )}
+
+            {contest.status === 'pending_live' && (
+              <Link
+                href={`/app/brand/contests/${contest.id}/pending`}
+                className="inline-flex items-center gap-1.5 rounded-[var(--r2)]
+                  border border-[var(--brand-warning)]/20
+                  bg-[var(--brand-warning)]/10 px-3 py-1.5 text-xs font-medium
+                  text-[var(--brand-warning)] transition-colors
+                  hover:bg-[var(--brand-warning)]/20"
+              >
+                <Clock className="h-3.5 w-3.5" />
+                Voir le lancement
               </Link>
             )}
 
