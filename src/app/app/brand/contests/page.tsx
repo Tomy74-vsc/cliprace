@@ -1,595 +1,561 @@
-﻿/*
-Page: Brand contests list
-Objectifs: liste des concours de la marque avec filtres (statut, plateforme, pÃ©riode), actions rapides.
-*/
+/**
+ * Brand Contests List — Server component.
+ *
+ * Refonte layout:
+ * - Sections verticales (Live / Révision / En attente / Brouillons / Terminés)
+ * - Cards horizontales larges avec visuel plateforme à gauche
+ * - Aucune logique de fetch modifiée (mêmes tables / vues Supabase)
+ */
 import Link from 'next/link';
 import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { BrandEmptyState } from '@/components/brand/empty-state-enhanced';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { Plus, Trophy, Clock, CheckCircle2, FileText, Archive, Search, Filter } from 'lucide-react';
+import { Plus, Trophy, Zap, Clock } from 'lucide-react';
 import { TrackOnView } from '@/components/analytics/track-once';
-import { PlatformBadge } from '@/components/creator/platform-badge';
-import { Input } from '@/components/ui/input';
-import type { Platform } from '@/lib/validators/platforms';
-
-const PAGE_SIZE = 20;
-const STATUS_VALUES = ['all', 'draft', 'active', 'ended', 'archived'] as const;
-const PLATFORM_VALUES: Platform[] = ['tiktok', 'instagram', 'youtube'];
-const SORT_VALUES = ['newest', 'oldest', 'prize_desc', 'submissions_desc'] as const;
+import { BrandEmptyState } from '@/components/brand/empty-state-enhanced';
+import { StatusBadge } from '@/components/brand-ui';
+import type { CampaignRow } from './campaigns-list-client';
+import { CollapsibleSection } from './collapsible-section';
+import { cn } from '@/lib/utils';
 
 export const revalidate = 60;
 
-interface ContestsPageProps {
-  searchParams: Promise<Record<string, string | string[] | undefined>>;
+const ctaClass = cn(
+  'inline-flex items-center gap-2 rounded-[var(--r2)] px-4 py-2.5',
+  'bg-[var(--cta-bg)] text-[var(--cta-fg)]',
+  'text-sm font-medium',
+  'hover:bg-white/90 transition-colors',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/50',
+  'focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-void)]',
+);
+
+const secondarySmallClass = cn(
+  'inline-flex items-center gap-1.5 rounded-[var(--r2)] border border-[var(--border-1)]',
+  'px-3 py-1.5 text-xs font-medium text-[var(--text-2)]',
+  'transition-colors hover:border-[var(--border-2)] hover:text-[var(--text-1)]',
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]',
+);
+
+function formatViews(value: number): string {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
+  if (value >= 1_000) return `${(value / 1_000).toFixed(1)}K`;
+  return value.toLocaleString('fr-FR');
 }
 
-export default async function BrandContestsPage({ searchParams }: ContestsPageProps) {
+function computeProgressPct(startAt?: string | null, endAt?: string | null, now: Date = new Date()): number {
+  if (!startAt || !endAt) return 0;
+  const start = new Date(startAt);
+  const end = new Date(endAt);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+    return 0;
+  }
+  const totalMs = end.getTime() - start.getTime();
+  const elapsedMs = now.getTime() - start.getTime();
+  const ratio = elapsedMs / totalMs;
+  const pct = Math.round(ratio * 100);
+  return Math.max(0, Math.min(100, pct));
+}
+
+function networkGradientClass(networks: string[]): string {
+  const primary = (networks[0] || '').toLowerCase();
+
+  if (primary === 'tiktok') {
+    return 'from-[#25F4EE]/15 to-[#FE2C55]/15';
+  }
+  if (primary === 'instagram') {
+    return 'from-[#F58529]/15 to-[#DD2A7B]/15';
+  }
+  if (primary === 'youtube') {
+    return 'from-[#FF0000]/15 via-[var(--surface-2)] to-transparent';
+  }
+
+  return 'from-[var(--accent)]/8 to-[var(--surface-3)]';
+}
+
+export default async function BrandContestsPage() {
   const { user } = await getSession();
   if (!user) return null;
 
-  const params = await searchParams;
+  const { contests, stats } = await fetchBrandContests(user.id);
 
-  const search = typeof params.search === 'string' ? params.search.slice(0, 80) : '';
-  const rawStatus = typeof params.status === 'string' ? params.status : null;
-  const statusParam: (typeof STATUS_VALUES)[number] = STATUS_VALUES.includes(
-    rawStatus as (typeof STATUS_VALUES)[number],
-  )
-    ? (rawStatus as (typeof STATUS_VALUES)[number])
-    : 'all';
+  const now = new Date();
 
-  const platformsParam = typeof params.platforms === 'string' ? params.platforms : '';
-  const selectedPlatforms = platformsParam
-    ? platformsParam
-        .split(',')
-        .map((p) => p.trim())
-        .filter((p): p is Platform => PLATFORM_VALUES.includes(p as Platform))
-    : [];
+  const liveContests = contests.filter((c) => c.status === 'active');
+  const reviewingContests = contests.filter((c) => c.status === 'reviewing');
+  const pendingContests = contests.filter((c) => c.status === 'pending_live');
+  const draftContests = contests.filter((c) => c.status === 'draft');
+  const endedContests = contests.filter((c) => c.status === 'ended' || c.status === 'archived');
 
-  const rawSort = typeof params.sort === 'string' ? params.sort : null;
-  const sortParam: (typeof SORT_VALUES)[number] = SORT_VALUES.includes(
-    rawSort as (typeof SORT_VALUES)[number],
-  )
-    ? (rawSort as (typeof SORT_VALUES)[number])
-    : 'newest';
-
-  const currentPageRaw = Number(params.page);
-  const page =
-    Number.isFinite(currentPageRaw) && currentPageRaw > 0 ? Math.floor(currentPageRaw) : 1;
-
-  const { contests, total, stats } = await fetchContests({
-    userId: user.id,
-    search,
-    status: statusParam,
-    platforms: selectedPlatforms,
-    sort: sortParam,
-    page,
-    pageSize: PAGE_SIZE,
-  });
+  const total = contests.length;
+  const hasNoContests = total === 0;
 
   return (
-    <main className="space-y-8">
-      <TrackOnView event="view_brand_contests" payload={{ total, status: statusParam }} />
+    <div className="mx-auto max-w-7xl px-4 lg:px-6 py-8 space-y-10">
+      <TrackOnView
+        event="view_brand_contests"
+        payload={{ total, active: stats.active }}
+      />
 
-      {/* En-tÃªte avec CTA */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-semibold">Mes concours</h1>
-          <p className="text-muted-foreground">
-            GÃ¨re tes concours, modÃ¨re les participations, suivez les performances.
+      {/* HEADER */}
+      <header className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-semibold brand-tracking text-[var(--text-1)]">
+            Mes campagnes
+          </h1>
+          <p className="mt-1 text-sm text-[var(--text-3)]">
+            {total} campagne{total > 1 ? 's' : ''} · {stats.active} active{stats.active > 1 ? 's' : ''}
           </p>
         </div>
-        <Button asChild>
-          <Link href="/app/brand/contests/new">
-            <Plus className="h-4 w-4 mr-2" />
-            CrÃ©er un concours
-          </Link>
-        </Button>
-      </div>
+        <Link href="/app/brand/contests/new" className={ctaClass}>
+          <Plus className="h-4 w-4" />
+          Nouvelle campagne
+        </Link>
+      </header>
 
-      {/* Stats rapides */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card className="group transition-all duration-200 hover:-translate-y-1 hover:shadow-card-hover border-border/60 hover:border-primary/20">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground transition-colors duration-200 group-hover:text-foreground/80">Actifs</p>
-                <p className="text-2xl font-semibold transition-colors duration-200 group-hover:text-primary">{stats.active}</p>
-              </div>
-              <Trophy className="h-8 w-8 text-primary transition-transform duration-200 group-hover:scale-110" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="group transition-all duration-200 hover:-translate-y-1 hover:shadow-card-hover border-border/60 hover:border-primary/20">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground transition-colors duration-200 group-hover:text-foreground/80">Brouillons</p>
-                <p className="text-2xl font-semibold transition-colors duration-200 group-hover:text-primary">{stats.draft}</p>
-              </div>
-              <FileText className="h-8 w-8 text-muted-foreground transition-transform duration-200 group-hover:scale-110" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="group transition-all duration-200 hover:-translate-y-1 hover:shadow-card-hover border-border/60 hover:border-primary/20">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground transition-colors duration-200 group-hover:text-foreground/80">TerminÃ©s</p>
-                <p className="text-2xl font-semibold transition-colors duration-200 group-hover:text-primary">{stats.ended}</p>
-              </div>
-              <CheckCircle2 className="h-8 w-8 text-success transition-transform duration-200 group-hover:scale-110" />
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="group transition-all duration-200 hover:-translate-y-1 hover:shadow-card-hover border-border/60 hover:border-primary/20">
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground transition-colors duration-200 group-hover:text-foreground/80">Total</p>
-                <p className="text-2xl font-semibold transition-colors duration-200 group-hover:text-primary">{total}</p>
-              </div>
-              <Archive className="h-8 w-8 text-muted-foreground transition-transform duration-200 group-hover:scale-110" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filtres */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Filter className="h-4 w-4" />
-            <CardTitle>Filtres</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {/* Recherche */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <form method="get" action="/app/brand/contests">
-              <Input
-                name="search"
-                placeholder="Rechercher un concours..."
-                defaultValue={search}
-                className="pl-9"
-              />
-              {/* PrÃ©server les autres paramÃ¨tres */}
-              {statusParam !== 'all' && (
-                <input type="hidden" name="status" value={statusParam} />
-              )}
-              {selectedPlatforms.length > 0 && (
-                <input type="hidden" name="platforms" value={selectedPlatforms.join(',')} />
-              )}
-              {sortParam !== 'newest' && (
-                <input type="hidden" name="sort" value={sortParam} />
-              )}
-            </form>
-          </div>
-
-          {/* Filtres statut */}
-          <div className="flex flex-wrap gap-2">
-            <span className="text-sm text-muted-foreground self-center">Statut:</span>
-            {STATUS_VALUES.map((status) => {
-              const url = new URLSearchParams();
-              if (status !== 'all') url.set('status', status);
-              if (search) url.set('search', search);
-              if (selectedPlatforms.length > 0) url.set('platforms', selectedPlatforms.join(','));
-              if (sortParam !== 'newest') url.set('sort', sortParam);
-              return (
-                <Button
-                  key={status}
-                  asChild
-                  variant={statusParam === status ? 'primary' : 'secondary'}
-                  size="sm"
-                >
-                  <Link href={`/app/brand/contests?${url.toString()}`}>
-                    {statusLabels[status]}
-                  </Link>
-                </Button>
-              );
-            })}
-          </div>
-
-          {/* Filtres plateforme */}
-          <div className="flex flex-wrap gap-2">
-            <span className="text-sm text-muted-foreground self-center">Plateformes:</span>
-            {PLATFORM_VALUES.map((platform) => {
-              const isSelected = selectedPlatforms.includes(platform);
-              const newPlatforms = isSelected
-                ? selectedPlatforms.filter((p) => p !== platform)
-                : [...selectedPlatforms, platform];
-              const url = new URLSearchParams();
-              if (statusParam !== 'all') url.set('status', statusParam);
-              if (search) url.set('search', search);
-              if (newPlatforms.length > 0) url.set('platforms', newPlatforms.join(','));
-              if (sortParam !== 'newest') url.set('sort', sortParam);
-              return (
-                <Button
-                  key={platform}
-                  asChild
-                  variant={isSelected ? 'primary' : 'secondary'}
-                  size="sm"
-                >
-                  <Link href={`/app/brand/contests?${url.toString()}`}>
-                    <PlatformBadge platform={platform} />
-                  </Link>
-                </Button>
-              );
-            })}
-          </div>
-
-          {/* Tri */}
-          <div className="flex flex-wrap gap-2">
-            <span className="text-sm text-muted-foreground self-center">Trier par:</span>
-            {SORT_VALUES.map((sort) => {
-              const url = new URLSearchParams();
-              if (statusParam !== 'all') url.set('status', statusParam);
-              if (search) url.set('search', search);
-              if (selectedPlatforms.length > 0) url.set('platforms', selectedPlatforms.join(','));
-              if (sort !== 'newest') url.set('sort', sort);
-              return (
-                <Button
-                  key={sort}
-                  asChild
-                  variant={sortParam === sort ? 'primary' : 'secondary'}
-                  size="sm"
-                >
-                  <Link href={`/app/brand/contests?${url.toString()}`}>{sortLabels[sort]}</Link>
-                </Button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Liste des concours */}
-      {contests.length === 0 ? (
+      {hasNoContests ? (
         <BrandEmptyState
-          type={statusParam === 'draft' ? 'no-contests' : 'no-results'}
-          title="Aucun concours trouvÃ©"
-          description={
-            statusParam === 'draft'
-              ? 'CrÃ©e ton premier concours pour commencer.'
-              : 'Aucun concours ne correspond Ã  tes filtres.'
-          }
-          action={
-            statusParam === 'draft'
-              ? {
-                  label: 'CrÃ©er un concours',
-                  href: '/app/brand/contests/new',
-                  variant: 'primary',
-                }
-              : {
-                  label: 'Voir tous les concours',
-                  href: '/app/brand/contests',
-                  variant: 'secondary',
-                }
-          }
+          type="no-contests"
+          title="Prêt à lancer ton premier concours ?"
+          description="Crée un concours UGC en quelques minutes et génère du contenu de qualité pour ta marque."
+          action={{
+            label: 'Créer un concours',
+            href: '/app/brand/contests/new',
+            variant: 'primary',
+          }}
         />
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {contests.map((contest) => (
-            <ContestCard key={contest.id} contest={contest} />
-          ))}
-        </div>
-      )}
+        <>
+          {/* SECTION LIVE */}
+          <ContestSection
+            title="● En cours"
+            titleClass="text-[var(--accent)]"
+            dot
+            contests={liveContests}
+            now={now}
+          />
 
-      {/* Pagination */}
-      {total > PAGE_SIZE && (
-        <div className="flex items-center justify-center gap-2">
-          {page > 1 && (
-            <Button asChild variant="secondary" size="sm">
-              <Link
-                href={`/app/brand/contests?page=${page - 1}${statusParam !== 'all' ? `&status=${statusParam}` : ''}${search ? `&search=${encodeURIComponent(search)}` : ''}${selectedPlatforms.length > 0 ? `&platforms=${selectedPlatforms.join(',')}` : ''}${sortParam !== 'newest' ? `&sort=${sortParam}` : ''}`}
-              >
-                PrÃ©cÃ©dent
-              </Link>
-            </Button>
+          {/* SECTION REVIEWING */}
+          <ContestSection
+            title="⏱ En révision"
+            titleClass="text-[var(--brand-warning)]"
+            contests={reviewingContests}
+            now={now}
+          />
+
+          {/* SECTION PENDING LIVE */}
+          <ContestSection
+            title="🕐 En attente de lancement"
+            contests={pendingContests}
+            now={now}
+          />
+
+          {/* SECTION DRAFTS */}
+          <ContestSection
+            title="Brouillons"
+            contests={draftContests}
+            muted
+            now={now}
+          />
+
+          {/* SECTION ENDED / ARCHIVED */}
+          {endedContests.length > 0 && (
+            <section className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <h2 className="text-sm font-semibold text-[var(--text-2)]">
+                  Terminés
+                </h2>
+                {endedContests.length > 3 && (
+                  <span className="text-xs text-[var(--text-3)] tabular-nums">
+                    {endedContests.length} campagne{endedContests.length > 1 ? 's' : ''}
+                  </span>
+                )}
+              </div>
+
+              {endedContests.length > 3 ? (
+                <CollapsibleSection
+                  defaultCollapsed
+                  initialVisibleCount={3}
+                  totalCount={endedContests.length}
+                >
+                  {(visibleCount) => (
+                    <div className="space-y-3">
+                      {endedContests.slice(0, visibleCount).map((contest, index) => (
+                        <ContestCard
+                          key={contest.id}
+                          contest={contest}
+                          now={now}
+                          muted
+                          index={index}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </CollapsibleSection>
+              ) : (
+                <div className="space-y-3">
+                  {endedContests.map((contest, index) => (
+                    <ContestCard
+                      key={contest.id}
+                      contest={contest}
+                      now={now}
+                      muted
+                      index={index}
+                    />
+                  ))}
+                </div>
+              )}
+            </section>
           )}
-          <span className="text-sm text-muted-foreground">
-            Page {page} sur {Math.ceil(total / PAGE_SIZE)}
-          </span>
-          {page < Math.ceil(total / PAGE_SIZE) && (
-            <Button asChild variant="secondary" size="sm">
-              <Link
-                href={`/app/brand/contests?page=${page + 1}${statusParam !== 'all' ? `&status=${statusParam}` : ''}${search ? `&search=${encodeURIComponent(search)}` : ''}${selectedPlatforms.length > 0 ? `&platforms=${selectedPlatforms.join(',')}` : ''}${sortParam !== 'newest' ? `&sort=${sortParam}` : ''}`}
-              >
-                Suivant
-              </Link>
-            </Button>
-          )}
-        </div>
+        </>
       )}
-    </main>
+    </div>
   );
 }
 
-const statusLabels: Record<string, string> = {
-  all: 'Tous',
-  draft: 'Brouillons',
-  active: 'Actifs',
-  ended: 'TerminÃ©s',
-  archived: 'ArchivÃ©s',
-};
-
-const statusVariants: Record<string, 'secondary' | 'success' | 'warning' | 'info'> = {
-  draft: 'secondary',
-  active: 'success',
-  ended: 'warning',
-  archived: 'info',
-};
-
-const sortLabels: Record<string, string> = {
-  newest: 'Plus rÃ©cents',
-  oldest: 'Plus anciens',
-  prize_desc: 'Budget dÃ©croissant',
-  submissions_desc: 'Plus de soumissions',
-};
-
-interface ContestCardProps {
-  contest: {
-    id: string;
-    title: string;
-    status: string;
-    prize_pool_cents: number;
-    currency: string;
-    networks: string[];
-    start_at: string;
-    end_at: string;
-    submissions_count: number;
-    pending_submissions_count: number;
-    views: number;
-    created_at: string;
-  };
-}
-
-function ContestCard({ contest }: ContestCardProps) {
-  const isActive = contest.status === 'active';
-  const isEnded = contest.status === 'ended';
-  const now = new Date();
-  const endDate = new Date(contest.end_at);
-  const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+function ContestSection({
+  title,
+  titleClass,
+  dot = false,
+  contests,
+  muted = false,
+  now,
+}: {
+  title: string;
+  titleClass?: string;
+  dot?: boolean;
+  contests: CampaignRow[];
+  muted?: boolean;
+  now: Date;
+}) {
+  if (contests.length === 0) return null;
 
   return (
-    <Card className="group transition-all duration-200 hover:-translate-y-1 hover:shadow-card-hover border-border/60 hover:border-primary/20">
-      <CardHeader>
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-lg line-clamp-2">{contest.title}</CardTitle>
-          <Badge variant={statusVariants[contest.status] || 'default'}>
-            {statusLabels[contest.status] || contest.status}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Prize pool</span>
-            <span className="font-semibold">
-              {formatCurrency(contest.prize_pool_cents, contest.currency)}
-            </span>
-          </div>
-          {contest.networks.length > 0 && (
-            <div className="flex flex-wrap gap-2">
-              {contest.networks.slice(0, 3).map((network) => (
-                <PlatformBadge key={network} platform={network as Platform} />
-              ))}
-            </div>
-          )}
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Clock className="h-3 w-3" />
-            {isActive && daysLeft > 0
-              ? `Se termine dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}`
-              : isEnded
-                ? `TerminÃ© le ${formatDate(contest.end_at)}`
-                : `DÃ©marre le ${formatDate(contest.start_at)}`}
-          </div>
-        </div>
-
-        <div className="pt-2 border-t border-border space-y-2">
-          <div className="grid grid-cols-2 gap-2 text-sm">
-            <div>
-              <p className="text-muted-foreground">Soumissions</p>
-              <p className="font-semibold">{contest.submissions_count}</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground">Vues</p>
-              <p className="font-semibold">{contest.views.toLocaleString()}</p>
-            </div>
-          </div>
-          {contest.pending_submissions_count > 0 && (
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">En attente</span>
-              <Badge variant="warning">{contest.pending_submissions_count}</Badge>
-            </div>
-          )}
-        </div>
-
-        <div className="flex gap-2">
-          <Button asChild size="sm" variant="primary" className="flex-1">
-            <Link href={`/app/brand/contests/${contest.id}`}>Voir</Link>
-          </Button>
-          {contest.pending_submissions_count > 0 && (
-            <Button asChild size="sm" variant="secondary" className="flex-1">
-              <Link href={`/app/brand/contests/${contest.id}/submissions`}>ModÃ©rer</Link>
-            </Button>
-          )}
-        </div>
-      </CardContent>
-    </Card>
+    <section className="space-y-3">
+      <div className="flex items-center gap-2">
+        {dot && (
+          <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)] motion-safe:animate-pulse" aria-hidden="true" />
+        )}
+        <h2 className={cn('text-sm font-semibold text-[var(--text-2)]', titleClass)}>
+          {title}
+        </h2>
+      </div>
+      <div className="space-y-3">
+        {contests.map((contest, index) => (
+          <ContestCard
+            key={contest.id}
+            contest={contest}
+            now={now}
+            muted={muted}
+            index={index}
+          />
+        ))}
+      </div>
+    </section>
   );
 }
 
-async function fetchContests({
-  userId,
-  search,
-  status,
-  platforms,
-  sort,
-  page,
-  pageSize,
+function ContestCard({
+  contest,
+  now,
+  muted,
+  index,
 }: {
-  userId: string;
-  search: string;
-  status: (typeof STATUS_VALUES)[number];
-  platforms: Platform[];
-  sort: (typeof SORT_VALUES)[number];
-  page: number;
-  pageSize: number;
+  contest: CampaignRow;
+  now: Date;
+  muted?: boolean;
+  index: number;
 }) {
-  const supabase = await getSupabaseSSR();
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
+  const isActive = contest.status === 'active';
+  const isDraft = contest.status === 'draft';
+  const isEnded = contest.status === 'ended' || contest.status === 'archived';
 
-  let query = supabase
-    .from('contests')
-    .select('id, title, status, prize_pool_cents, currency, networks, start_at, end_at, created_at', {
-      count: 'exact',
-    })
-    .eq('brand_id', userId);
+  const progressPct = isActive
+    ? computeProgressPct(contest.start_at, contest.end_at, now)
+    : 0;
 
-  // Filtre par statut
-  if (status !== 'all') {
-    query = query.eq('status', status);
+  const gradient = networkGradientClass(contest.networks || []);
+
+  const createdLabel = formatDate(contest.created_at);
+
+  let timelineLabel = createdLabel;
+  if (isActive && contest.start_at && contest.end_at) {
+    const end = new Date(contest.end_at);
+    const diffDays = Math.max(
+      0,
+      Math.round((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)),
+    );
+    timelineLabel = diffDays > 0 ? `J-${diffDays} restants` : 'Terminé';
   }
 
-  // Recherche
-  if (search) {
-    const sanitizedSearch = search.replace(/%/g, '');
-    query = query.ilike('title', `%${sanitizedSearch}%`);
-  }
+  return (
+    <div
+      className={cn(
+        'group relative rounded-[var(--r3)] border border-[var(--border-1)]',
+        'bg-[var(--surface-1)]/80 backdrop-blur-xl overflow-hidden',
+        'transition-all duration-200 hover:border-[var(--border-2)] hover:shadow-[var(--shadow-brand-2)]',
+        'motion-safe:hover:-translate-y-px',
+        muted && 'opacity-90',
+        'motion-safe:opacity-100',
+      )}
+      style={{
+        animationDelay: `${index * 50}ms`,
+        opacity: 1, // évite flash si animate-fadeIn absent
+      }}
+    >
+      <div className="flex gap-0">
+        {/* LEFT — Gradient visual */}
+        <div
+          className={cn(
+            'relative w-[200px] shrink-0 self-stretch min-h-[120px]',
+            'bg-gradient-to-br',
+            gradient,
+          )}
+        >
+          {/* Status overlay */}
+          <div className="absolute top-3 left-3">
+            <StatusBadge
+              variant={
+                contest.status === 'active'
+                  ? 'success'
+                  : contest.status === 'draft'
+                    ? 'neutral'
+                    : contest.status === 'archived'
+                      ? 'muted'
+                      : 'warning'
+              }
+              label={
+                contest.status === 'active' ? 'Live' :
+                contest.status === 'draft' ? 'Brouillon' :
+                contest.status === 'pending_live' ? 'Bientôt live' :
+                contest.status === 'reviewing' ? 'En révision' :
+                contest.status === 'ended' ? 'Terminé' :
+                contest.status === 'archived' ? 'Archivé' :
+                contest.status === 'paused' ? 'En pause' :
+                contest.status
+              }
+              pulse={isActive}
+            />
+          </div>
 
-  // Filtre par plateformes
-  if (platforms.length > 0) {
-    query = query.overlaps('networks', platforms);
-  }
+          {/* Track pattern overlay */}
+          <div className="absolute inset-0 track-pattern opacity-30" aria-hidden="true" />
+        </div>
 
-  // Pour le tri par soumissions, on doit d'abord rÃ©cupÃ©rer tous les concours,
-  // calculer les stats, trier, puis paginer
-  const needsSubmissionsSort = sort === 'submissions_desc';
-  
-  if (!needsSubmissionsSort) {
-    // Tri standard (sans soumissions)
-    switch (sort) {
-      case 'newest':
-        query = query.order('created_at', { ascending: false });
-        break;
-      case 'oldest':
-        query = query.order('created_at', { ascending: true });
-        break;
-      case 'prize_desc':
-        query = query.order('prize_pool_cents', { ascending: false });
-        break;
-    }
-  }
+        {/* RIGHT — Content */}
+        <div className="flex flex-1 flex-col justify-between p-5 min-w-0">
+          {/* TOP: Title + date */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-[var(--text-1)] truncate brand-tracking">
+                {contest.title}
+              </h3>
+              <p className="text-xs text-[var(--text-3)] mt-0.5">
+                {timelineLabel}
+              </p>
+            </div>
+          </div>
 
-  // RÃ©cupÃ©rer tous les concours si tri par soumissions, sinon paginer directement
-  let contests: UnsafeAny[] | null = null;
-  let totalCount: number = 0;
-  let queryError: UnsafeAny = null;
+          {/* MIDDLE: KPIs */}
+          <div className="flex items-center gap-6 my-3">
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-[var(--text-3)]">
+                Vues
+              </p>
+              <p className="text-sm font-semibold tabular-nums text-[var(--text-1)]">
+                {formatViews(contest.views)}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-[var(--text-3)]">
+                Créateurs
+              </p>
+              <p className="text-sm font-semibold tabular-nums text-[var(--text-1)]">
+                {contest.submissions_count}
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] uppercase tracking-wide text-[var(--text-3)]">
+                Budget
+              </p>
+              <p className="text-sm font-semibold tabular-nums text-[var(--text-1)]">
+                {formatCurrency(contest.prize_pool_cents, contest.currency)}
+              </p>
+            </div>
+            {isActive && (
+              <div className="flex-1 max-w-[140px]">
+                <p className="text-[11px] uppercase tracking-wide text-[var(--text-3)] mb-1">
+                  Progression
+                </p>
+                <div className="h-1 rounded-full bg-[var(--surface-2)] w-full">
+                  <div
+                    className="h-full rounded-full bg-[var(--accent)] motion-safe:transition-all"
+                    style={{ width: `${progressPct}%` }}
+                    aria-label={`Progression de la campagne à ${progressPct}%`}
+                  />
+                </div>
+              </div>
+            )}
+          </div>
 
-  if (needsSubmissionsSort) {
-    // RÃ©cupÃ©rer tous les concours pour le tri par soumissions
-    const { data, count, error } = await query;
-    contests = data;
-    totalCount = count || 0;
-    queryError = error;
-  } else {
-    // Pagination normale
-    const { data, count, error } = await query.range(from, to);
-    contests = data;
-    totalCount = count || 0;
-    queryError = error;
-  }
+          {/* BOTTOM: Actions */}
+          <div className="flex items-center gap-2 flex-wrap">
+            {isActive && (
+              <Link
+                href={`/app/brand/contests/${contest.id}`}
+                className="inline-flex items-center gap-1.5 rounded-[var(--r2)] border border-[var(--accent)]/20 bg-[var(--accent)]/10 px-3 py-1.5 text-xs font-medium text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/20"
+              >
+                <Trophy className="h-3.5 w-3.5" />
+                Classement
+              </Link>
+            )}
 
-  if (queryError) {
-    console.error('Contests fetch error', queryError);
-    return { contests: [], total: 0, stats: { active: 0, draft: 0, ended: 0 } };
-  }
+            {contest.pending_submissions_count > 0 && (
+              <Link
+                href={`/app/brand/contests/${contest.id}/submissions?status=pending`}
+                className="inline-flex items-center gap-1.5 rounded-[var(--r2)] border border-[var(--brand-warning)]/20 bg-[var(--brand-warning)]/10 px-3 py-1.5 text-xs font-medium text-[var(--brand-warning)] transition-colors hover:bg-[var(--brand-warning)]/20"
+              >
+                <Zap className="h-3.5 w-3.5" />
+                Modérer {contest.pending_submissions_count}
+              </Link>
+            )}
 
-  // RÃ©cupÃ©rer les stats globales
-  const { data: allContests } = await supabase
-    .from('contests')
-    .select('status')
-    .eq('brand_id', userId);
+            {isDraft && (
+              <Link
+                href={`/app/brand/contests/${contest.id}/edit`}
+                className={secondarySmallClass}
+              >
+                Continuer →
+              </Link>
+            )}
 
-  const stats = {
-    active: allContests?.filter((c) => c.status === 'active').length || 0,
-    draft: allContests?.filter((c) => c.status === 'draft').length || 0,
-    ended: allContests?.filter((c) => c.status === 'ended').length || 0,
-  };
+            {contest.status === 'pending_live' && (
+              <Link
+                href={`/app/brand/contests/${contest.id}/pending`}
+                className="inline-flex items-center gap-1.5 rounded-[var(--r2)]
+                  border border-[var(--brand-warning)]/20
+                  bg-[var(--brand-warning)]/10 px-3 py-1.5 text-xs font-medium
+                  text-[var(--brand-warning)] transition-colors
+                  hover:bg-[var(--brand-warning)]/20"
+              >
+                <Clock className="h-3.5 w-3.5" />
+                Voir le lancement
+              </Link>
+            )}
 
-  // RÃ©cupÃ©rer le nombre de soumissions et vues par concours
-  const contestIds = contests?.map((c) => c.id) || [];
-  const submissionsData: Record<string, { total: number; pending: number; views: number }> = {};
+            {isEnded && (
+              <Link
+                href={`/app/brand/contests/${contest.id}`}
+                className={secondarySmallClass}
+              >
+                Voir résultats
+              </Link>
+            )}
 
-  if (contestIds.length > 0) {
-    // Soumissions
-    const { data: submissions } = await supabase
-      .from('submissions')
-      .select('id, contest_id, status')
-      .in('contest_id', contestIds);
-
-    contestIds.forEach((id) => {
-      const contestSubmissions = submissions?.filter((s) => s.contest_id === id) || [];
-      submissionsData[id] = {
-        total: contestSubmissions.length,
-        pending: contestSubmissions.filter((s) => s.status === 'pending').length,
-        views: 0, // Sera rempli par la requÃªte suivante
-      };
-    });
-
-    // Vues depuis metrics_daily
-    const submissionIds = submissions?.map((s) => s.id) || [];
-    if (submissionIds.length > 0) {
-      const { data: metrics } = await supabase
-        .from('metrics_daily')
-        .select('submission_id, views')
-        .in('submission_id', submissionIds);
-
-      // AgrÃ©ger les vues par concours
-      const viewsByContest = new Map<string, number>();
-      metrics?.forEach((m: { submission_id: string; views: number }) => {
-        const submission = submissions?.find((s: UnsafeAny) => s.id === m.submission_id);
-        if (submission) {
-          const current = viewsByContest.get((submission as UnsafeAny).contest_id) || 0;
-          viewsByContest.set((submission as UnsafeAny).contest_id, current + (m.views || 0));
-        }
-      });
-
-      viewsByContest.forEach((views, contestId) => {
-        if (submissionsData[contestId]) {
-          submissionsData[contestId].views = views;
-        }
-      });
-    }
-  }
-
-  const contestsWithStats = (contests || []).map((contest) => ({
-    ...contest,
-    submissions_count: submissionsData[contest.id]?.total || 0,
-    pending_submissions_count: submissionsData[contest.id]?.pending || 0,
-    views: submissionsData[contest.id]?.views || 0,
-  }));
-
-  // Tri par soumissions si demandÃ© (sur tous les rÃ©sultats)
-  let sortedContests = contestsWithStats;
-  if (sort === 'submissions_desc') {
-    sortedContests = [...contestsWithStats].sort((a, b) => b.submissions_count - a.submissions_count);
-  }
-
-  // Appliquer la pagination si tri par soumissions
-  const paginatedContests = needsSubmissionsSort
-    ? sortedContests.slice(from, to + 1)
-    : sortedContests;
-
-  return {
-    contests: paginatedContests,
-    total: totalCount || sortedContests.length,
-    stats,
-  };
+            <Link
+              href={`/app/brand/contests/${contest.id}`}
+              className="ml-auto text-xs text-[var(--text-3)] hover:text-[var(--text-2)] transition-colors"
+            >
+              Détails →
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 }
 
+/* ─── Data fetching (server only) ─── */
+
+async function fetchBrandContests(
+  userId: string,
+): Promise<{
+  contests: CampaignRow[];
+  stats: {
+    active: number;
+    draft: number;
+    ended: number;
+    pending: number;
+    reviewing: number;
+  };
+}> {
+  const supabase = await getSupabaseSSR();
+
+  // 1. Fetch contests (filtre brand_id — ownership + RLS)
+  const { data: contests, error: contestsError } = await supabase
+    .from('contests')
+    .select(
+      'id, title, status, prize_pool_cents, currency, networks, start_at, end_at, created_at',
+    )
+    .eq('brand_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (contestsError || !contests?.length) {
+    if (contestsError) console.error('Contests fetch error', contestsError);
+    return {
+      contests: [],
+      stats: { active: 0, draft: 0, ended: 0, pending: 0, reviewing: 0 },
+    };
+  }
+
+  // 2. Stats depuis les données déjà chargées (zéro requête extra)
+  const stats = {
+    active: contests.filter((c) => c.status === 'active').length,
+    draft: contests.filter((c) => c.status === 'draft').length,
+    ended: contests.filter((c) => c.status === 'ended' || c.status === 'archived').length,
+    pending: contests.filter((c) => c.status === 'pending_live').length,
+    reviewing: contests.filter((c) => c.status === 'reviewing').length,
+  };
+
+  const contestIds = contests.map((c) => c.id);
+
+  // 3. Paralléliser: submissions (pending count) + contest_stats (views)
+  // contest_stats est une VIEW Supabase qui agrège metrics_daily — évite le waterfall
+  const [submissionsResult, contestStatsResult] = await Promise.all([
+    supabase
+      .from('submissions')
+      .select('id, contest_id, status')
+      .in('contest_id', contestIds),
+    supabase
+      .from('contest_stats')
+      .select('contest_id, total_views, total_submissions')
+      .in('contest_id', contestIds),
+  ]);
+
+  // 4. Build lookup maps (O(n) — pas de nested loops)
+  const pendingByContest = new Map<string, number>();
+  const totalByContest = new Map<string, number>();
+
+  contestIds.forEach((id) => {
+    pendingByContest.set(id, 0);
+    totalByContest.set(id, 0);
+  });
+
+  submissionsResult.data?.forEach((s) => {
+    if (s.status === 'pending') {
+      pendingByContest.set(
+        s.contest_id,
+        (pendingByContest.get(s.contest_id) ?? 0) + 1,
+      );
+    }
+    totalByContest.set(
+      s.contest_id,
+      (totalByContest.get(s.contest_id) ?? 0) + 1,
+    );
+  });
+
+  const viewsByContest = new Map<string, number>();
+  contestStatsResult.data?.forEach((cs) => {
+    viewsByContest.set(cs.contest_id, Number(cs.total_views ?? 0));
+  });
+
+  // 5. Enrich contests — type CampaignRow inchangé
+  const enrichedContests: CampaignRow[] = contests.map((c) => ({
+    ...c,
+    submissions_count: totalByContest.get(c.id) ?? 0,
+    pending_submissions_count: pendingByContest.get(c.id) ?? 0,
+    views: viewsByContest.get(c.id) ?? 0,
+  }));
+
+  return { contests: enrichedContests, stats };
+}

@@ -11,6 +11,7 @@ import { formatDate } from '@/lib/formatters';
 import { MessageSquare, Send, ArrowLeft, Loader2 } from 'lucide-react';
 import { useToastContext } from '@/hooks/use-toast-context';
 import { cn } from '@/lib/utils';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 interface Thread {
   id: string;
@@ -47,6 +48,7 @@ export function BrandMessagesClient({ initialThreads, userId }: BrandMessagesCli
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [messageText, setMessageText] = useState('');
+  const csrfToken = useCsrfToken();
 
   const selectedThread = threads.find((t) => t.id === selectedThreadId);
 
@@ -84,12 +86,20 @@ export function BrandMessagesClient({ initialThreads, userId }: BrandMessagesCli
 
   const handleSendMessage = async () => {
     if (!selectedThreadId || !messageText.trim()) return;
+    if (!csrfToken) {
+      toast({
+        type: 'error',
+        title: 'Sécurité',
+        message: 'Token CSRF indisponible. Réessaie dans quelques secondes.',
+      });
+      return;
+    }
 
     setSending(true);
     try {
       const response = await fetch(`/api/messages/threads/${selectedThreadId}/messages`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'x-csrf': csrfToken },
         body: JSON.stringify({ body: messageText.trim() }),
       });
 

@@ -3,7 +3,7 @@
 import { usePathname } from 'next/navigation';
 import { AnimatePresence, motion } from 'framer-motion';
 
-const transition = { duration: 0.25, ease: [0.32, 0.72, 0, 1] };
+const transition = { duration: 0.25, ease: 'easeOut' as const };
 
 export function BrandPageTransition({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

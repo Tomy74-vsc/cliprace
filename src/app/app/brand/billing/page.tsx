@@ -1,26 +1,62 @@
-/*
-Page: Brand billing
-Objectifs: liste des paiements (payments_brand), factures, statuts, actions (régler, télécharger facture)
-*/
+import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
+import { formatCurrency, formatDate } from '@/lib/formatters';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { BrandEmptyState } from '@/components/brand/empty-state-enhanced';
 import { StatCard } from '@/components/creator/stat-card';
-import { formatCurrency, formatDate } from '@/lib/formatters';
-import { DollarSign, CheckCircle2, Clock, XCircle, RefreshCw, Download, ExternalLink } from 'lucide-react';
 import { TrackOnView } from '@/components/analytics/track-once';
+import { StripePortalButton } from '@/components/brand/stripe-portal-button';
+import {
+  CheckCircle2,
+  Clock,
+  CreditCard,
+  Download,
+  ExternalLink,
+  FileText,
+  RefreshCw,
+  ShieldCheck,
+  XCircle,
+} from 'lucide-react';
 
 export const revalidate = 60;
+
+type PaymentRowData = {
+  id: string;
+  contest_id: string;
+  contest_title: string;
+  amount_cents: number;
+  currency: string;
+  status: string;
+  stripe_payment_intent_id: string | null;
+  stripe_customer_id: string | null;
+  created_at: string;
+};
+
+type BillingStats = {
+  total_paid_cents: number;
+  pending_cents: number;
+  pending_count: number;
+  processing_cents: number;
+  processing_count: number;
+};
+
+type BillingData = {
+  payments: PaymentRowData[];
+  stats: BillingStats;
+  canOpenPortal: boolean;
+  portalHint: string;
+  error: string | null;
+};
 
 export default async function BrandBillingPage() {
   const { user } = await getSession();
   if (!user) return null;
 
-  const { payments, stats, error } = await fetchPayments(user.id);
+  const { payments, stats, canOpenPortal, portalHint, error } = await fetchBillingData(user.id);
 
   if (error) {
     return (
@@ -28,8 +64,8 @@ export default async function BrandBillingPage() {
         <BrandEmptyState
           type="default"
           title="Erreur de chargement"
-          description="Impossible de charger les paiements. Réessaie plus tard ou contacte le support."
-          action={{ label: 'Réessayer', href: '/app/brand/billing', variant: 'secondary' }}
+          description="Impossible de charger la facturation. Reessayez dans quelques minutes."
+          action={{ label: 'Recharger', href: '/app/brand/billing', variant: 'secondary' }}
         />
       </main>
     );
@@ -39,86 +75,83 @@ export default async function BrandBillingPage() {
     <main className="space-y-8">
       <TrackOnView event="view_brand_billing" payload={{ total: payments.length }} />
 
-      {/* En-tête */}
-      <div className="space-y-2">
-        <h1 className="text-3xl font-semibold">Factures & Paiements</h1>
+      <header className="space-y-2">
+        <h1 className="text-3xl font-semibold">Facturation & Paiements</h1>
         <p className="text-muted-foreground">
-          Gère tes paiements, consulte tes factures et l&apos;historique de tes transactions.
+          Gere tes moyens de paiement, tes factures PDF et ton historique en toute securite.
         </p>
-      </div>
+      </header>
 
-      {/* Résumé transparent */}
-      {stats && (
-        <Card className="border-primary/20 bg-gradient-to-r from-primary/10 via-accent/5 to-background">
-          <CardHeader>
-            <CardTitle>Résumé de tes dépenses</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <p className="text-lg font-medium">
-                Vous avez dépensé <span className="text-primary font-semibold">{formatCurrency(stats.total_paid_cents, 'EUR')}</span> au total sur ClipRace.
-              </p>
-              {stats.total_views > 0 ? (
-                <p className="text-base text-muted-foreground">
-                  Vos campagnes ont généré <span className="font-semibold text-foreground">{stats.total_views.toLocaleString()}</span> vues au total, soit{' '}
-                  <span className="font-semibold text-foreground">
-                    {formatCurrency(Math.round((stats.total_paid_cents / stats.total_views) * 1000), 'EUR')}
-                  </span>{' '}
-                  pour 1 000 vues.
-                </p>
-              ) : (
-                <p className="text-base text-muted-foreground">
-                  Vos campagnes n&apos;ont pas encore généré de vues. Les métriques apparaîtront ici une fois les concours actifs.
-                </p>
-              )}
-              <p className="text-sm text-muted-foreground italic">
-                Pas d&apos;abonnement caché. Vous payez uniquement le cashprize de vos concours + une commission transparente.
+      <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.08] via-background to-background">
+        <CardHeader className="space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="rounded-xl border border-primary/30 bg-primary/10 p-2 text-primary">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div className="space-y-1">
+              <CardTitle>Portail Stripe securise</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Gere tes moyens de paiement, telecharge tes factures PDF et mets a jour tes informations fiscales
+                directement via notre partenaire Stripe.
               </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Stats détaillées */}
-      {stats && (
-        <section>
-          <div className="grid gap-4 md:grid-cols-4">
-            <StatCard
-              label="Total payé"
-              value={formatCurrency(stats.total_paid_cents, 'EUR')}
-              hint="Tous concours confondus"
-              icon={<CheckCircle2 className="h-4 w-4" />}
-            />
-            <StatCard
-              label="En attente"
-              value={formatCurrency(stats.pending_cents, 'EUR')}
-              hint={`${stats.pending_count} paiement${stats.pending_count > 1 ? 's' : ''}`}
-              icon={<Clock className="h-4 w-4" />}
-            />
-            <StatCard
-              label="En traitement"
-              value={formatCurrency(stats.processing_cents, 'EUR')}
-              hint={`${stats.processing_count} paiement${stats.processing_count > 1 ? 's' : ''}`}
-              icon={<RefreshCw className="h-4 w-4" />}
-            />
-            <StatCard
-              label="Total transactions"
-              value={String(payments.length)}
-              hint="Historique complet"
-              icon={<DollarSign className="h-4 w-4" />}
-            />
           </div>
-        </section>
-      )}
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <StripePortalButton enabled={canOpenPortal} disabledMessage={portalHint} />
+          <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+            <span className="inline-flex items-center gap-1">
+              <CreditCard className="h-3.5 w-3.5" />
+              Cartes et moyens de paiement
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <FileText className="h-3.5 w-3.5" />
+              Factures PDF
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <ExternalLink className="h-3.5 w-3.5" />
+              Session Stripe chiffree
+            </span>
+          </div>
+        </CardContent>
+      </Card>
 
-      {/* Liste des paiements */}
+      <section>
+        <div className="grid gap-4 md:grid-cols-4">
+          <StatCard
+            label="Total paye"
+            value={formatCurrency(stats.total_paid_cents, 'EUR')}
+            hint="Paiements confirms"
+            icon={<CheckCircle2 className="h-4 w-4" />}
+          />
+          <StatCard
+            label="En attente"
+            value={formatCurrency(stats.pending_cents, 'EUR')}
+            hint={`${stats.pending_count} paiement${stats.pending_count > 1 ? 's' : ''}`}
+            icon={<Clock className="h-4 w-4" />}
+          />
+          <StatCard
+            label="En traitement"
+            value={formatCurrency(stats.processing_cents, 'EUR')}
+            hint={`${stats.processing_count} paiement${stats.processing_count > 1 ? 's' : ''}`}
+            icon={<RefreshCw className="h-4 w-4" />}
+          />
+          <StatCard
+            label="Transactions"
+            value={String(payments.length)}
+            hint="Historique interne"
+            icon={<CreditCard className="h-4 w-4" />}
+          />
+        </div>
+      </section>
+
       {payments.length === 0 ? (
         <BrandEmptyState
           type="no-payments"
-          title="Aucun paiement"
-          description="Tu n'as pas encore effectué de paiement. Les paiements apparaîtront ici après la création d'un concours."
+          title="Aucun paiement pour le moment"
+          description="Effectue ton premier paiement de campagne pour activer la facturation complete."
           action={{
-            label: 'Créer un concours',
+            label: 'Creer une campagne',
             href: '/app/brand/contests/new',
             variant: 'primary',
           }}
@@ -126,23 +159,23 @@ export default async function BrandBillingPage() {
       ) : (
         <Card>
           <CardHeader>
-            <CardTitle>Historique des paiements</CardTitle>
+            <CardTitle>Historique interne des paiements</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="border-b border-border bg-muted/50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Campagne</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Montant payé (TTC)</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Statut</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                    <th className="px-4 py-3 text-left text-sm font-semibold">Facture PDF</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">Concours</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">Montant</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">Statut</th>
+                    <th className="px-4 py-3 text-left text-sm font-semibold">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {payments.map((payment) => (
-                    <PaymentRow key={payment.id} payment={payment} />
+                    <PaymentTableRow key={payment.id} payment={payment} />
                   ))}
                 </tbody>
               </table>
@@ -150,77 +183,17 @@ export default async function BrandBillingPage() {
           </CardContent>
         </Card>
       )}
-
-      {/* Informations */}
-      <Card className="border-primary/20 bg-primary/5">
-        <CardHeader>
-          <CardTitle>Informations</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2 text-sm text-muted-foreground">
-          <p>
-            • Les paiements sont traités de manière sécurisée via Stripe. Tu recevras une confirmation par email.
-          </p>
-          <p>
-            • Les factures sont disponibles dans ton portail Stripe. Tu peux y accéder depuis chaque paiement.
-          </p>
-          <p>
-            • En cas de problème, contacte le support via{' '}
-            <Link href="/app/brand/faq" className="text-primary hover:underline">
-              la FAQ
-            </Link>
-            .
-          </p>
-        </CardContent>
-      </Card>
     </main>
   );
 }
 
-interface PaymentRowProps {
-  payment: {
-    id: string;
-    contest_id: string;
-    contest_title: string;
-    amount_cents: number;
-    currency: string;
-    status: string;
-    stripe_checkout_session_id: string | null;
-    stripe_payment_intent_id: string | null;
-    created_at: string;
-    updated_at: string;
-  };
-}
-
-function PaymentRow({ payment }: PaymentRowProps) {
-  const statusLabels: Record<string, string> = {
-    requires_payment: 'Paiement requis',
-    processing: 'En traitement',
-    succeeded: 'Payé',
-    failed: 'Échoué',
-    refunded: 'Remboursé',
-  };
-
-  const statusVariants: Record<string, 'default' | 'success' | 'warning' | 'danger' | 'info'> = {
-    requires_payment: 'warning',
-    processing: 'info',
-    succeeded: 'success',
-    failed: 'danger',
-    refunded: 'default',
-  };
-
-  const statusIcons: Record<string, React.ReactNode> = {
-    requires_payment: <Clock className="h-4 w-4" />,
-    processing: <RefreshCw className="h-4 w-4" />,
-    succeeded: <CheckCircle2 className="h-4 w-4" />,
-    failed: <XCircle className="h-4 w-4" />,
-    refunded: <RefreshCw className="h-4 w-4" />,
-  };
-
+function PaymentTableRow({ payment }: { payment: PaymentRowData }) {
   const needsPayment = payment.status === 'requires_payment' || payment.status === 'processing';
   const isPaid = payment.status === 'succeeded';
 
   return (
     <tr className="border-b border-border/60 hover:bg-muted/40 transition-colors">
+      <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(payment.created_at)}</td>
       <td className="px-4 py-3">
         <Link
           href={`/app/brand/contests/${payment.contest_id}`}
@@ -229,137 +202,150 @@ function PaymentRow({ payment }: PaymentRowProps) {
           {payment.contest_title}
         </Link>
       </td>
+      <td className="px-4 py-3 font-semibold">{formatCurrency(payment.amount_cents, payment.currency)}</td>
       <td className="px-4 py-3">
-        <span className="font-semibold">
-          {formatCurrency(payment.amount_cents, payment.currency)}
-        </span>
+        <PaymentStatusBadge status={payment.status} />
       </td>
       <td className="px-4 py-3">
-        <Badge variant={statusVariants[payment.status] || 'default'} className="flex items-center gap-1 w-fit">
-          {statusIcons[payment.status]}
-          {statusLabels[payment.status] || payment.status}
-        </Badge>
-      </td>
-      <td className="px-4 py-3 text-sm text-muted-foreground">
-        {formatDate(payment.created_at)}
-      </td>
-      <td className="px-4 py-3">
-        <div className="flex items-center gap-2">
-          {needsPayment && (
+        <div className="flex flex-wrap items-center gap-2">
+          {needsPayment ? (
             <Button asChild size="sm" variant="primary">
-              <Link href={`/app/brand/contests/${payment.contest_id}`}>Régler</Link>
+              <Link href={`/app/brand/contests/${payment.contest_id}`}>Regler</Link>
             </Button>
-          )}
-          {isPaid && payment.stripe_payment_intent_id && (
+          ) : null}
+
+          {isPaid && payment.stripe_payment_intent_id ? (
             <Button asChild size="sm" variant="secondary">
               <a
                 href={`https://dashboard.stripe.com/payments/${payment.stripe_payment_intent_id}`}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                <ExternalLink className="h-4 w-4 mr-1" />
-                Voir sur Stripe
+                <ExternalLink className="h-4 w-4" />
+                Stripe
               </a>
             </Button>
-          )}
-          {isPaid && (
-            <Button
-              asChild
-              size="sm"
-              variant="ghost"
-              className="flex items-center gap-1"
-            >
-              <a
-                href={`/api/invoices/${payment.id}/download`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+          ) : null}
+
+          {isPaid ? (
+            <Button asChild size="sm" variant="ghost">
+              <a href={`/api/invoices/${payment.id}/download`} target="_blank" rel="noopener noreferrer">
                 <Download className="h-4 w-4" />
                 Facture
               </a>
             </Button>
-          )}
+          ) : null}
         </div>
       </td>
     </tr>
   );
 }
 
-async function fetchPayments(userId: string) {
-  const supabase = await getSupabaseSSR();
-
-  // Récupérer tous les paiements de la marque
-  const { data: paymentsData, error } = await supabase
-    .from('payments_brand')
-    .select(
-      'id, contest_id, amount_cents, currency, status, stripe_checkout_session_id, stripe_payment_intent_id, created_at, updated_at, contest:contest_id(title)'
-    )
-    .eq('brand_id', userId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Payments fetch error', error);
-    return { error: 'Failed to fetch payments', payments: [], stats: null };
-  }
-
-  // Récupérer les titres des concours
-  const payments = (paymentsData || []).map((payment) => ({
-    id: payment.id,
-    contest_id: payment.contest_id,
-    contest_title: (payment.contest as { title?: string | null } | null)?.title || 'Concours',
-    amount_cents: payment.amount_cents,
-    currency: payment.currency || 'EUR',
-    status: payment.status,
-    stripe_checkout_session_id: payment.stripe_checkout_session_id,
-    stripe_payment_intent_id: payment.stripe_payment_intent_id,
-    created_at: payment.created_at,
-    updated_at: payment.updated_at,
-  }));
-
-  // Récupérer les vues totales pour les concours payés
-  const succeededPayments = payments.filter((p) => p.status === 'succeeded');
-  const contestIds = succeededPayments.map((p) => p.contest_id);
-  
-  let totalViews = 0;
-  if (contestIds.length > 0) {
-    // Récupérer les soumissions approuvées pour ces concours
-    const { data: submissions } = await supabase
-      .from('submissions')
-      .select('id')
-      .in('contest_id', contestIds)
-      .eq('status', 'approved');
-    
-    const submissionIds = submissions?.map((s) => s.id) || [];
-    
-    if (submissionIds.length > 0) {
-      // Agréger les vues depuis metrics_daily
-      const { data: metrics } = await supabase
-        .from('metrics_daily')
-        .select('views')
-        .in('submission_id', submissionIds);
-      
-      totalViews = metrics?.reduce((sum, m) => sum + (m.views || 0), 0) || 0;
-    }
-  }
-
-  // Calculer les stats
-  const stats = {
-    total_paid_cents: succeededPayments.reduce((sum, p) => sum + p.amount_cents, 0),
-    total_views: totalViews,
-    pending_cents: payments
-      .filter((p) => p.status === 'requires_payment')
-      .reduce((sum, p) => sum + p.amount_cents, 0),
-    pending_count: payments.filter((p) => p.status === 'requires_payment').length,
-    processing_cents: payments
-      .filter((p) => p.status === 'processing')
-      .reduce((sum, p) => sum + p.amount_cents, 0),
-    processing_count: payments.filter((p) => p.status === 'processing').length,
+function PaymentStatusBadge({ status }: { status: string }) {
+  const statusMap: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'danger' | 'info'; icon: ReactNode }> = {
+    requires_payment: { label: 'Paiement requis', variant: 'warning', icon: <Clock className="h-4 w-4" /> },
+    processing: { label: 'En traitement', variant: 'info', icon: <RefreshCw className="h-4 w-4" /> },
+    succeeded: { label: 'Paye', variant: 'success', icon: <CheckCircle2 className="h-4 w-4" /> },
+    failed: { label: 'Echoue', variant: 'danger', icon: <XCircle className="h-4 w-4" /> },
+    refunded: { label: 'Rembourse', variant: 'default', icon: <RefreshCw className="h-4 w-4" /> },
   };
 
-  return {
-    payments,
-    stats,
-    error: null,
-  };
+  const display = statusMap[status] ?? { label: status, variant: 'default' as const, icon: <Clock className="h-4 w-4" /> };
+
+  return (
+    <Badge variant={display.variant} className="inline-flex items-center gap-1">
+      {display.icon}
+      {display.label}
+    </Badge>
+  );
 }
 
+async function fetchBillingData(userId: string): Promise<BillingData> {
+  try {
+    const supabase = await getSupabaseSSR();
+
+    const [paymentsRes, profileRes] = await Promise.all([
+      supabase
+        .from('payments_brand')
+        .select(
+          'id, contest_id, amount_cents, currency, status, stripe_payment_intent_id, stripe_customer_id, created_at, contest:contest_id(title)'
+        )
+        .eq('brand_id', userId)
+        .order('created_at', { ascending: false }),
+      supabase.from('profiles').select('stripe_customer_id').eq('id', userId).maybeSingle(),
+    ]);
+
+    const paymentsError = paymentsRes.error;
+    if (paymentsError) {
+      console.error('billing:payments_fetch_error', paymentsError);
+      return buildBillingError();
+    }
+
+    const profileErrorCode = String((profileRes.error as UnsafeAny)?.code || '');
+    if (profileRes.error && profileErrorCode !== '42703') {
+      console.error('billing:profile_fetch_error', profileRes.error);
+      return buildBillingError();
+    }
+
+    const payments = (paymentsRes.data || []).map((payment) => ({
+      id: payment.id,
+      contest_id: payment.contest_id,
+      contest_title: (payment.contest as { title?: string | null } | null)?.title || 'Concours',
+      amount_cents: payment.amount_cents || 0,
+      currency: payment.currency || 'EUR',
+      status: payment.status || 'requires_payment',
+      stripe_payment_intent_id: payment.stripe_payment_intent_id,
+      stripe_customer_id: (payment as UnsafeAny).stripe_customer_id || null,
+      created_at: payment.created_at,
+    }));
+
+    const totalPaid = payments
+      .filter((payment) => payment.status === 'succeeded')
+      .reduce((sum, payment) => sum + payment.amount_cents, 0);
+    const pending = payments.filter((payment) => payment.status === 'requires_payment');
+    const processing = payments.filter((payment) => payment.status === 'processing');
+
+    const profileStripeCustomerId =
+      typeof (profileRes.data as UnsafeAny)?.stripe_customer_id === 'string'
+        ? ((profileRes.data as UnsafeAny).stripe_customer_id as string)
+        : null;
+    const paymentStripeCustomerId =
+      payments.find((payment) => typeof payment.stripe_customer_id === 'string')?.stripe_customer_id || null;
+    const canOpenPortal = Boolean(profileStripeCustomerId || paymentStripeCustomerId);
+
+    return {
+      payments,
+      stats: {
+        total_paid_cents: totalPaid,
+        pending_cents: pending.reduce((sum, payment) => sum + payment.amount_cents, 0),
+        pending_count: pending.length,
+        processing_cents: processing.reduce((sum, payment) => sum + payment.amount_cents, 0),
+        processing_count: processing.length,
+      },
+      canOpenPortal,
+      portalHint: canOpenPortal
+        ? ''
+        : 'Effectuez votre premier paiement pour activer la facturation et le portail Stripe.',
+      error: null,
+    };
+  } catch (error) {
+    console.error('billing:unexpected_error', error);
+    return buildBillingError();
+  }
+}
+
+function buildBillingError(): BillingData {
+  return {
+    payments: [],
+    stats: {
+      total_paid_cents: 0,
+      pending_cents: 0,
+      pending_count: 0,
+      processing_cents: 0,
+      processing_count: 0,
+    },
+    canOpenPortal: false,
+    portalHint: 'Effectuez votre premier paiement pour activer la facturation et le portail Stripe.',
+    error: 'Failed to fetch billing',
+  };
+}

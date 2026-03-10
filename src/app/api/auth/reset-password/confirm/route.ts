@@ -8,6 +8,7 @@ import { getSupabaseSSRWithResponse } from '@/lib/supabase/ssr';
 import { rateLimit } from '@/lib/rateLimit';
 import { formatErrorResponse, createError } from '@/lib/errors';
 import { assertCsrf } from '@/lib/csrf';
+import { buildAnonRateLimitKey } from '@/lib/safe-ip';
 
 const confirmResetPasswordSchema = z.object({
   password: z.string().min(8, 'Le mot de passe doit contenir au moins 8 caractères'),
@@ -17,9 +18,8 @@ const confirmResetPasswordSchema = z.object({
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate limiting: 5 req/15min par IP
-    const ip = req.headers.get('x-forwarded-for') || 'unknown';
-    const rlKey = `auth:reset-password-confirm:${ip}`;
+    // Rate limiting: 5 req/15min par IP+UA
+    const rlKey = buildAnonRateLimitKey('auth:reset-password-confirm', req);
     if (!(await rateLimit({ key: rlKey, route: 'auth:reset-password:confirm', windowMs: 15 * 60 * 1000, max: 5 }))) {
       return formatErrorResponse(
         createError('RATE_LIMIT', 'Trop de tentatives. Réessayez dans 15 minutes.', 429)

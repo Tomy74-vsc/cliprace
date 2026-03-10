@@ -12,6 +12,7 @@ import { getUserRole } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { rateLimit } from '@/lib/rateLimit';
 import { assertCsrf } from '@/lib/csrf';
+import { getClientIp, buildRateLimitKey } from '@/lib/safe-ip';
 
 const BodySchema = z.object({
   status: z.enum(['approved', 'rejected', 'removed']),
@@ -40,9 +41,8 @@ export async function PATCH(
     const role = await getUserRole(user.id);
     if (!role) return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
 
-    // Rate limit: 50 modérations / min par utilisateur+IP
-    const ip = req.headers.get('x-forwarded-for') || 'unknown';
-    const rlKey = `submissions:moderate:${user.id}:${ip}`;
+    // Rate limit: 50 modérations / min par utilisateur+IP+UA
+    const rlKey = buildRateLimitKey('submissions:moderate', user.id, req);
     const allowed = await rateLimit({
       key: rlKey,
       route: 'submissions:moderate',
@@ -141,7 +141,7 @@ export async function PATCH(
     );
 
     // Audit
-    const ip = req.headers.get('x-forwarded-for') ?? undefined;
+    const ip = getClientIp(req);
     const ua = req.headers.get('user-agent') ?? undefined;
     await admin.from('audit_logs').insert({
       actor_id: user.id,

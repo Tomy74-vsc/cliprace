@@ -1,6 +1,8 @@
 // Source: GET /api/auth/csrf - Returns CSRF token for client-side forms
 // Effects: Returns CSRF token from cookie (for double-submit pattern)
+// Security: Uses crypto-strong token generation, never Math.random
 import { NextRequest, NextResponse } from 'next/server';
+import { generateCsrfToken } from '@/lib/csrf';
 
 export async function GET(req: NextRequest) {
   try {
@@ -9,8 +11,7 @@ export async function GET(req: NextRequest) {
 
     // If no token exists, generate one (should be set by middleware, but fallback here)
     if (!csrfToken) {
-      // Generate token using Web Crypto API
-      const token = globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2);
+      const token = generateCsrfToken();
       const secure = process.env.NODE_ENV === 'production';
       
       // Create response with cookie

@@ -4,12 +4,14 @@ Notifications dropdown : affiche les notifs non lues + accès page liste.
 'use client';
 
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { Bell, X } from 'lucide-react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { formatDate } from '@/lib/formatters';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { useCsrfToken } from '@/hooks/use-csrf-token';
 
 type NotificationItem = {
   id: string;
@@ -20,6 +22,8 @@ type NotificationItem = {
 };
 
 export function NotificationsDropdown() {
+  const pathname = usePathname();
+  const csrfToken = useCsrfToken();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -27,6 +31,8 @@ export function NotificationsDropdown() {
   const [activeIndex, setActiveIndex] = useState(0);
   const unread = items.filter((n) => !n.read).length;
   const panelRef = useRef<HTMLDivElement | null>(null);
+  const isBrandArea = pathname?.startsWith('/app/brand');
+  const basePath = isBrandArea ? '/app/brand' : '/app/creator';
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -88,7 +94,18 @@ export function NotificationsDropdown() {
 
   async function markAllRead() {
     try {
-      await fetch('/api/notifications/read', { method: 'POST', cache: 'no-store' });
+      if (!csrfToken) {
+        setError('Token CSRF indisponible. Réessaie dans quelques secondes.');
+        return;
+      }
+      const res = await fetch('/api/notifications/read', {
+        method: 'POST',
+        cache: 'no-store',
+        headers: { 'x-csrf': csrfToken },
+      });
+      if (!res.ok) {
+        throw new Error('Erreur lors du marquage des notifications.');
+      }
       await fetchNotifications();
       setOpen(false);
     } catch (e) {
@@ -163,7 +180,7 @@ export function NotificationsDropdown() {
                   className={cn('py-2', !item.read && 'bg-muted/40 rounded-lg px-2')}
                 >
                   <Link
-                    href={notificationLink(item)}
+                    href={notificationLink(item, basePath)}
                     className="block focus:outline-none focus:ring-2 focus:ring-primary rounded-lg"
                     data-notification-item
                     id={item.id}
@@ -181,7 +198,7 @@ export function NotificationsDropdown() {
             </ul>
           )}
           <div className="mt-2 flex items-center justify-between text-xs">
-            <Link href="/app/creator/notifications" className="text-primary hover:underline">
+            <Link href={`${basePath}/notifications`} className="text-primary hover:underline">
               Voir tout
             </Link>
           </div>
@@ -206,12 +223,12 @@ function notificationTitle(type: string) {
   }
 }
 
-function notificationLink(item: NotificationItem) {
+function notificationLink(item: NotificationItem, basePath: '/app/brand' | '/app/creator') {
   if (item.type === 'submission_approved' || item.type === 'submission_rejected') {
-    return '/app/creator/submissions';
+    return basePath === '/app/brand' ? '/app/brand/contests' : '/app/creator/submissions';
   }
   if (item.type === 'cashout_completed') {
-    return '/app/creator/wallet';
+    return basePath === '/app/brand' ? '/app/brand/billing' : '/app/creator/wallet';
   }
-  return '/app/creator/notifications';
+  return `${basePath}/notifications`;
 }

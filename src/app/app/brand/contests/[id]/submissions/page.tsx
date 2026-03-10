@@ -19,6 +19,7 @@ import {
   FocusModerationLauncher,
   type FocusModerationSubmission,
 } from '@/components/brand/moderation/FocusModeration';
+import { ReviewingBanner } from '@/components/brand/reviewing-banner';
 
 const PAGE_SIZE = 20;
 const STATUS_VALUES = ['all', 'pending', 'approved', 'rejected'] as const;
@@ -46,7 +47,7 @@ export default async function BrandContestSubmissionsPage({
   const supabase = await getSupabaseSSR();
   const { data: contest, error: contestError } = await supabase
     .from('contests')
-    .select('id, title, brand_id')
+    .select('id, title, brand_id, status, ends_at')
     .eq('id', id)
     .eq('brand_id', user.id)
     .maybeSingle();
@@ -109,6 +110,14 @@ export default async function BrandContestSubmissionsPage({
         event="view_brand_submissions"
         payload={{ contest_id: id, status: statusParam, total }}
       />
+
+      {contest.status === 'reviewing' && (
+        <ReviewingBanner
+          contestId={id}
+          endsAt={contest.ends_at ?? null}
+          pendingCount={stats.pending}
+        />
+      )}
 
       {/* En-tête */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">

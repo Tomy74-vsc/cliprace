@@ -30,7 +30,7 @@ async function getAllRouteFiles(dir: string): Promise<string[]> {
 }
 
 async function auditRateLimit() {
-  const apiDir = join(process.cwd(), 'src/app/api/admin');
+  const apiDir = join(process.cwd(), 'src/app/api');
   const files = await getAllRouteFiles(apiDir);
   const issues: Issue[] = [];
 

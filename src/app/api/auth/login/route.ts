@@ -1,4 +1,4 @@
-﻿// Source: POST /api/auth/login (Â§6, Â§1168-1169, Â§191)
+// Source: POST /api/auth/login (Â§6, Â§1168-1169, Â§191)
 // Effects: authenticate and return session + profile + role
 import { NextRequest, NextResponse } from 'next/server';
 import { loginSchema } from '@/lib/validators/auth';
@@ -7,12 +7,12 @@ import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { rateLimit } from '@/lib/rateLimit';
 import { formatErrorResponse, createError } from '@/lib/errors';
 import { assertCsrf } from '@/lib/csrf';
+import { getClientIp, buildAnonRateLimitKey } from '@/lib/safe-ip';
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate limiting: 10 req/min par IP (Â§4, Â§156)
-    const ip = req.headers.get('x-forwarded-for') || 'unknown';
-    const rlKey = `auth:login:${ip}`;
+    // Rate limiting: 10 req/min par IP+UA (§4, §156)
+    const rlKey = buildAnonRateLimitKey('auth:login', req);
     if (!(await rateLimit({ key: rlKey, route: 'auth:login', windowMs: 60 * 1000, max: 10 }))) {
       return formatErrorResponse(createError('RATE_LIMIT', 'Trop de tentatives. RÃ©essayez dans 1 minute.', 429));
     }
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Audit log
-    const ipAddress = req.headers.get('x-forwarded-for') || undefined;
+    const ipAddress = getClientIp(req);
     const userAgent = req.headers.get('user-agent') || undefined;
     await admin.from('audit_logs').insert({
       actor_id: userId,

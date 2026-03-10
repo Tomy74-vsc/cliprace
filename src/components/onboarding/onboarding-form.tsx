@@ -18,48 +18,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronRight, ChevronLeft, CheckCircle2, User, Building2, Globe, FileText } from 'lucide-react';
 import type { UserRole } from '@/lib/auth';
 import { useCsrfToken } from '@/hooks/use-csrf-token';
+import { PlatformConnectStep } from '@/components/onboarding/platform-connect-step';
 
 type CreatorPlatformKey = keyof NonNullable<ProfileCompleteInput['platform_links']>;
-
-const CREATOR_PLATFORM_FIELDS: Array<{
-  key: CreatorPlatformKey;
-  label: string;
-  placeholder: string;
-  helper: string;
-}> = [
-  {
-    key: 'tiktok',
-    label: 'TikTok',
-    placeholder: '@moncompte ou https://www.tiktok.com/@moncompte',
-    helper: 'Handle ou URL publique TikTok',
-  },
-  {
-    key: 'instagram',
-    label: 'Instagram',
-    placeholder: '@moncompte ou https://www.instagram.com/moncompte',
-    helper: 'Handle ou URL Instagram',
-  },
-  {
-    key: 'youtube',
-    label: 'YouTube',
-    placeholder: 'https://www.youtube.com/@MaChaine',
-    helper: 'URL de chaîne ou handle YouTube',
-  },
-];
 
 interface OnboardingFormProps {
   role: UserRole;
   initialData?: Partial<ProfileCompleteInput>;
+  connectedPlatforms?: Array<{ platform: string; handle: string | null }>;
 }
 
-export function OnboardingForm({ role, initialData }: OnboardingFormProps) {
+export function OnboardingForm({ role, initialData, connectedPlatforms = [] }: OnboardingFormProps) {
   const router = useRouter();
   const { toast } = useToastContext();
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const csrfToken = useCsrfToken();
 
-  const totalSteps = role === 'creator' ? 3 : 4; // Creator: 3 étapes, Brand: 4 étapes
+  const totalSteps = role === 'creator' ? 4 : 4; // Creator: 4 étapes, Brand: 4 étapes
 
   const {
     register,
@@ -73,9 +49,6 @@ export function OnboardingForm({ role, initialData }: OnboardingFormProps) {
     mode: 'onBlur',
   });
 
-  const platformLinkErrors =
-    (errors.platform_links as Record<CreatorPlatformKey, { message?: string }> | undefined) ?? undefined;
-
   // Validation des étapes (aligné avec le schéma Zod - champs optionnels)
   const validateStep = async (step: number): Promise<boolean> => {
     if (role === 'creator') {
@@ -83,11 +56,13 @@ export function OnboardingForm({ role, initialData }: OnboardingFormProps) {
         // Étape 1: username et primary_platform sont requis
         return await trigger(['username', 'primary_platform']);
       } else if (step === 2) {
-        // Étape 2: followers et avg_views sont optionnels selon le schéma
-        // On valide seulement si des valeurs sont présentes
-        return true; // Permet de passer même si vide
+        // Étape 2: connexion plateformes OAuth (pas de champs formulaire)
+        return true;
       } else if (step === 3) {
-        // Étape 3: bio est maintenant requise
+        // Étape 3: followers et avg_views sont optionnels selon le schéma
+        return true;
+      } else if (step === 4) {
+        // Étape 4: bio est maintenant requise
         return await trigger(['bio']);
       }
     } else if (role === 'brand') {
@@ -238,31 +213,20 @@ export function OnboardingForm({ role, initialData }: OnboardingFormProps) {
                   </p>
                 )}
               </div>
-              <div className="space-y-3 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-700 p-4">
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-                    Comptes plateformes
-                  </h4>
-                  <span className="text-xs text-muted-foreground">Optionnel</span>
-                </div>
-                {CREATOR_PLATFORM_FIELDS.map((platform) => (
-                  <Input
-                    key={platform.key}
-                    label={platform.label}
-                    placeholder={platform.placeholder}
-                    {...register(`platform_links.${platform.key}` as const)}
-                    error={platformLinkErrors?.[platform.key]?.message}
-                    helpText={platform.helper}
-                  />
-                ))}
-                <p className="text-xs text-muted-foreground">
-                  Vous pourrez bientôt connecter vos comptes automatiquement via OAuth. En attendant, nous utilisons ces
-                  liens publics pour aider les marques à vérifier vos profils.
-                </p>
-              </div>
+              <p className="text-xs text-[var(--text-3)]">
+                Tu pourras connecter tes comptes à l&apos;étape suivante.
+              </p>
             </div>
           );
         case 2:
+          return (
+            <PlatformConnectStep
+              connectedPlatforms={connectedPlatforms}
+              onSkip={() => setCurrentStep(3)}
+              onContinue={() => setCurrentStep(3)}
+            />
+          );
+        case 3:
           return (
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
@@ -287,7 +251,7 @@ export function OnboardingForm({ role, initialData }: OnboardingFormProps) {
               />
             </div>
           );
-        case 3:
+        case 4:
           return (
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
@@ -459,34 +423,38 @@ export function OnboardingForm({ role, initialData }: OnboardingFormProps) {
       </div>
 
       <CardFooter className="p-6 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={handlePrevious}
-          disabled={currentStep === 1 || loading || isSubmitting}
-        >
-          <ChevronLeft className="w-4 h-4 mr-1" />
-          Précédent
-        </Button>
+        {!(role === 'creator' && currentStep === 2) && (
+          <>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handlePrevious}
+              disabled={currentStep === 1 || loading || isSubmitting}
+            >
+              <ChevronLeft className="w-4 h-4 mr-1" />
+              Précédent
+            </Button>
 
-        {currentStep < totalSteps ? (
-          <Button
-            type="button"
-            onClick={handleNext}
-            disabled={loading || isSubmitting}
-          >
-            Suivant
-            <ChevronRight className="w-4 h-4 ml-1" />
-          </Button>
-        ) : (
-          <Button
-            type="submit"
-            loading={loading || isSubmitting}
-            disabled={loading || isSubmitting}
-          >
-            <CheckCircle2 className="w-4 h-4 mr-1" />
-            Terminer
-          </Button>
+            {currentStep < totalSteps ? (
+              <Button
+                type="button"
+                onClick={handleNext}
+                disabled={loading || isSubmitting}
+              >
+                Suivant
+                <ChevronRight className="w-4 h-4 ml-1" />
+              </Button>
+            ) : (
+              <Button
+                type="submit"
+                loading={loading || isSubmitting}
+                disabled={loading || isSubmitting}
+              >
+                <CheckCircle2 className="w-4 h-4 mr-1" />
+                Terminer
+              </Button>
+            )}
+          </>
         )}
       </CardFooter>
     </form>

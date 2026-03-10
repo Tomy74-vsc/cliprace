@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -17,88 +17,86 @@ interface Step4PreviewProps {
 export function Step4Preview({ data }: Step4PreviewProps) {
   return (
     <div className="space-y-8">
-      <div className="text-center space-y-2 pb-2">
-        <h2 className="text-2xl font-semibold">RÃ©capitulatif</h2>
+      <div className="space-y-2 pb-2 text-center">
+        <h2 className="text-2xl font-semibold">Récapitulatif</h2>
         <p className="text-muted-foreground">
-          VÃ©rifiez toutes les informations avant de finaliser votre campagne
+          Vérifiez toutes les informations avant de finaliser votre campagne
         </p>
       </div>
 
-      {/* Produit */}
-      {(data.productName || data.productOneLiner) && (
-        <div className="bg-gradient-to-br from-primary/5 to-transparent rounded-xl border border-primary/20 p-6 space-y-4">
-          <h3 className="font-semibold text-lg">Votre produit</h3>
-          {data.productName && (
+      {(data.productName || data.productOneLiner) ? (
+        <div className="space-y-4 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/5 to-transparent p-6">
+          <h3 className="text-lg font-semibold">Votre produit</h3>
+          {data.productName ? (
             <div>
-              <div className="text-sm text-muted-foreground mb-1">Nom</div>
-              <div className="font-semibold text-base">{data.productName}</div>
+              <div className="mb-1 text-sm text-muted-foreground">Nom</div>
+              <div className="text-base font-semibold">{data.productName}</div>
             </div>
-          )}
-          {data.productOneLiner && (
+          ) : null}
+          {data.productOneLiner ? (
             <div>
-              <div className="text-sm text-muted-foreground mb-1">Description</div>
+              <div className="mb-1 text-sm text-muted-foreground">Description</div>
               <div className="text-base">{data.productOneLiner}</div>
             </div>
-          )}
-          {data.productBenefits && data.productBenefits.length > 0 && (
+          ) : null}
+          {data.productBenefits && data.productBenefits.length > 0 ? (
             <div>
-              <div className="text-sm text-muted-foreground mb-2">Points clÃ©s</div>
+              <div className="mb-2 text-sm text-muted-foreground">Points clés</div>
               <ul className="space-y-2">
-                {data.productBenefits.filter((b) => b.trim()).map((benefit, index) => (
+                {data.productBenefits.filter((benefit) => benefit.trim()).map((benefit, index) => (
                   <li key={index} className="flex items-start gap-2">
-                    <span className="text-primary mt-1">â€¢</span>
+                    <span className="mt-1 text-primary">•</span>
                     <span>{benefit}</span>
                   </li>
                 ))}
               </ul>
             </div>
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
 
-      {/* RÃ©sumÃ© */}
       <div className="grid gap-6 md:grid-cols-2">
-        <div className="bg-muted/30 rounded-xl border p-6 space-y-4">
-          <h3 className="font-semibold text-lg">Informations</h3>
+        <div className="space-y-4 rounded-xl border bg-muted/30 p-6">
+          <h3 className="text-lg font-semibold">Informations</h3>
           <div className="space-y-3 text-sm">
             <div>
-              <div className="text-muted-foreground mb-1">Titre</div>
-              <div className="font-semibold">{data.title || 'â€”'}</div>
+              <div className="mb-1 text-muted-foreground">Titre</div>
+              <div className="font-semibold">{data.title || '-'}</div>
             </div>
             <div>
-              <div className="text-muted-foreground mb-1">Dates</div>
+              <div className="mb-1 text-muted-foreground">Dates</div>
               <div className="font-medium">
-                {data.start_at ? formatDate(data.start_at) : 'â€”'} â†’{' '}
-                {data.end_at ? formatDate(data.end_at) : 'â€”'}
+                {data.start_at ? formatDate(data.start_at) : '-'} à{' '}
+                {data.end_at ? formatDate(data.end_at) : '-'}
               </div>
             </div>
-            {data.marketing_objective && (
+            {data.marketing_objective ? (
               <div>
-                <div className="text-muted-foreground mb-1">Objectif</div>
+                <div className="mb-1 text-muted-foreground">Objectif</div>
                 <div className="font-medium">{data.marketing_objective}</div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
 
-        <div className="bg-muted/30 rounded-xl border p-6 space-y-4">
-          <h3 className="font-semibold text-lg">Conditions</h3>
+        <div className="space-y-4 rounded-xl border bg-muted/30 p-6">
+          <h3 className="text-lg font-semibold">Conditions</h3>
           <div className="space-y-3 text-sm">
             <div>
-              <div className="text-muted-foreground mb-2">Plateformes</div>
+              <div className="mb-2 text-muted-foreground">Plateformes</div>
               <div className="flex flex-wrap gap-2">
                 {data.networks.length > 0 ? (
-                  data.networks.map((p) => (
-                    <PlatformBadge key={p} platform={p as Platform} />
+                  data.networks.map((platform) => (
+                    <PlatformBadge key={platform} platform={platform as Platform} />
                   ))
                 ) : (
-                  <span className="text-muted-foreground">â€”</span>
+                  <span className="text-muted-foreground">-</span>
                 )}
               </div>
             </div>
-            {data.required_hashtags.length > 0 && (
+            {data.required_hashtags.length > 0 ? (
               <div>
-                <div className="text-muted-foreground mb-2">Hashtags</div>
+                <div className="mb-2 text-muted-foreground">Hashtags</div>
                 <div className="flex flex-wrap gap-1">
                   {data.required_hashtags.map((tag) => (
                     <Badge key={tag} variant="secondary">
@@ -107,39 +105,39 @@ export function Step4Preview({ data }: Step4PreviewProps) {
                   ))}
                 </div>
               </div>
-            )}
-            {(data.min_followers || data.min_views) && (
+            ) : null}
+            {data.min_followers || data.min_views ? (
               <div>
-                <div className="text-muted-foreground mb-1">Seuils minimums</div>
+                <div className="mb-1 text-muted-foreground">Seuils minimums</div>
                 <div className="font-medium">
-                  {data.min_followers && `${data.min_followers.toLocaleString()} abonnÃ©s`}
-                  {data.min_followers && data.min_views && ' â€¢ '}
-                  {data.min_views && `${data.min_views.toLocaleString()} vues`}
+                  {data.min_followers ? `${data.min_followers.toLocaleString()} abonnés` : ''}
+                  {data.min_followers && data.min_views ? ' • ' : ''}
+                  {data.min_views ? `${data.min_views.toLocaleString()} vues` : ''}
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
 
-      <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-transparent rounded-xl border border-primary/20 p-6 space-y-6">
+      <div className="space-y-6 rounded-xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6">
         <div className="text-center">
-          <h3 className="font-semibold text-lg mb-2">Budget & gains</h3>
+          <h3 className="mb-2 text-lg font-semibold">Budget & gains</h3>
           <div className="text-3xl font-bold">
             {formatCurrency(data.total_prize_pool_cents, data.currency)}
           </div>
-          <p className="text-sm text-muted-foreground mt-1">
-            Ã  distribuer Ã  {data.prizes.reduce((sum, p) => sum + (p.rank_end - p.rank_start + 1), 0)} crÃ©ateurs
+          <p className="mt-1 text-sm text-muted-foreground">
+            à distribuer à {data.prizes.reduce((sum, prize) => sum + (prize.rank_end - prize.rank_start + 1), 0)} créateurs
           </p>
         </div>
 
-        {data.prizes.length > 0 && (
+        {data.prizes.length > 0 ? (
           <div className="space-y-3">
-            <div className="text-sm font-medium text-center text-muted-foreground">RÃ©partition</div>
+            <div className="text-center text-sm font-medium text-muted-foreground">Répartition</div>
             <div className="grid grid-cols-3 gap-3">
               {data.prizes.slice(0, 3).map((prize, index) => (
-                <div key={index} className="text-center p-3 bg-background/50 rounded-lg border">
-                  <div className="text-xs text-muted-foreground mb-1">
+                <div key={index} className="rounded-lg border bg-background/50 p-3 text-center">
+                  <div className="mb-1 text-xs text-muted-foreground">
                     {index === 0 ? '1er' : index === 1 ? '2e' : '3e'}
                   </div>
                   <div className="font-bold">
@@ -148,35 +146,35 @@ export function Step4Preview({ data }: Step4PreviewProps) {
                 </div>
               ))}
             </div>
-            {data.prizes.length > 3 && (
-              <div className="text-center p-3 bg-background/50 rounded-lg border">
-                <div className="text-xs text-muted-foreground mb-1">
-                  {data.prizes[3].rank_start}eâ€“{data.prizes[data.prizes.length - 1].rank_end}e
+            {data.prizes.length > 3 ? (
+              <div className="rounded-lg border bg-background/50 p-3 text-center">
+                <div className="mb-1 text-xs text-muted-foreground">
+                  {data.prizes[3].rank_start}e à {data.prizes[data.prizes.length - 1].rank_end}e
                 </div>
                 <div className="text-sm font-medium">
                   {formatCurrency(data.prizes[data.prizes.length - 1].amount_cents, data.currency)} - {formatCurrency(data.prizes[3].amount_cents, data.currency)}
                 </div>
               </div>
-            )}
-            <div className="pt-4 border-t space-y-2">
+            ) : null}
+            <div className="space-y-2 border-t pt-4">
               <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">Total Ã  payer :</span>
+                <span className="text-sm text-muted-foreground">Total à payer :</span>
                 <span className="text-xl font-bold">
                   {formatCurrency(Math.round(data.total_prize_pool_cents * 1.15), data.currency)}
                 </span>
               </div>
-              <p className="text-xs text-muted-foreground text-center">
+              <p className="text-center text-xs text-muted-foreground">
                 Inclut la commission de plateforme (15%)
               </p>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
-      {data.brief_md && (
+      {data.brief_md ? (
         <Card>
           <CardHeader>
-            <CardTitle>Brief crÃ©ateur</CardTitle>
+            <CardTitle>Brief créateur</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="prose prose-sm max-w-none">
@@ -184,18 +182,16 @@ export function Step4Preview({ data }: Step4PreviewProps) {
             </div>
           </CardContent>
         </Card>
-      )}
+      ) : null}
 
       <Card className="border-primary/20 bg-primary/5">
         <CardContent className="pt-6">
           <p className="text-sm text-muted-foreground">
-            En cliquant sur &quot;Finaliser&quot;, vous serez redirigÃ© vers le paiement. La campagne sera crÃ©Ã©e
-            en brouillon et passera en &quot;active&quot; une fois le paiement validÃ©.
+            En cliquant sur &quot;Finaliser&quot;, vous serez redirigé vers le paiement. La campagne sera créée
+            en brouillon et passera en &quot;active&quot; une fois le paiement validé.
           </p>
         </CardContent>
       </Card>
     </div>
   );
 }
-
-

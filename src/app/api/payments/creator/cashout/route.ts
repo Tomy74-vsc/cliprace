@@ -10,13 +10,13 @@ import { getUserRole } from '@/lib/auth';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { rateLimit } from '@/lib/rateLimit';
 import { assertCsrf } from '@/lib/csrf';
+import { getClientIp, buildRateLimitKey } from '@/lib/safe-ip';
 
 const BodySchema = z.object({ amount_cents: z.number().int().positive() });
 
 export async function POST(req: NextRequest) {
   try {
-    // Rate limit: 1/min per creator
-    const ip = req.headers.get('x-forwarded-for') || 'unknown';
+    // Rate limit: 1/min per creator+ip+ua
     const supabaseSSR = await getSupabaseSSR();
     const { data: { user } } = await supabaseSSR.auth.getUser();
     if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ ok: false, message: 'Forbidden' }, { status: 403 });
     }
 
-    const rlKey = `payments:creator:cashout:${user.id}:${ip}`;
+    const rlKey = buildRateLimitKey('payments:creator:cashout', user.id, req);
     if (!(await rateLimit({ key: rlKey, route: 'payments:creator:cashout', windowMs: 60_000, max: 1 }))) {
       return NextResponse.json({ ok: false, message: 'Rate limit exceeded' }, { status: 429 });
     }
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     if (insErr) return NextResponse.json({ ok: false, message: 'Cashout insert failed', error: insErr.message }, { status: 500 });
 
     // Audit
-    const ip2 = req.headers.get('x-forwarded-for') ?? undefined;
+    const auditIp = getClientIp(req);
     const ua = req.headers.get('user-agent') ?? undefined;
     await admin.from('audit_logs').insert({
       actor_id: user.id,
@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       table_name: 'cashouts',
       row_pk: null,
       new_values: { amount_cents },
-      ip: ip2,
+      ip: auditIp,
       user_agent: ua,
     });
 

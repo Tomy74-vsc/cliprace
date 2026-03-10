@@ -8,6 +8,7 @@ import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { rateLimit } from '@/lib/rateLimit';
 import { assertCsrf } from '@/lib/csrf';
+import { getClientIp, buildRateLimitKey } from '@/lib/safe-ip';
 
 const AttachmentSchema = z.object({
   url: z.string().url(),
@@ -80,9 +81,13 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    // Rate limit: 60 messages/min per user
-    const ip = req.headers.get('x-forwarded-for') || (req as UnsafeAny).ip || 'unknown';
-    const rlKey = `messages:post:${ip}`;
+    const { id: threadId } = await context.params;
+    const supabaseSSR = await getSupabaseSSR();
+    const { data: { user } } = await supabaseSSR.auth.getUser();
+    if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
+
+    // Rate limit: 60 messages/min per user+ip+ua (moved after auth for proper key)
+    const rlKey = buildRateLimitKey('messages:post', user.id, req);
     if (!(await rateLimit({ key: rlKey, route: 'messages:threads:post', windowMs: 60 * 1000, max: 60 }))) {
       return NextResponse.json({ ok: false, message: 'Trop de requêtes, réessayez plus tard.' }, { status: 429 });
     }
@@ -93,10 +98,6 @@ export async function POST(
     } catch {
       return NextResponse.json({ ok: false, message: 'CSRF invalide' }, { status: 403 });
     }
-    const { id: threadId } = await context.params;
-    const supabaseSSR = await getSupabaseSSR();
-    const { data: { user } } = await supabaseSSR.auth.getUser();
-    if (!user) return NextResponse.json({ ok: false, message: 'Unauthorized' }, { status: 401 });
 
     const admin = getSupabaseAdmin();
     const { data: thread, error: tErr } = await admin

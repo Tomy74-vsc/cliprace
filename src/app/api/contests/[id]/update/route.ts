@@ -10,6 +10,7 @@ import { getUserRole } from '@/lib/auth';
 import { assertCsrf } from '@/lib/csrf';
 import { contestUpdateSchema } from '@/lib/validators/contests';
 import { createError, type AppError } from '@/lib/errors';
+import { getClientIp } from '@/lib/safe-ip';
 
 type AllowedPlatform = 'tiktok' | 'instagram' | 'youtube';
 type NormalizedPrize = {
@@ -219,7 +220,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     }
 
     // Audit log
-    const ipHeader = req.headers.get('x-forwarded-for') ?? undefined;
+    const ipHeader = getClientIp(req);
     const ua = req.headers.get('user-agent') ?? undefined;
     const { error: auditError } = await admin.from('audit_logs').insert({
       actor_id: user.id,
