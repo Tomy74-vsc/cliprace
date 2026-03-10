@@ -11,6 +11,7 @@ import { formatCurrency } from '@/lib/formatters';
 import { TrackOnView } from '@/components/analytics/track-once';
 import { Progress } from '@/components/ui/progress';
 import { Info } from 'lucide-react';
+import { LeaderboardLiveIndicator } from '@/components/leaderboard/leaderboard-live-indicator';
 
 export const revalidate = 45;
 
@@ -84,7 +85,7 @@ export default async function ContestLeaderboardPage({ params, searchParams }: C
             </p>
           </div>
           <div className="flex items-center gap-3 flex-wrap justify-end">
-            <div className="text-xs text-muted-foreground">Dernière mise à jour {lastUpdated}</div>
+            <LeaderboardLiveIndicator initialTime={lastUpdated} />
             <Button asChild variant="ghost" size="sm">
               <Link href={refreshHref}>Rafraîchir</Link>
             </Button>

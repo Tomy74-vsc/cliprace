@@ -10,6 +10,7 @@ import { Info, Download, ArrowLeft, Trophy } from 'lucide-react';
 import { GlassCard, StatusBadge } from '@/components/brand-ui';
 import { LeaderboardPodium } from '@/components/brand/leaderboard-podium';
 import { cn } from '@/lib/utils';
+import { LeaderboardLiveIndicator } from '@/components/leaderboard/leaderboard-live-indicator';
 
 export const revalidate = 45;
 
@@ -135,9 +136,7 @@ export default async function BrandContestLeaderboardPage({
 
           {/* Actions */}
           <div className="flex items-center gap-2 flex-wrap justify-end">
-            <span className="text-xs text-[var(--text-3)]">
-              Mis à jour à {lastUpdated}
-            </span>
+            <LeaderboardLiveIndicator initialTime={lastUpdated} />
             <Link
               href={refreshHref}
               className="inline-flex items-center gap-1.5 rounded-[var(--r2)]
