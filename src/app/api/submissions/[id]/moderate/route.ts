@@ -13,6 +13,8 @@ import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { rateLimit } from '@/lib/rateLimit';
 import { assertCsrf } from '@/lib/csrf';
 import { getClientIp, buildRateLimitKey } from '@/lib/safe-ip';
+import { enqueueIngestionJob } from '@/lib/ingestion/queue';
+import { dispatchIngestion } from '@/lib/ingestion/dispatcher';
 
 const BodySchema = z.object({
   status: z.enum(['approved', 'rejected', 'removed']),
@@ -66,7 +68,7 @@ export async function PATCH(
     // Load submission + contest ownership
     const { data: sub, error: subErr } = await admin
       .from('submissions')
-      .select('id, contest_id, creator_id, status, rejection_reason')
+      .select('id, contest_id, creator_id, status, rejection_reason, platform, external_url')
       .eq('id', submissionId)
       .single();
     if (subErr || !sub) return NextResponse.json({ ok: false, message: 'Submission not found' }, { status: 404 });
@@ -109,6 +111,27 @@ export async function PATCH(
       .update(updatePayload)
       .eq('id', submissionId);
     if (updErr) return NextResponse.json({ ok: false, message: 'Update failed', error: updErr.message }, { status: 500 });
+
+    // Fire & forget : enqueue ingestion job + immediate dispatch for approved YouTube submissions
+    if (status === 'approved' && sub.platform === 'youtube') {
+      void enqueueIngestionJob(submissionId, sub.platform)
+        .then((jobId) => {
+          if (!jobId) return;
+          return dispatchIngestion({
+            submissionId,
+            platform: sub.platform,
+            videoUrl: sub.external_url,
+            existingJobId: jobId,
+          });
+        })
+        .then(() => getSupabaseAdmin().rpc('refresh_all_materialized_views'))
+        .catch((e) =>
+          console.error(
+            '[moderation:approve] ingestion fire-and-forget error',
+            e,
+          ),
+        );
+    }
 
     // Update moderation queue status
     await admin

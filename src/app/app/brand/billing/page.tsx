@@ -3,13 +3,10 @@ import Link from 'next/link';
 import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { formatCurrency, formatDate } from '@/lib/formatters';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
 import { BrandEmptyState } from '@/components/brand/empty-state-enhanced';
-import { StatCard } from '@/components/creator/stat-card';
 import { TrackOnView } from '@/components/analytics/track-once';
 import { StripePortalButton } from '@/components/brand/stripe-portal-button';
+import { GlassCard, StatusBadge } from '@/components/brand-ui';
 import {
   CheckCircle2,
   Clock,
@@ -77,29 +74,29 @@ export default async function BrandBillingPage() {
 
       <header className="space-y-2">
         <h1 className="text-3xl font-semibold">Facturation & Paiements</h1>
-        <p className="text-muted-foreground">
+        <p className="text-[var(--text-3)]">
           Gere tes moyens de paiement, tes factures PDF et ton historique en toute securite.
         </p>
       </header>
 
-      <Card className="border-primary/20 bg-gradient-to-br from-primary/[0.08] via-background to-background">
-        <CardHeader className="space-y-3">
+      <GlassCard className="p-0 overflow-hidden">
+        <div className="px-6 py-4 border-b border-[var(--border-1)]">
           <div className="flex items-start gap-3">
-            <div className="rounded-xl border border-primary/30 bg-primary/10 p-2 text-primary">
+            <div className="rounded-xl border border-[var(--accent)]/30 bg-[var(--accent)]/10 p-2 text-[var(--accent)]">
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div className="space-y-1">
-              <CardTitle>Portail Stripe securise</CardTitle>
-              <p className="text-sm text-muted-foreground">
+              <h2 className="text-sm font-semibold text-[var(--text-1)]">Portail Stripe securise</h2>
+              <p className="text-xs text-[var(--text-3)]">
                 Gere tes moyens de paiement, telecharge tes factures PDF et mets a jour tes informations fiscales
                 directement via notre partenaire Stripe.
               </p>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-4">
+        </div>
+        <div className="p-6 space-y-4">
           <StripePortalButton enabled={canOpenPortal} disabledMessage={portalHint} />
-          <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4 text-xs text-[var(--text-3)]">
             <span className="inline-flex items-center gap-1">
               <CreditCard className="h-3.5 w-3.5" />
               Cartes et moyens de paiement
@@ -113,35 +110,79 @@ export default async function BrandBillingPage() {
               Session Stripe chiffree
             </span>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </GlassCard>
 
       <section>
         <div className="grid gap-4 md:grid-cols-4">
-          <StatCard
-            label="Total paye"
-            value={formatCurrency(stats.total_paid_cents, 'EUR')}
-            hint="Paiements confirms"
-            icon={<CheckCircle2 className="h-4 w-4" />}
-          />
-          <StatCard
-            label="En attente"
-            value={formatCurrency(stats.pending_cents, 'EUR')}
-            hint={`${stats.pending_count} paiement${stats.pending_count > 1 ? 's' : ''}`}
-            icon={<Clock className="h-4 w-4" />}
-          />
-          <StatCard
-            label="En traitement"
-            value={formatCurrency(stats.processing_cents, 'EUR')}
-            hint={`${stats.processing_count} paiement${stats.processing_count > 1 ? 's' : ''}`}
-            icon={<RefreshCw className="h-4 w-4" />}
-          />
-          <StatCard
-            label="Transactions"
-            value={String(payments.length)}
-            hint="Historique interne"
-            icon={<CreditCard className="h-4 w-4" />}
-          />
+          <div className="rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)]/80 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-3)]">
+                  Total paye
+                </p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-[var(--text-1)]">
+                  {formatCurrency(stats.total_paid_cents, 'EUR')}
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-3)]">Paiements confirmes</p>
+              </div>
+              <div className="shrink-0 rounded-full bg-[var(--surface-2)] p-2 text-[var(--text-2)]">
+                <CheckCircle2 className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+          <div className="rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)]/80 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-3)]">
+                  En attente
+                </p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-[var(--text-1)]">
+                  {formatCurrency(stats.pending_cents, 'EUR')}
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-3)]">
+                  {`${stats.pending_count} paiement${stats.pending_count > 1 ? 's' : ''}`}
+                </p>
+              </div>
+              <div className="shrink-0 rounded-full bg-[var(--surface-2)] p-2 text-[var(--text-2)]">
+                <Clock className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+          <div className="rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)]/80 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-3)]">
+                  En traitement
+                </p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-[var(--text-1)]">
+                  {formatCurrency(stats.processing_cents, 'EUR')}
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-3)]">
+                  {`${stats.processing_count} paiement${stats.processing_count > 1 ? 's' : ''}`}
+                </p>
+              </div>
+              <div className="shrink-0 rounded-full bg-[var(--surface-2)] p-2 text-[var(--text-2)]">
+                <RefreshCw className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
+          <div className="rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)]/80 p-5">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wider text-[var(--text-3)]">
+                  Transactions
+                </p>
+                <p className="mt-2 text-2xl font-semibold tabular-nums text-[var(--text-1)]">
+                  {String(payments.length)}
+                </p>
+                <p className="mt-1 text-xs text-[var(--text-3)]">Historique interne</p>
+              </div>
+              <div className="shrink-0 rounded-full bg-[var(--surface-2)] p-2 text-[var(--text-2)]">
+                <CreditCard className="h-4 w-4" />
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -157,14 +198,16 @@ export default async function BrandBillingPage() {
           }}
         />
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle>Historique interne des paiements</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
+        <GlassCard className="p-0 overflow-hidden">
+          <div className="px-6 py-4 border-b border-[var(--border-1)]">
+            <h2 className="text-sm font-semibold text-[var(--text-1)]">
+              Historique interne des paiements
+            </h2>
+          </div>
+          <div className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
-                <thead className="border-b border-border bg-muted/50">
+                <thead className="border-b border-[var(--border-1)] bg-[var(--surface-2)]/60">
                   <tr>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
                     <th className="px-4 py-3 text-left text-sm font-semibold">Concours</th>
@@ -180,8 +223,8 @@ export default async function BrandBillingPage() {
                 </tbody>
               </table>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </GlassCard>
       )}
     </main>
   );
@@ -192,8 +235,8 @@ function PaymentTableRow({ payment }: { payment: PaymentRowData }) {
   const isPaid = payment.status === 'succeeded';
 
   return (
-    <tr className="border-b border-border/60 hover:bg-muted/40 transition-colors">
-      <td className="px-4 py-3 text-sm text-muted-foreground">{formatDate(payment.created_at)}</td>
+    <tr className="border-b border-[var(--border-1)]/60 hover:bg-[var(--surface-2)]/40 transition-colors">
+      <td className="px-4 py-3 text-sm text-[var(--text-3)]">{formatDate(payment.created_at)}</td>
       <td className="px-4 py-3">
         <Link
           href={`/app/brand/contests/${payment.contest_id}`}
@@ -209,31 +252,36 @@ function PaymentTableRow({ payment }: { payment: PaymentRowData }) {
       <td className="px-4 py-3">
         <div className="flex flex-wrap items-center gap-2">
           {needsPayment ? (
-            <Button asChild size="sm" variant="primary">
-              <Link href={`/app/brand/contests/${payment.contest_id}`}>Regler</Link>
-            </Button>
+            <Link
+              href={`/app/brand/contests/${payment.contest_id}`}
+              className="inline-flex items-center gap-2 rounded-[var(--r2)] border border-[var(--accent)]/30 bg-[var(--accent)]/8 px-3 py-1.5 text-xs font-medium text-[var(--accent)] transition-colors hover:bg-[var(--accent)]/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            >
+              Regler
+            </Link>
           ) : null}
 
           {isPaid && payment.stripe_payment_intent_id ? (
-            <Button asChild size="sm" variant="secondary">
-              <a
-                href={`https://dashboard.stripe.com/payments/${payment.stripe_payment_intent_id}`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ExternalLink className="h-4 w-4" />
-                Stripe
-              </a>
-            </Button>
+            <a
+              href={`https://dashboard.stripe.com/payments/${payment.stripe_payment_intent_id}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-[var(--r2)] border border-[var(--border-1)] px-3 py-1.5 text-xs font-medium text-[var(--text-2)] transition-colors hover:border-[var(--border-2)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Stripe
+            </a>
           ) : null}
 
           {isPaid ? (
-            <Button asChild size="sm" variant="ghost">
-              <a href={`/api/invoices/${payment.id}/download`} target="_blank" rel="noopener noreferrer">
-                <Download className="h-4 w-4" />
-                Facture
-              </a>
-            </Button>
+            <a
+              href={`/api/invoices/${payment.id}/download`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-[var(--r2)] border border-[var(--border-1)] px-3 py-1.5 text-xs font-medium text-[var(--text-2)] transition-colors hover:border-[var(--border-2)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+            >
+              <Download className="h-4 w-4" />
+              Facture
+            </a>
           ) : null}
         </div>
       </td>
@@ -242,22 +290,20 @@ function PaymentTableRow({ payment }: { payment: PaymentRowData }) {
 }
 
 function PaymentStatusBadge({ status }: { status: string }) {
-  const statusMap: Record<string, { label: string; variant: 'default' | 'success' | 'warning' | 'danger' | 'info'; icon: ReactNode }> = {
-    requires_payment: { label: 'Paiement requis', variant: 'warning', icon: <Clock className="h-4 w-4" /> },
-    processing: { label: 'En traitement', variant: 'info', icon: <RefreshCw className="h-4 w-4" /> },
-    succeeded: { label: 'Paye', variant: 'success', icon: <CheckCircle2 className="h-4 w-4" /> },
-    failed: { label: 'Echoue', variant: 'danger', icon: <XCircle className="h-4 w-4" /> },
-    refunded: { label: 'Rembourse', variant: 'default', icon: <RefreshCw className="h-4 w-4" /> },
+  const statusMap: Record<
+    string,
+    { label: string; variant: 'success' | 'warning' | 'danger' | 'neutral' }
+  > = {
+    requires_payment: { label: 'Paiement requis', variant: 'warning' },
+    processing: { label: 'En traitement', variant: 'warning' },
+    succeeded: { label: 'Paye', variant: 'success' },
+    failed: { label: 'Echoue', variant: 'danger' },
+    refunded: { label: 'Rembourse', variant: 'danger' },
   };
 
-  const display = statusMap[status] ?? { label: status, variant: 'default' as const, icon: <Clock className="h-4 w-4" /> };
+  const display = statusMap[status] ?? { label: status, variant: 'neutral' as const };
 
-  return (
-    <Badge variant={display.variant} className="inline-flex items-center gap-1">
-      {display.icon}
-      {display.label}
-    </Badge>
-  );
+  return <StatusBadge variant={display.variant} label={display.label} />;
 }
 
 async function fetchBillingData(userId: string): Promise<BillingData> {

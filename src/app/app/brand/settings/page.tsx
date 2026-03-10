@@ -3,10 +3,8 @@ import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { BrandSettingsForm } from '@/components/settings/brand-settings-form';
 import { TrackOnView } from '@/components/analytics/track-once';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { GlassCard } from '@/components/brand-ui';
+import { AlertTriangle } from 'lucide-react';
 
 export default async function BrandSettingsPage() {
   const { user } = await getSession();
@@ -58,40 +56,51 @@ export default async function BrandSettingsPage() {
       </div>
 
       {profileIncomplete && (
-        <Alert>
-          <AlertTitle>Profil incomplet</AlertTitle>
-          <AlertDescription>
-            Un profil incomplet peut limiter certaines fonctionnalités. Complétez les champs ci-dessous pour
-            débloquer toutes les fonctionnalités et améliorer votre expérience.
-          </AlertDescription>
-        </Alert>
+        <GlassCard className="flex items-start gap-3 p-4 border-[var(--brand-warning)]/30 bg-[var(--brand-warning)]/5">
+          <AlertTriangle className="h-4 w-4 text-[var(--brand-warning)] mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-[var(--text-1)]">Profil incomplet</p>
+            <p className="text-xs text-[var(--text-3)] mt-1">
+              Un profil incomplet peut limiter certaines fonctionnalités. Complétez les champs ci-dessous pour
+              débloquer toutes les fonctionnalités et améliorer votre expérience.
+            </p>
+          </div>
+        </GlassCard>
       )}
 
-      <Card>
-        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <GlassCard className="p-0 overflow-hidden">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between px-6 py-4 border-b border-[var(--border-1)]">
           <div>
-            <CardTitle>Résumé profil</CardTitle>
-            <CardDescription>Taux de complétion et aperçu public.</CardDescription>
+            <h2 className="text-sm font-semibold text-[var(--text-1)]">Résumé profil</h2>
+            <p className="text-xs text-[var(--text-3)]">Taux de complétion et aperçu public.</p>
           </div>
-          <Badge variant={completion.percent >= 80 ? 'success' : 'secondary'}>
+          <span className="rounded-[var(--r-pill)] bg-[var(--surface-2)] px-2.5 py-1 text-xs font-medium text-[var(--text-2)]">
             {completion.percent}% complété
-          </Badge>
-        </CardHeader>
-        <CardContent className="flex items-center gap-4">
-          <Avatar className="h-12 w-12">
-            <AvatarImage src={profile?.avatar_url || ''} alt={profile?.display_name || 'Marque'} />
-            <AvatarFallback>{(profile?.display_name || 'MA').slice(0, 2).toUpperCase()}</AvatarFallback>
-          </Avatar>
+          </span>
+        </div>
+        <div className="flex items-center gap-4 p-6">
+          <div className="h-12 w-12 rounded-full bg-[var(--surface-2)] border border-[var(--border-1)] overflow-hidden flex items-center justify-center text-sm font-semibold text-[var(--text-2)]">
+            {profile?.avatar_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={profile.avatar_url}
+                alt={profile?.display_name || 'Marque'}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              (profile?.display_name || 'MA').slice(0, 2).toUpperCase()
+            )}
+          </div>
           <div className="space-y-1 text-sm">
             <div className="font-semibold text-foreground">{profile?.display_name || 'Nom non renseigné'}</div>
-            <div className="text-muted-foreground">
+            <div className="text-[var(--text-3)]">
               {brandDetails?.company_name || 'Entreprise ?'} ·{' '}
               {brandDetails?.industry || 'Secteur non renseigné'} ·{' '}
               {brandDetails?.address_city || 'Localisation ?'}
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </GlassCard>
 
       <BrandSettingsForm
         initialProfile={{

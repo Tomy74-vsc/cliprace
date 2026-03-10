@@ -68,20 +68,20 @@
 
 .dark {
   color-scheme: dark;
-  --background: #050816;
-  --foreground: #f8fafc;
-  --card: #0b1020;
-  --card-foreground: #f8fafc;
-  --popover: #0b1020;
-  --popover-foreground: #f8fafc;
-  --muted: #0f172a;
-  --muted-foreground: #94a3b8;
+  --background: #0d0d0d;
+  --foreground: #f4f4f5;
+  --card: #121212;
+  --card-foreground: #f4f4f5;
+  --popover: #121212;
+  --popover-foreground: #f4f4f5;
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
   --accent: #0ea5e9;
   --accent-foreground: #020617;
   --primary: #6366f1;
   --primary-foreground: #e0e7ff;
-  --secondary: #0f172a;
-  --secondary-foreground: #e2e8f0;
+  --secondary: #18181b;
+  --secondary-foreground: #e4e4e7;
   --destructive: #f43f5e;
   --destructive-foreground: #fff1f2;
 
@@ -93,17 +93,17 @@
   --info-foreground: #bae6fd;
   --danger: #f43f5e;
   --danger-foreground: #ffe4e6;
-  --border: #1e293b;
-  --input: #1e293b;
+  --border: rgba(255, 255, 255, 0.12);
+  --input: rgba(255, 255, 255, 0.12);
   --ring: #6366f1;
   --radius: 1rem;
 
-  --surface-muted: #0b1224;
-  --surface-elev-1: rgba(11, 16, 32, 0.8);
+  --surface-muted: #18181b;
+  --surface-elev-1: rgba(18, 18, 18, 0.9);
   --surface-elev-1-dark: rgba(255, 255, 255, 0.08);
 
-  --scrollbar-thumb: rgba(99, 102, 241, 0.45);
-  --scrollbar-thumb-hover: rgba(99, 102, 241, 0.65);
+  --scrollbar-thumb: rgba(99, 102, 241, 0.5);
+  --scrollbar-thumb-hover: rgba(99, 102, 241, 0.7);
 }
 
 /* =========================
@@ -285,7 +285,7 @@ p {
 }
 
 .subtle { color: rgb(82,82,91); }       /* text-zinc-600 */
-.dark .subtle { color: rgb(161,161,170);}/* text-zinc-400 */
+.dark .subtle { color: #a1a1aa; }       /* zinc-400, WCAG AA on dark */
 
 /* Parallax helper (si utilisé dans le hero) */
 .parallax-hero {
@@ -467,8 +467,8 @@ p {
   box-shadow: 0 18px 60px -25px rgba(124,58,237,.25);
 }
 .dark .stat-bubble {
-  background: rgba(24,24,27,0.6);
-  border-color: rgba(250,250,250,0.12);
+  background: rgba(18,18,18,0.85);
+  border-color: rgba(255,255,255,0.15);
 }
 
 /* Effet glow des cartes feature */
@@ -539,7 +539,7 @@ p {
   background: linear-gradient(90deg, transparent, rgba(0,0,0,.08), transparent);
 }
 .dark .hr-muted {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.08), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.12), transparent);
 }
 
 /* =========================
@@ -711,21 +711,21 @@ textarea:focus-visible {
    Admin/Public pages are never affected.
    ========================================================= */
 .brand-scope {
-  /* ── Background depth scale ── */
+  /* ── Background depth scale (WCAG AA: surfaces above void for readability) ── */
   --bg-void: #050505;
-  --bg-ink: #07090B;
-  --surface-1: #0A0F14;
-  --surface-2: #101721;
-  --surface-3: #141C28;
+  --bg-ink: #0a0a0a;
+  --surface-1: #121212;
+  --surface-2: #1a1a1a;
+  --surface-3: #242424;
 
-  /* ── Text hierarchy ── */
-  --text-1: rgba(255, 255, 255, 0.92);
-  --text-2: rgba(255, 255, 255, 0.66);
-  --text-3: rgba(255, 255, 255, 0.44);
+  /* ── Text hierarchy (primary #F4F4F5 for WCAG AA on dark) ── */
+  --text-1: #F4F4F5;
+  --text-2: rgba(255, 255, 255, 0.72);
+  --text-3: rgba(255, 255, 255, 0.52);
 
-  /* ── Borders ── */
-  --border-1: rgba(255, 255, 255, 0.06);
-  --border-2: rgba(255, 255, 255, 0.10);
+  /* ── Borders (stronger opacity for visibility) ── */
+  --border-1: rgba(255, 255, 255, 0.10);
+  --border-2: rgba(255, 255, 255, 0.15);
 
   /* ── Accent: emerald Race Light ── */
   --brand-accent: #10B981;

@@ -12,7 +12,8 @@
     { "path": "/api/cron/contests/archive",        "schedule": "0 3 * * *" },
     { "path": "/api/cron/contests/activate",       "schedule": "*/15 * * * *" },
     { "path": "/api/cron/contests/reviewing",      "schedule": "*/15 * * * *" },
-    { "path": "/api/cron/contests/finalize",       "schedule": "*/15 * * * *" }
+    { "path": "/api/cron/contests/finalize",       "schedule": "*/15 * * * *" },
+    { "path": "/api/cron/refresh-metrics",         "schedule": "0 * * * *" }
   ],
 
   "headers": [

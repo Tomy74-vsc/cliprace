@@ -77,10 +77,69 @@ export async function GET(_req: NextRequest) {
       value: redirectUrl,
     };
 
+    // OAuth onboarding (YouTube, TikTok, Instagram) — presence only, no values
+    const hasGoogle = !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+    const hasTiktok = !!(process.env.TIKTOK_CLIENT_ID && process.env.TIKTOK_CLIENT_SECRET);
+    const hasInstagram = !!(process.env.INSTAGRAM_APP_ID && process.env.INSTAGRAM_APP_SECRET);
+    const hasOauthEncryption = !!process.env.OAUTH_TOKEN_ENCRYPTION_KEY;
+
+    checks.oauthYouTube = {
+      status: hasGoogle ? 'ok' : 'warning',
+      message: hasGoogle ? 'YouTube OAuth configuré (GOOGLE_CLIENT_ID + SECRET)' : 'GOOGLE_CLIENT_ID / GOOGLE_CLIENT_SECRET manquants — connexion YouTube indisponible',
+      value: hasGoogle ? '✅' : '⚠️',
+    };
+    checks.oauthTiktok = {
+      status: hasTiktok ? 'ok' : 'warning',
+      message: hasTiktok ? 'TikTok OAuth configuré (TIKTOK_CLIENT_ID + SECRET)' : 'TIKTOK_CLIENT_ID / TIKTOK_CLIENT_SECRET manquants — connexion TikTok indisponible',
+      value: hasTiktok ? '✅' : '⚠️',
+    };
+    checks.oauthInstagram = {
+      status: hasInstagram ? 'ok' : 'warning',
+      message: hasInstagram ? 'Instagram OAuth configuré (INSTAGRAM_APP_ID + SECRET)' : 'INSTAGRAM_APP_ID / INSTAGRAM_APP_SECRET manquants — connexion Instagram indisponible',
+      value: hasInstagram ? '✅' : '⚠️',
+    };
+    checks.oauthTokenEncryption = {
+      status: hasOauthEncryption ? 'ok' : 'warning',
+      message: hasOauthEncryption ? 'OAUTH_TOKEN_ENCRYPTION_KEY configurée' : 'OAUTH_TOKEN_ENCRYPTION_KEY manquante — callback OAuth échouera',
+      value: hasOauthEncryption ? '✅' : '⚠️',
+    };
+    checks.oauthRedirectUris = {
+      status: 'ok',
+      message: 'À enregistrer dans chaque console (Google, Meta, TikTok)',
+      value: [
+        `${siteUrl}/api/auth/oauth/youtube/callback`,
+        `${siteUrl}/api/auth/oauth/tiktok/callback`,
+        `${siteUrl}/api/auth/oauth/instagram/callback`,
+      ].join(' ; '),
+    };
+
     // Summary
     const allOk = Object.values(checks).every(c => c.status === 'ok');
     const hasErrors = Object.values(checks).some(c => c.status === 'error');
     const hasWarnings = Object.values(checks).some(c => c.status === 'warning');
+
+    const oauthIncomplete = !hasGoogle || !hasTiktok || !hasInstagram || !hasOauthEncryption;
+    const recommendations: string[] = [];
+    if (hasErrors) {
+      recommendations.push(
+        'Vérifiez vos variables d\'environnement dans .env.local',
+        'Assurez-vous que NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY sont définies',
+        'Vérifiez la configuration dans Supabase Dashboard',
+      );
+    } else if (hasWarnings) {
+      recommendations.push('Certaines configurations sont manquantes mais non critiques');
+      if (!env.SUPABASE_SERVICE_ROLE_KEY) recommendations.push('Vérifiez SUPABASE_SERVICE_ROLE_KEY si besoin.');
+      if (oauthIncomplete) recommendations.push('OAuth onboarding: voir docs/OAUTH_ONBOARDING_AUDIT.md pour clés et Redirect URIs (Google, Meta, TikTok).');
+    } else {
+      recommendations.push(
+        'Toutes les configurations semblent correctes',
+        'Si les emails ne sont toujours pas envoyés, vérifiez:',
+        '1. Les Redirect URLs dans Supabase Dashboard (Authentication → URL Configuration)',
+        '2. Les Email Templates sont activés (Authentication → Email Templates)',
+        '3. Le rate limit email n\'est pas atteint (3 emails/heure en dev)',
+        '4. Les logs Supabase (Logs → Auth Logs) pour voir si l\'email a été envoyé',
+      );
+    }
 
     return NextResponse.json({
       ok: allOk,
@@ -91,21 +150,7 @@ export async function GET(_req: NextRequest) {
         totalChecks: Object.keys(checks).length,
       },
       checks,
-      recommendations: hasErrors ? [
-        'Vérifiez vos variables d\'environnement dans .env.local',
-        'Assurez-vous que NEXT_PUBLIC_SUPABASE_URL et NEXT_PUBLIC_SUPABASE_ANON_KEY sont définies',
-        'Vérifiez la configuration dans Supabase Dashboard',
-      ] : hasWarnings ? [
-        'Certaines configurations sont manquantes mais non critiques',
-        'Vérifiez SUPABASE_SERVICE_ROLE_KEY si vous avez des erreurs lors de certaines opérations',
-      ] : [
-        'Toutes les configurations semblent correctes',
-        'Si les emails ne sont toujours pas envoyés, vérifiez:',
-        '1. Les Redirect URLs dans Supabase Dashboard (Authentication → URL Configuration)',
-        '2. Les Email Templates sont activés (Authentication → Email Templates)',
-        '3. Le rate limit email n\'est pas atteint (3 emails/heure en dev)',
-        '4. Les logs Supabase (Logs → Auth Logs) pour voir si l\'email a été envoyé',
-      ],
+      recommendations,
     });
   } catch (error) {
     return NextResponse.json({

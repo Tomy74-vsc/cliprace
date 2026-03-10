@@ -9,8 +9,8 @@ import {
   type NotificationType,
 } from '@/components/notifications/notification-item';
 import { TrackOnView } from '@/components/analytics/track-once';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { BrandEmptyState } from '@/components/brand/empty-state-enhanced';
+import { GlassCard } from '@/components/brand-ui';
 
 const PAGE_SIZE = 20;
 
@@ -132,35 +132,43 @@ export default async function BrandNotificationsPage({
 
       <section aria-live="polite">
         {notifications.length === 0 ? (
-          <div className="rounded-xl border border-dashed border-zinc-300 dark:border-zinc-700 p-12 text-center text-sm text-muted-foreground">
-            <p className="mb-4">
-              {statusFilter === 'unread'
+          <BrandEmptyState
+            type="no-notifications"
+            title={
+              statusFilter === 'unread'
+                ? 'Vous êtes à jour'
+                : 'Aucune notification'
+            }
+            description={
+              statusFilter === 'unread'
                 ? "Vous êtes à jour, aucune notification non lue."
-                : 'Aucune notification pour le moment.'}
-            </p>
-            <Button asChild variant="secondary">
-              <Link href="/app/brand/settings">Personnaliser mes alertes</Link>
-            </Button>
-          </div>
+                : 'Aucune notification pour le moment.'
+            }
+            action={{
+              label: 'Personnaliser mes alertes',
+              href: '/app/brand/settings',
+              variant: 'secondary',
+            }}
+          />
         ) : (
           <div className="space-y-4">
             {groupByDay(notifications).map(({ day, items }) => (
-              <Card key={day} className="shadow-sm">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-sm text-muted-foreground">{day}</CardTitle>
-                  <span className="text-xs text-muted-foreground">
+              <GlassCard key={day} className="p-0 overflow-hidden">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-1)]">
+                  <span className="text-xs font-medium text-[var(--text-3)]">{day}</span>
+                  <span className="text-xs text-[var(--text-3)]">
                     {items.length} notification{items.length > 1 ? 's' : ''}
                   </span>
-                </CardHeader>
-                <CardContent className="space-y-3">
+                </div>
+                <div className="divide-y divide-[var(--border-1)]">
                   {items.map((notification) => (
                     <NotificationItem
                       key={notification.id}
                       notification={notification}
                     />
                   ))}
-                </CardContent>
-              </Card>
+                </div>
+              </GlassCard>
             ))}
           </div>
         )}

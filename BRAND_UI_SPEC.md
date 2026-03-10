@@ -2,7 +2,7 @@
 **North Star:** “Finance-grade trust” + “Live campaign energy”  
 **References (finish level):** Apple / Uber / Revolut  
 **References (dynamic patterns):** Netflix / TikTok (only where useful)  
-**Theme:** Ink Dark (#050505) + subtle emerald “Race Light”  
+**Theme:** Ink Dark (void #050505, surfaces #121212+) + subtle emerald. **Contrast:** WCAG AA (text #F4F4F5, borders 10–15% white). “Race Light”  
 **Design Trinity:** shadcn/ui (foundation) + Magic UI / Origin UI (polish) + Rive (micro-interactions)  
 **Constraint:** Simple. Fast. Accessible. No gimmicks. “Wow” must increase trust, not noise.
 
@@ -53,24 +53,24 @@ Rules:
 ---
 
 ## 2) Design Tokens (Tailwind v4 + CSS variables)
-> Canon “Ink Void” background remains **#050505**, but surfaces must layer above it to avoid “pure black template” feel.
+> Canon “Ink Void” background remains **#050505**, surfaces must be #121212+ for WCAG AA. No grey-on-grey.
 
 ### 2.1 Color System
 **Background**
 - `--bg-void`: `#050505` (Depth 0)
-- `--bg-ink`: `#07090B` (Depth 0.5 optional)
-- `--surface-1`: `#0A0F14` (Depth 1)
-- `--surface-2`: `#101721` (Depth 2 hover/active)
-- `--surface-3`: `#141C28` (Depth 3 overlays inside panels)
+- `--bg-ink`: `#0a0a0a` (Depth 0.5 optional)
+- `--surface-1`: `#121212` (Depth 1 — minimum for readability)
+- `--surface-2`: `#1a1a1a` (Depth 2 hover/active)
+- `--surface-3`: `#242424` (Depth 3 overlays inside panels)
 
-**Text**
-- `--text-1`: `rgba(255,255,255,0.92)` (primary)
-- `--text-2`: `rgba(255,255,255,0.66)` (secondary)
-- `--text-3`: `rgba(255,255,255,0.44)` (tertiary)
+**Text (WCAG AA on dark)**
+- `--text-1`: `#F4F4F5` (primary)
+- `--text-2`: `rgba(255,255,255,0.72)` (secondary)
+- `--text-3`: `rgba(255,255,255,0.52)` (tertiary)
 
-**Borders**
-- `--border-1`: `rgba(255,255,255,0.06)` (subtle)
-- `--border-2`: `rgba(255,255,255,0.10)` (defined)
+**Borders (visible in daylight)**
+- `--border-1`: `rgba(255,255,255,0.10)` (subtle)
+- `--border-2`: `rgba(255,255,255,0.15)` (defined)
 
 **Accent**
 - `--accent`: `#10B981` (emerald Race Light)
@@ -268,5 +268,5 @@ Rules:
 - Constant glow everywhere
 - Glass on every card
 - 10 different card styles
-- Grey-on-grey low contrast text
+- **Grey-on-grey or low-contrast text** (use --text-1 #F4F4F5 on surfaces #121212+; borders ≥ 10% white)
 - Particle effects as decoration on every page
