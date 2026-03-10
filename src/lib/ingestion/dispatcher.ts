@@ -1,5 +1,6 @@
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { extractYoutubeId, fetchYoutubeMetrics } from './youtube';
+import { fetchTiktokMetrics } from './tiktok';
 import type {
   IngestionPlatform,
   IngestionResult,
@@ -33,6 +34,18 @@ function extractErrorCode(error: unknown): string {
   }
   if (message.includes('YOUTUBE_API_HTTP_ERROR')) {
     return 'YOUTUBE_API_HTTP_ERROR';
+  }
+  if (message.includes('TIKTOK_RATE_LIMIT')) {
+    return 'TIKTOK_RATE_LIMIT';
+  }
+  if (message.includes('TIKTOK_VIDEO_UNAVAILABLE')) {
+    return 'TIKTOK_VIDEO_UNAVAILABLE';
+  }
+  if (message.includes('TIKTOK_TIMEOUT')) {
+    return 'TIKTOK_TIMEOUT';
+  }
+  if (message.includes('TIKTOK_API_HTTP_ERROR')) {
+    return 'TIKTOK_API_HTTP_ERROR';
   }
   if (message.includes('PLATFORM_NOT_SUPPORTED')) {
     return 'PLATFORM_NOT_SUPPORTED';
@@ -140,6 +153,15 @@ export async function dispatchIngestion(
           throw new Error('YOUTUBE_INVALID_URL');
         }
         metrics = await fetchYoutubeMetrics(videoId);
+        break;
+      }
+      case 'tiktok': {
+        metrics = await fetchTiktokMetrics(params.videoUrl);
+        console.log('[ingestion:tiktok] success', {
+          submissionId: params.submissionId,
+          views: metrics.views,
+          likes: metrics.likes,
+        });
         break;
       }
       default: {
