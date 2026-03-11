@@ -16,8 +16,19 @@ import { notFound } from 'next/navigation';
 import { BrandShell } from '@/components/brand-ui/BrandShell';
 import { GlassCard } from '@/components/brand-ui/GlassCard';
 import { BrandInput } from '@/components/brand-ui/BrandInput';
+import { Surface } from '@/components/brand-ui/Surface';
+import { Panel } from '@/components/brand-ui/Panel';
+import { Card } from '@/components/brand-ui/Card';
+import { StatusBadge } from '@/components/brand-ui/StatusBadge';
+import { EmptyState } from '@/components/brand-ui/EmptyState';
+import {
+  SkeletonKpiHero,
+  SkeletonKpi,
+  SkeletonCard,
+  SkeletonTable,
+} from '@/components/brand-ui/Skeleton';
 import { DemoInteractive } from './demo-interactive';
-import { Search, Mail, Lock } from 'lucide-react';
+import { Search, Mail, Lock, Inbox } from 'lucide-react';
 
 /* Gate: design-system demo is dev-only */
 const IS_DEV = process.env.NODE_ENV !== 'production';
@@ -311,6 +322,104 @@ export default function UiKitPage() {
               />
             </div>
           </GlassCard>
+        </Section>
+
+        {/* ══════════════════════════════════════════
+            3b. NEW SURFACES (Surface, Panel, Card)
+            ══════════════════════════════════════════ */}
+        <Section title="3b. Surface / Panel / Card">
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Surface variant="default" className="p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-3)] mb-2">Surface — default</p>
+              <p className="text-sm text-[var(--text-2)]">Base surface with border and shadow.</p>
+            </Surface>
+            <Surface variant="hoverable" className="p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-3)] mb-2">Surface — hoverable</p>
+              <p className="text-sm text-[var(--text-2)]">Hover to see lift effect.</p>
+            </Surface>
+            <Surface variant="track" className="p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-3)] mb-2">Surface — track</p>
+              <p className="text-sm text-[var(--text-2)]">SVG track pattern background.</p>
+            </Surface>
+            <Surface variant="notched" className="p-4">
+              <p className="text-xs font-medium uppercase tracking-wide text-[var(--text-3)] mb-2">Surface — notched</p>
+              <p className="text-sm text-[var(--text-2)]">Clip Notch cut corner.</p>
+            </Surface>
+          </div>
+
+          <Panel title="Panel with header" description="A panel with title, description, and action slot." action={<span className="text-xs text-[var(--brand-accent)]">Action →</span>}>
+            <p className="text-sm text-[var(--text-2)]">Panel body content with p-6 padding.</p>
+          </Panel>
+
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Card><p className="text-sm text-[var(--text-2)]">Basic card</p></Card>
+            <Card hoverable><p className="text-sm text-[var(--text-2)]">Hoverable card</p></Card>
+            <Card><p className="text-sm text-[var(--text-2)]">Another card</p></Card>
+          </div>
+        </Section>
+
+        {/* ══════════════════════════════════════════
+            3c. STATUS BADGES
+            ══════════════════════════════════════════ */}
+        <Section title="3c. Status Badges">
+          <GlassCard>
+            <div className="flex flex-wrap gap-3">
+              <StatusBadge status="active" />
+              <StatusBadge status="draft" />
+              <StatusBadge status="paused" />
+              <StatusBadge status="ended" />
+              <StatusBadge status="archived" />
+              <StatusBadge status="pending" />
+              <StatusBadge status="approved" />
+              <StatusBadge status="rejected" />
+              <StatusBadge status="live" />
+              <StatusBadge variant="success" label="Custom label" />
+            </div>
+          </GlassCard>
+        </Section>
+
+        {/* ══════════════════════════════════════════
+            3d. SKELETONS
+            ══════════════════════════════════════════ */}
+        <Section title="3d. Skeletons">
+          <div className="grid gap-6 sm:grid-cols-3">
+            <SkeletonKpiHero />
+            <SkeletonKpiHero />
+            <SkeletonKpiHero />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-4 mt-4">
+            <SkeletonKpi />
+            <SkeletonKpi />
+            <SkeletonKpi />
+            <SkeletonKpi />
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 mt-4">
+            <SkeletonCard lines={3} />
+            <SkeletonCard lines={4} />
+          </div>
+          <SkeletonTable rows={3} cols={4} className="mt-4" />
+        </Section>
+
+        {/* ══════════════════════════════════════════
+            3e. EMPTY + ERROR STATES
+            ══════════════════════════════════════════ */}
+        <Section title="3e. Empty & Error States">
+          <div className="grid gap-6 sm:grid-cols-2">
+            <Surface className="overflow-hidden">
+              <EmptyState
+                title="No campaigns yet"
+                description="Create your first campaign to get started."
+                icon={<Inbox />}
+              />
+            </Surface>
+            <Surface className="overflow-hidden">
+              <EmptyState
+                title="No submissions"
+                description="Creators haven't submitted content yet."
+                variant="track"
+              />
+            </Surface>
+          </div>
         </Section>
 
         {/* ══════════════════════════════════════════

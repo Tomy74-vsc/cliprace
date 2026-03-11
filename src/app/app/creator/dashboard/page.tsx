@@ -22,6 +22,7 @@ import {
 } from "@/components/creator/active-contests-carousel";
 import type { Platform } from "@/lib/validators/platforms";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { MetricsFreshnessBanner } from "@/components/brand/metrics-freshness-banner";
 
 export const revalidate = 60;
 
@@ -85,6 +86,8 @@ export default async function CreatorDashboard() {
   const milestonesProgressPercent =
     milestones.length > 0 ? Math.round((completedMilestones / milestones.length) * 100) : 0;
 
+  const hasRealMetrics = data.stats.views_total > 0;
+
   const todo = buildTodoList({
     profileIncomplete: data.profileIncomplete,
     hasSubmissions: data.stats.submissions_count > 0,
@@ -97,6 +100,11 @@ export default async function CreatorDashboard() {
   return (
     <main className="space-y-8">
       <TrackOnView event="view_dashboard" payload={{ role: "creator" }} />
+
+      <MetricsFreshnessBanner
+        hasRealMetrics={hasRealMetrics}
+        approvedSubmissionsCount={data.stats.approved_submissions}
+      />
 
       <section className="rounded-3xl border border-border p-6 md:p-8 shadow-card cliprace-hero">
         <div className="grid gap-6 md:grid-cols-[2fr,1.1fr] md:items-center">

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSession } from '@/lib/auth';
 import { rateLimit } from '@/lib/rateLimit';
 import { buildRateLimitKey } from '@/lib/safe-ip';
-import { buildAuthUrl, type OAuthPlatform } from '@/lib/oauth/platforms';
+import { buildAuthUrl, type OAuthPlatform, OAUTH_CONFIG } from '@/lib/oauth/platforms';
 
 const OAUTH_STATE_COOKIE_PREFIX = 'oauth_state_';
 
@@ -47,15 +47,33 @@ export async function GET(
     }
 
     const origin = new URL(req.url).origin;
-    const redirectUri = `${origin}/api/auth/oauth/${platformParam}/callback`;
+
+    const platform = platformParam satisfies OAuthPlatform;
+    const platformConfig = OAUTH_CONFIG[platform];
+
+    if (!platformConfig.clientId || !platformConfig.clientSecret) {
+      console.error(
+        `[OAuth][${platform}] Missing env vars: clientId or clientSecret`,
+      );
+      return NextResponse.redirect(
+        new URL(
+          `/app/onboarding?error=oauth_misconfigured&platform=${platform}`,
+          req.url,
+        ),
+      );
+    }
+
+    console.log(`[OAuth][${platform}] Initiating auth flow`);
+
+    const redirectUri = `${origin}/api/auth/oauth/${platform}/callback`;
 
     const state = crypto.randomUUID();
 
-    const authorizationUrl = buildAuthUrl(platformParam, state, redirectUri);
+    const authorizationUrl = buildAuthUrl(platform, state, redirectUri);
 
     const response = NextResponse.redirect(authorizationUrl);
 
-    response.cookies.set(`${OAUTH_STATE_COOKIE_PREFIX}${platformParam}`, state, {
+    response.cookies.set(`${OAUTH_STATE_COOKIE_PREFIX}${platform}`, state, {
       httpOnly: true,
       sameSite: 'lax',
       secure: process.env.NODE_ENV === 'production',

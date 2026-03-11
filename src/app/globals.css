@@ -756,6 +756,16 @@ textarea:focus-visible {
   --duration-fast: 120ms;
   --duration-normal: 180ms;
 
+  /* ── Aliases (match PR2 spec token names) ── */
+  --accent: #10B981;
+  --border-accent: rgba(16, 185, 129, 0.35);
+  --brand-info: #3B82F6;
+  --shadow-1: 0 1px 0 rgba(255, 255, 255, 0.04) inset, 0 8px 20px rgba(0, 0, 0, 0.45);
+  --shadow-2: 0 1px 0 rgba(255, 255, 255, 0.06) inset, 0 18px 50px rgba(0, 0, 0, 0.55);
+  --motion-fast: 120ms;
+  --motion-normal: 180ms;
+  --motion-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+
   /* ── Force visual identity ── */
   background-color: var(--bg-void);
   color: var(--text-1);

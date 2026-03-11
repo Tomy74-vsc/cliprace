@@ -4,8 +4,8 @@ Purpose: Formulaire multi-étapes pour onboarding créateur/marque
 */
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { CardFooter } from '@/components/ui/card';
@@ -34,6 +34,8 @@ export function OnboardingForm({ role, initialData, connectedPlatforms = [] }: O
   const [loading, setLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
   const csrfToken = useCsrfToken();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
 
   const totalSteps = role === 'creator' ? 4 : 4; // Creator: 4 étapes, Brand: 4 étapes
 
@@ -82,6 +84,66 @@ export function OnboardingForm({ role, initialData, connectedPlatforms = [] }: O
     }
     return true;
   };
+
+  // Intentionally run once on mount to read and clean initial OAuth params
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    const error = searchParams.get('error');
+    const platform = searchParams.get('platform');
+    const reason = searchParams.get('reason');
+    const connected = searchParams.get('connected');
+
+    const hasOAuthFeedback = Boolean(error || (connected === 'true' && platform));
+    if (!hasOAuthFeedback) {
+      return;
+    }
+
+    const platformLabel: Record<string, string> = {
+      youtube: 'YouTube',
+      tiktok: 'TikTok',
+      instagram: 'Instagram',
+    };
+
+    if (connected === 'true' && platform) {
+      const successLabel = platformLabel[platform] ?? platform;
+      toast({
+        type: 'success',
+        title: `${successLabel} connecté !`,
+        message: `Ton compte ${successLabel} a bien été lié à ClipRace.`,
+        duration: 4000,
+      });
+    }
+
+    if (error) {
+      const pLabel = platform ? (platformLabel[platform] ?? platform) : 'la plateforme';
+
+      const title = 'Connexion impossible';
+      let message: string;
+
+      if (error === 'oauth_misconfigured') {
+        message = `La connexion ${pLabel} n'est pas encore activée. Contacte le support.`;
+      } else if (error === 'oauth_provider_error' && reason === 'access_denied') {
+        message = `Tu as refusé l'accès à ${pLabel}. Réessaie quand tu veux.`;
+      } else if (error === 'oauth_provider_error') {
+        message = `${pLabel} a retourné une erreur. Réessaie dans quelques instants.`;
+      } else {
+        message = `Une erreur technique s'est produite lors de la connexion à ${pLabel}. Réessaie.`;
+      }
+
+      toast({ type: 'error', title, message, duration: 7000 });
+    }
+
+    const cleanParams = new URLSearchParams(searchParams.toString());
+    cleanParams.delete('error');
+    cleanParams.delete('platform');
+    cleanParams.delete('reason');
+    cleanParams.delete('connected');
+
+    const newSearch = cleanParams.toString();
+    router.replace(newSearch ? `${pathname}?${newSearch}` : pathname, {
+      scroll: false,
+    });
+  }, []);
 
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);
@@ -177,7 +239,7 @@ export function OnboardingForm({ role, initialData, connectedPlatforms = [] }: O
           return (
             <div className="space-y-4">
               <div className="flex items-center gap-2 mb-4">
-                <User className="w-5 h-5 text-[#635BFF]" />
+                <User className="w-5 h-5 text-primary" />
                 <h3 className="text-lg font-semibold">Informations de base</h3>
               </div>
               <Input

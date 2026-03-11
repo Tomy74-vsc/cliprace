@@ -11,7 +11,8 @@
     "format": "prettier --write .",
     "audit:csrf": "tsx scripts/audit-csrf.ts",
     "audit:rate-limit": "tsx scripts/audit-rate-limit.ts",
-    "audit:audit-logs": "tsx scripts/audit-audit-logs.ts"
+    "audit:audit-logs": "tsx scripts/audit-audit-logs.ts",
+    "audit:brand-security": "tsx scripts/audit-brand-security.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",

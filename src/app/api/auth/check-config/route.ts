@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { env } from '@/lib/env';
 import { createClient } from '@supabase/supabase-js';
 
-export async function GET(_req: NextRequest) {
+export async function GET(req: NextRequest) {
   try {
     const checks: Record<string, { status: 'ok' | 'error' | 'warning'; message: string; value?: string }> = {};
 
@@ -141,6 +141,8 @@ export async function GET(_req: NextRequest) {
       );
     }
 
+    const requestOrigin = new URL(req.url).origin;
+
     return NextResponse.json({
       ok: allOk,
       summary: {
@@ -151,6 +153,26 @@ export async function GET(_req: NextRequest) {
       },
       checks,
       recommendations,
+      oauth: {
+        youtube: {
+          clientId: !!process.env.GOOGLE_CLIENT_ID,
+          clientSecret: !!process.env.GOOGLE_CLIENT_SECRET,
+        },
+        tiktok: {
+          clientId: !!process.env.TIKTOK_CLIENT_ID,
+          clientSecret: !!process.env.TIKTOK_CLIENT_SECRET,
+        },
+        instagram: {
+          appId: !!process.env.INSTAGRAM_APP_ID,
+          appSecret: !!process.env.INSTAGRAM_APP_SECRET,
+        },
+        encryptionKey: !!process.env.OAUTH_TOKEN_ENCRYPTION_KEY,
+        callbackUrls: {
+          youtube: `${requestOrigin}/api/auth/oauth/youtube/callback`,
+          tiktok: `${requestOrigin}/api/auth/oauth/tiktok/callback`,
+          instagram: `${requestOrigin}/api/auth/oauth/instagram/callback`,
+        },
+      },
     });
   } catch (error) {
     return NextResponse.json({

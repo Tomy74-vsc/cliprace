@@ -47,9 +47,34 @@ export async function GET(
   { params }: { params: { platform: string } },
 ) {
   const url = new URL(req.url);
+  const searchParams = url.searchParams;
   const origin = url.origin;
 
-  const platformParam = params.platform?.toLowerCase();
+  const platformParamRaw = params.platform?.toLowerCase();
+
+  const error = searchParams.get('error');
+  const errorDescription = searchParams.get('error_description');
+
+  if (error) {
+    const platformForLog = isValidPlatform(platformParamRaw ?? '')
+      ? (platformParamRaw as OAuthPlatform)
+      : 'unknown';
+
+    console.error(
+      `[OAuth][${platformForLog}] Provider error: ${error} — ${errorDescription ?? ''}`,
+    );
+
+    const redirectUrl = new URL(
+      `/app/creator/onboarding?error=oauth_provider_error&platform=${encodeURIComponent(
+        platformForLog,
+      )}&reason=${encodeURIComponent(error)}`,
+      origin,
+    );
+
+    return NextResponse.redirect(redirectUrl.toString());
+  }
+
+  const platformParam = platformParamRaw;
   if (!platformParam || !isValidPlatform(platformParam)) {
     return NextResponse.redirect(
       `${origin}/app/creator/onboarding?error=oauth_failed`,
@@ -59,7 +84,7 @@ export async function GET(
   const platform = platformParam;
 
   const code = url.searchParams.get('code');
-  const state = url.searchParams.get('state');
+  const state = searchParams.get('state');
 
   const stateCookieName = `${OAUTH_STATE_COOKIE_PREFIX}${platform}`;
   const storedState = req.cookies.get(stateCookieName)?.value;
@@ -131,7 +156,10 @@ export async function GET(
       .single();
 
     if (accountError || !account) {
-      console.error('OAuth callback: failed to upsert platform_accounts', accountError);
+      console.error(
+        `[OAuth][${platform}] Callback failed: upsert platform_accounts`,
+        accountError,
+      );
       const res = NextResponse.redirect(
         buildOnboardingUrl(origin, platform, errorParams),
       );
@@ -154,7 +182,10 @@ export async function GET(
     );
 
     if (tokenError) {
-      console.error('OAuth callback: failed to upsert platform_oauth_tokens', tokenError);
+      console.error(
+        `[OAuth][${platform}] Callback failed: upsert platform_oauth_tokens`,
+        tokenError,
+      );
       const res = NextResponse.redirect(
         buildOnboardingUrl(origin, platform, errorParams),
       );
@@ -175,7 +206,7 @@ export async function GET(
     clearStateCookie(res, platform);
     return res;
   } catch (err) {
-    console.error('OAuth callback error', err);
+    console.error(`[OAuth][${platform}] Callback failed:`, err);
     const res = NextResponse.redirect(
       buildOnboardingUrl(origin, platform, errorParams),
     );

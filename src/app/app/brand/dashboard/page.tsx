@@ -21,6 +21,7 @@ import { TrackOnView } from '@/components/analytics/track-once';
 import { RoiPerformanceChart } from '@/components/brand/roi-performance-chart';
 import { DashboardPendingSubmissionsCard } from '@/components/brand/dashboard-pending-submissions-card';
 import { AnalyticsPeriodToggle } from './analytics-period-toggle';
+import { MetricsFreshnessBanner } from '@/components/brand/metrics-freshness-banner';
 
 export const revalidate = 60;
 
@@ -284,6 +285,11 @@ export default async function BrandDashboard() {
 
   /* Best performing contest (by views) */
   const bestContest = [...data.active_contests].sort((a, b) => b.views - a.views)[0] || null;
+  const hasRealMetrics = data.stats.total_views > 0;
+  const approvedSubmissionsCount = Object.values(data.platform_distribution).reduce(
+    (sum, count) => sum + count,
+    0,
+  );
 
   return (
     <div className="mx-auto max-w-7xl px-4 lg:px-6 py-6 space-y-6">
@@ -306,6 +312,11 @@ export default async function BrandDashboard() {
           )}
         </p>
       </header>
+
+      <MetricsFreshnessBanner
+        hasRealMetrics={hasRealMetrics}
+        approvedSubmissionsCount={approvedSubmissionsCount}
+      />
 
       {/* ══════════════════════════════════════════════
           12-COL GRID — Mission Control
