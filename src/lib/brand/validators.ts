@@ -26,6 +26,10 @@ export const contestValidators = {
   canPause: (contest: ContestRow): boolean =>
     contest.status === 'active',
 
+  /** Only paused contests can be resumed. */
+  canResume: (contest: ContestRow): boolean =>
+    contest.status === 'paused',
+
   /** Active or paused contests can be ended. */
   canEnd: (contest: ContestRow): boolean =>
     (['active', 'paused'] as ContestRow['status'][]).includes(contest.status),

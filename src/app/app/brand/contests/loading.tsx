@@ -1,3 +1,35 @@
+import { SkeletonLine, SkeletonBlock, SkeletonTable } from '@/components/brand-ui';
+
+export default function BrandContestsLoading() {
+  return (
+    <div className="brand-scope max-w-7xl mx-auto px-6 py-8 space-y-4" aria-busy="true" aria-label="Loading campaigns">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-4">
+        <div className="space-y-2">
+          <SkeletonLine width="180px" height="24px" />
+          <SkeletonLine width="260px" height="14px" />
+        </div>
+        <SkeletonBlock width="140px" height="36px" rounded="var(--r2)" />
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap items-center justify-between gap-3 mt-2">
+        <SkeletonBlock width="260px" height="36px" rounded="var(--r2)" />
+        <div className="flex items-center gap-2">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <SkeletonBlock key={i} width="60px" height="28px" rounded="999px" />
+          ))}
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="mt-4">
+        <SkeletonTable rows={8} cols={7} />
+      </div>
+    </div>
+  );
+}
+
 export default function BrandContestsLoading() {
   return (
     <div className="mx-auto max-w-7xl px-4 lg:px-6 py-8 space-y-10">
