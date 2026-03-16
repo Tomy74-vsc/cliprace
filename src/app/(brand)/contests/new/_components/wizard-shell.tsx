@@ -91,31 +91,55 @@ export function WizardShell() {
         startAt: formData.startAt ? formData.startAt.toISOString() : null,
         endAt: formData.endAt ? formData.endAt.toISOString() : null,
         coverUrl: formData.coverUrl,
-        publish,
       };
 
-      const res = await fetch('/api/brand/contests', {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'content-type': 'application/json',
-          'x-csrf': token,
-        },
-        body: JSON.stringify(payload),
-      });
+      if (publish) {
+        const res = await fetch('/api/brand/contests/checkout', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'content-type': 'application/json',
+            'x-csrf': token,
+          },
+          body: JSON.stringify(payload),
+        });
 
-      const data = (await res.json()) as {
-        success?: boolean;
-        contestId?: string;
-        error?: string;
-      };
+        const data = (await res.json()) as {
+          success?: boolean;
+          checkoutUrl?: string;
+          contestId?: string;
+          error?: string;
+        };
 
-      if (!res.ok || !data.success || !data.contestId) {
-        throw new Error(data.error ?? 'Creation failed');
+        if (!res.ok || !data.checkoutUrl) {
+          throw new Error(data.error ?? 'Checkout failed');
+        }
+
+        window.location.href = data.checkoutUrl;
+      } else {
+        const res = await fetch('/api/brand/contests', {
+          method: 'POST',
+          credentials: 'include',
+          headers: {
+            'content-type': 'application/json',
+            'x-csrf': token,
+          },
+          body: JSON.stringify({ ...payload, publish: false }),
+        });
+
+        const data = (await res.json()) as {
+          success?: boolean;
+          contestId?: string;
+          error?: string;
+        };
+
+        if (!res.ok || !data.contestId) {
+          throw new Error(data.error ?? 'Creation failed');
+        }
+
+        toast.success('Draft saved!');
+        router.push(`/app/brand/contests/${data.contestId}`);
       }
-
-      toast.success(publish ? 'Contest published!' : 'Draft saved!');
-      router.push(`/app/brand/contests/${data.contestId}`);
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Something went wrong while creating the contest.';

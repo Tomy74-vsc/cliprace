@@ -119,7 +119,12 @@ export async function POST(req: NextRequest) {
         if (oldStatus !== 'active') {
           const { error: cUpd } = await admin
             .from('contests')
-            .update({ status: 'active', updated_at: new Date().toISOString() })
+            .update({
+              status: 'active',
+              updated_at: new Date().toISOString(),
+              ranking_frozen_at: new Date().toISOString(),
+              // ranking_weights_snapshot already set when contest was created
+            })
             .eq('id', contest_id);
           if (cUpd) {
             console.error('webhook:contest_activate_failed', { contest_id, eventId, error: cUpd.message });
