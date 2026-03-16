@@ -59,7 +59,7 @@ export function StepReview({ data }: Props) {
       ok: hasCover,
       optional: true,
     },
-  ] as const;
+  ] satisfies { label: string; ok: boolean; optional?: boolean }[];
 
   return (
     <div className="space-y-6">

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import type { WizardFormData, WizardStep } from '../_types';
-import { WIZARD_STEPS } from '../_types';
+import { WIZARD_STEPS, stepBasicsSchema, stepBudgetSchema, stepScheduleSchema } from '../_types';
 import { getCsrfToken } from '@/lib/csrf-client';
 import { toast } from 'sonner';
 import { Surface } from '@/components/brand-ui/Surface';
@@ -39,11 +39,40 @@ export function WizardShell() {
   };
 
   const nextStep = () => {
-    setCurrentStep((prev) => Math.min(5, (prev + 1) as WizardStep));
+    let result;
+    if (currentStep === 1) {
+      result = stepBasicsSchema.safeParse({
+        title: formData.title,
+        briefMd: formData.briefMd,
+        networks: formData.networks,
+      });
+    } else if (currentStep === 2) {
+      result = stepBudgetSchema.safeParse({
+        budgetCents: formData.budgetCents,
+        prizePoolCents: formData.prizePoolCents,
+        currency: formData.currency,
+        maxWinners: formData.maxWinners,
+      });
+    } else if (currentStep === 3) {
+      result = stepScheduleSchema.safeParse({
+        startAt: formData.startAt,
+        endAt: formData.endAt,
+      });
+    } else {
+      result = { success: true } as const;
+    }
+
+    if (!result.success) {
+      const firstError = result.error.errors[0]?.message ?? 'Please complete this step before continuing.';
+      toast.error(firstError);
+      return;
+    }
+
+    setCurrentStep((prev) => (Math.min(5, prev + 1) as WizardStep));
   };
 
   const prevStep = () => {
-    setCurrentStep((prev) => Math.max(1, (prev - 1) as WizardStep));
+    setCurrentStep((prev) => (Math.max(1, prev - 1) as WizardStep));
   };
 
   const handleSubmit = async (publish: boolean) => {
