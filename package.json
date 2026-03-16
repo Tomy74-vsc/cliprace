@@ -12,7 +12,9 @@
     "audit:csrf": "tsx scripts/audit-csrf.ts",
     "audit:rate-limit": "tsx scripts/audit-rate-limit.ts",
     "audit:audit-logs": "tsx scripts/audit-audit-logs.ts",
-    "audit:brand-security": "tsx scripts/audit-brand-security.ts"
+    "audit:brand-security": "tsx scripts/audit-brand-security.ts",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.3.4",
@@ -67,6 +69,7 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.58.2",
     "@types/jsonwebtoken": "^9.0.5",
     "@types/node": "^20",
     "@types/node-fetch": "^2.6.12",

@@ -2,7 +2,8 @@
 
 import { useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Check } from 'lucide-react';
+import { Search, Check, ChevronDown } from 'lucide-react';
+import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { BrandInput } from '@/components/brand-ui';
 import type { ContestsFilters } from '../_types';
 import { cn } from '@/lib/utils';
@@ -22,15 +23,15 @@ const STATUS_OPTIONS = [
 ] as const;
 
 const SORT_OPTIONS: {
-  key: string;
+  value: string;
   label: string;
   sortBy: ContestsFilters['sortBy'];
   sortDir: ContestsFilters['sortDir'];
 }[] = [
-  { key: 'recent', label: 'Recent', sortBy: 'created_at', sortDir: 'desc' },
-  { key: 'end_at', label: 'End date', sortBy: 'end_at', sortDir: 'asc' },
-  { key: 'views', label: 'Most views', sortBy: 'total_views', sortDir: 'desc' },
-  { key: 'subs', label: 'Most submissions', sortBy: 'submission_count', sortDir: 'desc' },
+  { value: 'created_at_desc', label: 'Newest first', sortBy: 'created_at', sortDir: 'desc' },
+  { value: 'created_at_asc', label: 'Oldest first', sortBy: 'created_at', sortDir: 'asc' },
+  { value: 'end_at_asc', label: 'Ending soon', sortBy: 'end_at', sortDir: 'asc' },
+  { value: 'views_desc', label: 'Most views', sortBy: 'total_views', sortDir: 'desc' },
 ];
 
 export function ContestsFilters({ initialFilters, totalCount }: ContestsFiltersProps) {
@@ -133,30 +134,47 @@ export function ContestsFilters({ initialFilters, totalCount }: ContestsFiltersP
           })}
         </div>
 
-        {/* Sort dropdown (simple, sans Radix pour limiter le scope) */}
-        <div className="relative">
-          <select
-            value={currentSort.key}
-            onChange={(event) => {
-              const selected = SORT_OPTIONS.find(
-                (o) => o.key === event.target.value,
-              );
-              if (!selected) return;
-              updateUrl({
-                sortBy: selected.sortBy,
-                sortDir: selected.sortDir,
-              });
-            }}
-            className="h-8 rounded-[var(--r2)] border border-[var(--border-1)] bg-[var(--surface-1)] px-3 pr-6 text-[13px] text-[var(--text-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
-            aria-label="Sort campaigns"
+        {/* Sort dropdown — Radix DropdownMenu */}
+        <DropdownMenu.Root>
+          <DropdownMenu.Trigger asChild>
+            <button
+              type="button"
+              className="flex items-center gap-2 rounded-[var(--r2)] border border-[var(--border-1)] bg-[var(--surface-2)] px-3 py-1.5 text-[13px] text-[var(--text-2)] transition-colors duration-150 hover:border-[var(--border-2)] hover:text-[var(--text-1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent)]"
+              aria-label="Sort campaigns"
+            >
+              <span>{currentSort.label}</span>
+              <ChevronDown className="h-3.5 w-3.5" />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Content
+            align="end"
+            sideOffset={4}
+            className="z-50 min-w-[160px] rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)] p-1 shadow-[var(--shadow-2)]"
           >
-            {SORT_OPTIONS.map((opt) => (
-              <option key={opt.key} value={opt.key}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
+            {SORT_OPTIONS.map((opt) => {
+              const active = opt.value === currentSort.value;
+              return (
+                <DropdownMenu.Item
+                  key={opt.value}
+                  onSelect={() => {
+                    updateUrl({
+                      sortBy: opt.sortBy,
+                      sortDir: opt.sortDir,
+                    });
+                  }}
+                  className={cn(
+                    'flex cursor-pointer items-center gap-2 rounded-[var(--r2)] px-3 py-2 text-[13px] text-[var(--text-2)] outline-none hover:bg-[var(--surface-2)] hover:text-[var(--text-1)] data-[highlighted]:bg-[var(--surface-2)] data-[highlighted]:text-[var(--text-1)]',
+                    active && 'font-medium text-[var(--accent)]',
+                  )}
+                >
+                  {active && <Check className="h-3.5 w-3.5" />}
+                  {!active && <span className="h-3.5 w-3.5" aria-hidden="true" />}
+                  <span>{opt.label}</span>
+                </DropdownMenu.Item>
+              );
+            })}
+          </DropdownMenu.Content>
+        </DropdownMenu.Root>
 
         {/* Clear filters */}
         {hasActiveFilters && (

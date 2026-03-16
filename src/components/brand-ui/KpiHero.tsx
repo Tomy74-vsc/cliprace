@@ -110,6 +110,7 @@ export function KpiHero({
 
   return (
     <Surface
+      data-testid="kpi-hero"
       variant="notched"
       className={cn('p-6', beam && 'beam-border', className)}
     >

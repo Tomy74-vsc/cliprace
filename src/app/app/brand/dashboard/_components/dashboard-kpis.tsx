@@ -11,7 +11,7 @@ export function DashboardKpis({ stats }: DashboardKpisProps) {
   const sparkline = stats.viewsOverTime.slice(-7).map((d) => d.views);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-4" data-testid="kpi-strip">
       <KpiHero
         label="Total views"
         value={stats.totalViews}

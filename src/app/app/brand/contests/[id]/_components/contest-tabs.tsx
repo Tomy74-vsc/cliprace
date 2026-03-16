@@ -53,7 +53,10 @@ export function ContestTabs({
       onValueChange={handleTabChange}
       className="space-y-4"
     >
-      <TabsList className="inline-flex h-9 items-center justify-start gap-1 rounded-[var(--r2)] bg-[var(--surface-2)]/60 px-1 py-1">
+      <TabsList
+        className="inline-flex h-9 items-center justify-start gap-1 rounded-[var(--r2)] bg-[var(--surface-2)]/60 px-1 py-1"
+        data-testid="contest-tabs"
+      >
         <TabsTrigger
           value="overview"
           className="px-3 py-1.5 text-xs font-medium data-[state=active]:bg-[var(--surface-1)] data-[state=active]:text-[var(--text-1)] data-[state=active]:shadow-[0_1px_0_rgba(16,185,129,0.25)] data-[state=active]:border-b-2 data-[state=active]:border-b-[var(--accent)] text-[var(--text-2)]"

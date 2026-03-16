@@ -12,7 +12,7 @@ interface WizardProgressProps {
 
 export function WizardProgress({ currentStep, steps }: WizardProgressProps) {
   return (
-    <div className="flex w-full items-center gap-0">
+    <div className="flex w-full items-center gap-0" data-testid="wizard-progress">
       {steps.map((step, index) => {
         const stepNumber = step.step;
         const isCompleted = stepNumber < currentStep;

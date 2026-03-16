@@ -151,6 +151,7 @@ export function DashboardLiveRail({ brandId }: DashboardLiveRailProps) {
 
   return (
     <Panel
+      data-testid="live-rail"
       title="Live"
       description={offline ? 'Realtime offline — refreshing soon.' : 'Latest submissions in realtime.'}
       className="h-[320px]"
