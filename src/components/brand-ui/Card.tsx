@@ -1,42 +1,36 @@
-import { forwardRef, type ComponentPropsWithoutRef } from 'react';
+import { forwardRef } from 'react';
+import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils';
-import { Surface } from './Surface';
 
-/* ── Types ───────────────────────────────────────────────────────────────── */
+const cardVariants = cva(
+  'brand-scope rounded-[var(--r3)] border transition-all duration-[180ms] p-4',
+  {
+    variants: {
+      variant: {
+        default:
+          'bg-[var(--surface-1)] border-[var(--border-1)] shadow-[var(--shadow-1)]',
+        hoverable:
+          'bg-[var(--surface-1)] border-[var(--border-1)] hover:border-[var(--border-2)] hover:-translate-y-px cursor-pointer',
+        track:
+          'bg-[var(--surface-1)] border-[var(--border-1)] [background-image:url(/track-pattern.svg)] [background-size:400px]',
+      },
+    },
+    defaultVariants: { variant: 'default' },
+  },
+);
 
-export interface CardProps extends ComponentPropsWithoutRef<'div'> {
-  /** Activate hover lift effect (auto-enabled if onClick provided). */
-  hoverable?: boolean;
-}
-
-/* ── Component ───────────────────────────────────────────────────────────── */
+export interface CardProps
+  extends React.HTMLAttributes<HTMLDivElement>,
+    VariantProps<typeof cardVariants> {}
 
 export const Card = forwardRef<HTMLDivElement, CardProps>(
-  ({ hoverable, onClick, className, children, ...rest }, ref) => {
-    const isHoverable = hoverable ?? !!onClick;
-
+  ({ className, variant, ...props }, ref) => {
     return (
-      <Surface
+      <div
         ref={ref}
-        variant={isHoverable ? 'hoverable' : 'default'}
-        onClick={onClick}
-        role={onClick ? 'button' : undefined}
-        tabIndex={onClick ? 0 : undefined}
-        onKeyDown={
-          onClick
-            ? (e: React.KeyboardEvent) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  onClick(e as unknown as React.MouseEvent<HTMLDivElement>);
-                }
-              }
-            : undefined
-        }
-        className={cn('p-4', className)}
-        {...rest}
-      >
-        {children}
-      </Surface>
+        className={cn(cardVariants({ variant }), className)}
+        {...props}
+      />
     );
   },
 );

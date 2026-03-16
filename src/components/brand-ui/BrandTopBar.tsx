@@ -11,6 +11,7 @@
  */
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { Menu, Plus, Search } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -62,9 +63,11 @@ function BrandIdentityBlock({
         )}
       >
         {brandLogoUrl ? (
-          <img
+          <Image
             src={brandLogoUrl}
             alt={`${displayName} logo`}
+            width={32}
+            height={32}
             className="size-full object-cover"
           />
         ) : (

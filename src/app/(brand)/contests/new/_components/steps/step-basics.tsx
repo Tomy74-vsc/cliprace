@@ -62,12 +62,13 @@ export function StepBasics({ data, onChange }: Props) {
       noValidate
     >
       <div>
-        <label className="text-xs font-medium text-[var(--text-2)]">
+        <label htmlFor="contest-title" className="text-xs font-medium text-[var(--text-2)]">
           Contest title
         </label>
         <input
           type="text"
           placeholder="Summer UGC Challenge 2025"
+          id="contest-title"
           {...register('title')}
           className="mt-1 w-full rounded-[var(--r2)] border border-[var(--border-1)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)] outline-none focus-visible:border-[var(--accent)]"
         />
@@ -79,12 +80,13 @@ export function StepBasics({ data, onChange }: Props) {
       </div>
 
       <div>
-        <label className="text-xs font-medium text-[var(--text-2)]">
+        <label htmlFor="contest-brief" className="text-xs font-medium text-[var(--text-2)]">
           Brief
         </label>
         <textarea
           rows={6}
           placeholder="Describe what creators should make..."
+          id="contest-brief"
           {...register('briefMd')}
           className="mt-1 w-full resize-none rounded-[var(--r2)] border border-[var(--border-1)] bg-[var(--surface-2)] px-3 py-2 text-sm text-[var(--text-1)] outline-none focus-visible:border-[var(--accent)]"
         />
@@ -96,10 +98,10 @@ export function StepBasics({ data, onChange }: Props) {
       </div>
 
       <div>
-        <label className="text-xs font-medium text-[var(--text-2)]">
+        <label htmlFor="platforms" className="text-xs font-medium text-[var(--text-2)]">
           Platforms
         </label>
-        <div className="mt-2 flex flex-wrap gap-2">
+        <div id="platforms" className="mt-2 flex flex-wrap gap-2">
           {PLATFORMS.map((platform) => {
             const active = values.networks?.includes(platform.id);
             return (

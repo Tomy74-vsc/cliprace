@@ -81,13 +81,17 @@ export function StepSchedule({ data, onChange }: Props) {
     >
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="text-xs font-medium text-[var(--text-2)]">
+          <label htmlFor="start-at" className="text-xs font-medium text-[var(--text-2)]">
             Start date
           </label>
           <input
             type="datetime-local"
+            id="start-at"
             min={startInputMin}
             defaultValue={toLocalInputValue(initialStart)}
+            {...register('startAt', {
+              setValueAs: (v) => (v ? fromLocalInputValue(v) : null),
+            })}
             onChange={(e) =>
               setValue('startAt', fromLocalInputValue(e.target.value), {
                 shouldValidate: true,
@@ -104,13 +108,17 @@ export function StepSchedule({ data, onChange }: Props) {
         </div>
 
         <div>
-          <label className="text-xs font-medium text-[var(--text-2)]">
+          <label htmlFor="end-at" className="text-xs font-medium text-[var(--text-2)]">
             End date
           </label>
           <input
             type="datetime-local"
+            id="end-at"
             min={endInputMin}
             defaultValue={toLocalInputValue(initialEnd)}
+            {...register('endAt', {
+              setValueAs: (v) => (v ? fromLocalInputValue(v) : null),
+            })}
             onChange={(e) =>
               setValue('endAt', fromLocalInputValue(e.target.value), {
                 shouldValidate: true,

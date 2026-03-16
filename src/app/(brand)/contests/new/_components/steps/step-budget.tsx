@@ -58,10 +58,10 @@ export function StepBudget({ data, onChange }: Props) {
       noValidate
     >
       <div>
-        <label className="text-xs font-medium text-[var(--text-2)]">
+        <label htmlFor="currency" className="text-xs font-medium text-[var(--text-2)]">
           Currency
         </label>
-        <div className="mt-2 flex gap-2">
+        <div id="currency" className="mt-2 flex gap-2">
           {(['EUR', 'USD'] as const).map((c) => (
             <button
               key={c}
@@ -87,7 +87,7 @@ export function StepBudget({ data, onChange }: Props) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <div>
-          <label className="text-xs font-medium text-[var(--text-2)]">
+          <label htmlFor="total-budget" className="text-xs font-medium text-[var(--text-2)]">
             Total budget ({values.currency})
           </label>
           <input
@@ -95,6 +95,7 @@ export function StepBudget({ data, onChange }: Props) {
             min={0}
             step="1"
             placeholder="500"
+            id="total-budget"
             {...register('budgetCents', {
               setValueAs: (v) => (v === '' ? 0 : Number(v) * 100),
             })}
@@ -111,7 +112,7 @@ export function StepBudget({ data, onChange }: Props) {
         </div>
 
         <div>
-          <label className="text-xs font-medium text-[var(--text-2)]">
+          <label htmlFor="prize-pool" className="text-xs font-medium text-[var(--text-2)]">
             Prize pool ({values.currency})
           </label>
           <input
@@ -119,6 +120,7 @@ export function StepBudget({ data, onChange }: Props) {
             min={0}
             step="1"
             placeholder="250"
+            id="prize-pool"
             {...register('prizePoolCents', {
               setValueAs: (v) => (v === '' ? 0 : Number(v) * 100),
             })}
@@ -136,7 +138,7 @@ export function StepBudget({ data, onChange }: Props) {
       </div>
 
       <div>
-        <label className="text-xs font-medium text-[var(--text-2)]">
+        <label htmlFor="max-winners" className="text-xs font-medium text-[var(--text-2)]">
           Max winners
         </label>
         <input
@@ -144,6 +146,7 @@ export function StepBudget({ data, onChange }: Props) {
           min={1}
           max={100}
           step="1"
+          id="max-winners"
           {...register('maxWinners', {
             setValueAs: (v) => (v === '' ? 1 : Number(v)),
           })}

@@ -352,9 +352,15 @@ export default function UiKitPage() {
           </Panel>
 
           <div className="grid gap-4 sm:grid-cols-3">
-            <Card><p className="text-sm text-[var(--text-2)]">Basic card</p></Card>
-            <Card hoverable><p className="text-sm text-[var(--text-2)]">Hoverable card</p></Card>
-            <Card><p className="text-sm text-[var(--text-2)]">Another card</p></Card>
+            <Card>
+              <p className="text-sm text-[var(--text-2)]">Basic card</p>
+            </Card>
+            <Card variant="hoverable">
+              <p className="text-sm text-[var(--text-2)]">Hoverable card</p>
+            </Card>
+            <Card>
+              <p className="text-sm text-[var(--text-2)]">Another card</p>
+            </Card>
           </div>
         </Section>
 
