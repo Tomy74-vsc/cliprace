@@ -1,6 +1,6 @@
 'use client';
 
-import type { FC } from 'react';
+import type { CSSProperties, FC } from 'react';
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Shield } from 'lucide-react';
@@ -19,7 +19,7 @@ type PlatformConfig = {
   description: string;
   connectHref: string;
   brandColor: string;
-  Logo: FC<{ className?: string; size?: number }>;
+  Logo: FC<{ className?: string; size?: number; style?: CSSProperties }>;
 };
 
 const PLATFORMS: PlatformConfig[] = [
