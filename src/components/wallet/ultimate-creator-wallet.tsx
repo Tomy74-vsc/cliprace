@@ -2,6 +2,7 @@
 
 import { useMemo, useCallback, useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { getCsrfToken } from '@/lib/csrf-client';
 import { WalletBalanceCard } from './wallet-balance-card';
 import { EarningsChart } from './earnings-chart';
 import { CashoutSlider } from './cashout-slider';
@@ -39,7 +40,14 @@ export function UltimateCreatorWallet({ wallet, stripeConnected = true }: Ultima
   const handleConfigurer = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/payments/creator/onboarding');
+      const res = await fetch('/api/payments/creator/onboarding', {
+        method: 'POST',
+        headers: {
+          'x-csrf': getCsrfToken(),
+          'content-type': 'application/json',
+        },
+        credentials: 'include',
+      });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message || 'Erreur');
       if (data.url) {

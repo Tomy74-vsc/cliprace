@@ -1,90 +1,82 @@
-// Source: CSRF protection (double-submit cookie + header) (§4, §147-149)
-// Effects: generate crypto-secure token, validate on POST/PUT/DELETE
-import { randomBytes } from 'crypto';
+import { createHmac, timingSafeEqual, randomBytes } from 'crypto';
 
-const CSRF_COOKIE_NAME = 'csrf';
-const CSRF_HEADER_NAME = 'x-csrf';
+const SECRET = process.env.CSRF_HMAC_SECRET ?? '';
 
-/**
- * Generate a crypto-secure CSRF token (32 bytes, base64url encoded).
- * Edge Runtime compatible (uses Web Crypto API if available, falls back to Node.js crypto).
- */
-export function generateCsrfToken(): string {
-  // Use Web Crypto API for Edge Runtime compatibility (middleware)
-  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
-    const array = new Uint8Array(32);
-    crypto.getRandomValues(array);
-    // Convert to base64url
-    const base64 = Buffer.from(array).toString('base64');
-    return base64.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+function getSecret(): string {
+  if (!SECRET || SECRET.length < 32) {
+    throw new Error('CSRF_HMAC_SECRET must be set and at least 32 characters');
   }
-  // Fallback to Node.js crypto (for server-side)
-  return randomBytes(32).toString('base64url');
+  return SECRET;
 }
 
-/**
- * Generate a CSRF token value.
- * Note: cookie setting is handled in /api/auth/csrf and middleware.
- */
-export function getCsrfToken(): string {
-  return generateCsrfToken();
+function hmacSha256Hex(secret: string, data: string): string {
+  return createHmac('sha256', secret).update(data).digest('hex');
 }
 
-/**
- * Assert CSRF token validity (double-submit: cookie must match header).
- * Throws if invalid.
- */
-export function assertCsrf(cookieHeader?: string | null, headerValue?: string | null): void {
-  const cookieValue = getCookieFromHeader(cookieHeader, CSRF_COOKIE_NAME);
-
-  if (!cookieValue) {
-    throw new Error('CSRF token cookie missing');
-  }
-
-  if (!headerValue) {
-    throw new Error('CSRF token header missing');
-  }
-
-  // Constant-time comparison to prevent timing attacks
-  if (!constantTimeEqual(cookieValue, headerValue)) {
-    throw new Error('CSRF token mismatch');
-  }
-}
-
-function getCookieFromHeader(cookieHeader: string | null | undefined, name: string): string | null {
-  if (!cookieHeader) return null;
-
-  const pairs = cookieHeader.split(';');
-  for (const pair of pairs) {
-    const [rawName, ...rest] = pair.trim().split('=');
-    if (!rawName) continue;
-    if (rawName === name) {
-      return rest.join('=');
-    }
-  }
-
-  return null;
-}
-
-/**
- * Constant-time string comparison to prevent timing attacks.
- */
 function constantTimeEqual(a: string, b: string): boolean {
-  if (a.length !== b.length) {
+  try {
+    return timingSafeEqual(Buffer.from(a), Buffer.from(b));
+  } catch {
     return false;
   }
-
-  let result = 0;
-  for (let i = 0; i < a.length; i++) {
-    result |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  }
-
-  return result === 0;
 }
 
 /**
- * Get CSRF header name (for client-side usage).
+ * Mint a signed CSRF token: `sigHex.nonceHex`
+ * sig = HMAC_SHA256(CSRF_HMAC_SECRET, binding!nonce)
  */
+export function csrfMint(userId?: string, anonSid?: string): string {
+  const secret = getSecret();
+  const nonce = randomBytes(32).toString('hex');
+  const binding = userId ? `uid:${userId}` : `anon:${anonSid ?? 'unknown'}`;
+  const sig = hmacSha256Hex(secret, `${binding}!${nonce}`);
+  return `${sig}.${nonce}`;
+}
+
+/**
+ * Assert CSRF validity (OWASP Signed Double-Submit Cookie).
+ *
+ * 1. Extract token from cookie header (__Host-csrf or csrf fallback)
+ * 2. Constant-time compare cookie value === x-csrf header value
+ * 3. Verify HMAC signature against binding (userId or anonSid)
+ *
+ * Backward-compatible: callers that omit userId/anonSid fall back to 'anon:unknown'.
+ */
+export function assertCsrf(
+  cookieHeader: string | null,
+  csrfHeader: string | null,
+  userId?: string,
+  anonSid?: string,
+): void {
+  if (!cookieHeader || !csrfHeader) throw new Error('csrf_missing');
+
+  const cookieToken =
+    cookieHeader
+      .split(';')
+      .map((c) => c.trim())
+      .find((c) => c.startsWith('__Host-csrf=') || c.startsWith('csrf='))
+      ?.split('=')
+      .slice(1)
+      .join('=') ?? null;
+
+  if (!cookieToken) throw new Error('csrf_missing');
+  if (!constantTimeEqual(csrfHeader, cookieToken))
+    throw new Error('csrf_cookie_header_mismatch');
+
+  const dotIdx = csrfHeader.indexOf('.');
+  if (dotIdx === -1) throw new Error('csrf_malformed');
+
+  const sigHex = csrfHeader.slice(0, dotIdx);
+  const nonceHex = csrfHeader.slice(dotIdx + 1);
+  if (!sigHex || !nonceHex) throw new Error('csrf_malformed');
+
+  const secret = getSecret();
+  const binding = userId ? `uid:${userId}` : `anon:${anonSid ?? 'unknown'}`;
+  const expected = hmacSha256Hex(secret, `${binding}!${nonceHex}`);
+
+  if (!constantTimeEqual(sigHex, expected)) throw new Error('csrf_bad_sig');
+}
+
 export function getCsrfHeaderName(): string {
-  return CSRF_HEADER_NAME;
+  return 'x-csrf';
 }

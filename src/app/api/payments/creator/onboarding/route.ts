@@ -4,6 +4,7 @@
  * Creates a Connect account if needed and stores stripe_account_id in profiles.
  */
 import { NextResponse } from 'next/server';
+import { assertCsrf } from '@/lib/csrf';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { getUserRole } from '@/lib/auth';
@@ -13,8 +14,18 @@ const BASE_URL =
   process.env.NEXT_PUBLIC_APP_URL ||
   (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
 
-export async function GET() {
+export async function POST(req: Request) {
   try {
+    const cookieHeader = req.headers.get('cookie');
+    const csrfHeader = req.headers.get('x-csrf');
+    try {
+      assertCsrf(cookieHeader, csrfHeader);
+    } catch (e) {
+      return NextResponse.json(
+        { error: (e as Error).message },
+        { status: 400 },
+      );
+    }
     const supabase = await getSupabaseSSR();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {

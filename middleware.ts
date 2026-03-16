@@ -50,19 +50,21 @@ export async function middleware(req: NextRequest) {
   const pathname = url.pathname;
   const res = NextResponse.next();
 
+  const csrfCookieName =
+    process.env.NODE_ENV === 'production' ? '__Host-csrf' : 'csrf';
+
   // ─── Emit CSRF cookie for /auth/* pages and /api/auth/* routes ───
   const isAuthPage = pathname.startsWith('/auth/');
   const isAuthApi = pathname.startsWith('/api/auth/');
 
   if (isAuthPage || isAuthApi) {
-    const hasCsrf = req.cookies.get('csrf');
+    const hasCsrf = req.cookies.get(csrfCookieName);
     if (!hasCsrf) {
       const token = generateEdgeCsrfToken();
-      const secure = process.env.NODE_ENV === 'production';
-      res.cookies.set('csrf', token, {
-        httpOnly: true,
+      res.cookies.set(csrfCookieName, token, {
+        httpOnly: false,
         sameSite: 'lax',
-        secure,
+        secure: process.env.NODE_ENV === 'production',
         path: '/',
         maxAge: 60 * 60 * 24, // 24 hours
       });
@@ -85,13 +87,28 @@ export async function middleware(req: NextRequest) {
     // 2. User exists: check onboarding (one lightweight profile select; RLS allows own row)
     const { data: profile } = await supabase
       .from('profiles')
-      .select('onboarding_complete')
+      .select('onboarding_complete, role')
       .eq('id', user.id)
       .single();
 
     const onboardingComplete = profile?.onboarding_complete ?? false;
     if (!onboardingComplete) {
       return NextResponse.redirect(new URL('/app/onboarding', req.url));
+    }
+
+    // Role-guard par préfixe
+    const role = profile?.role as string | undefined;
+
+    if (pathname.startsWith('/app/brand/') && role !== 'brand' && role !== 'admin') {
+      return NextResponse.redirect(new URL('/auth/login', req.url));
+    }
+
+    if (pathname.startsWith('/app/creator/') && role !== 'creator' && role !== 'admin') {
+      return NextResponse.redirect(new URL('/auth/login', req.url));
+    }
+
+    if (pathname.startsWith('/app/admin/') && role !== 'admin') {
+      return NextResponse.redirect(new URL('/auth/login', req.url));
     }
 
     return res;

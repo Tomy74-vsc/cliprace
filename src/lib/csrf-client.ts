@@ -1,31 +1,20 @@
-let cachedToken: string | null = null;
-let pendingRequest: Promise<string> | null = null;
+/**
+ * Client-side CSRF token reader.
+ * Reads the signed CSRF token directly from document.cookie
+ * (__Host-csrf in production, csrf in development).
+ */
 
-export async function getCsrfToken(): Promise<string> {
-  if (cachedToken) return cachedToken;
-  if (pendingRequest) return pendingRequest;
-
-  pendingRequest = fetch('/api/auth/csrf', {
-    method: 'GET',
-    credentials: 'include',
-    cache: 'no-store',
-  })
-    .then(async (res) => {
-      const data = await res.json().catch(() => ({}));
-      const token = typeof (data as { token?: unknown } | null)?.token === 'string' ? (data as { token: string }).token : null;
-      if (!res.ok || !token) {
-        throw new Error('CSRF token unavailable');
-      }
-      cachedToken = token;
-      return token;
-    })
-    .finally(() => {
-      pendingRequest = null;
-    });
-
-  return pendingRequest;
+export function getCsrfToken(): string {
+  if (typeof document === 'undefined') return '';
+  const cookies = document.cookie.split(';').map((c) => c.trim());
+  const csrf = cookies
+    .find((c) => c.startsWith('__Host-csrf=') || c.startsWith('csrf='))
+    ?.split('=')
+    .slice(1)
+    .join('=');
+  return csrf ?? '';
 }
 
-export function clearCsrfToken() {
-  cachedToken = null;
+export function clearCsrfToken(): void {
+  // No-op: cookie is managed by middleware / API route.
 }
