@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { formatCurrency, formatDate } from '@/lib/formatters';
@@ -49,7 +50,7 @@ type BillingData = {
 
 export default async function BrandBillingPage() {
   const { user } = await getSession();
-  if (!user) return null;
+  if (!user) redirect('/auth/login');
 
   const { payments, stats, canOpenPortal, portalHint, error } = await fetchBillingData(user.id);
 
@@ -325,7 +326,7 @@ async function fetchBillingData(userId: string): Promise<BillingData> {
       return buildBillingError();
     }
 
-    const profileErrorCode = String((profileRes.error as UnsafeAny)?.code || '');
+    const profileErrorCode = String((profileRes.error as { code?: string } | null)?.code || '');
     if (profileRes.error && profileErrorCode !== '42703') {
       console.error('billing:profile_fetch_error', profileRes.error);
       return buildBillingError();
@@ -339,7 +340,7 @@ async function fetchBillingData(userId: string): Promise<BillingData> {
       currency: payment.currency || 'EUR',
       status: payment.status || 'requires_payment',
       stripe_payment_intent_id: payment.stripe_payment_intent_id,
-      stripe_customer_id: (payment as UnsafeAny).stripe_customer_id || null,
+      stripe_customer_id: (payment as { stripe_customer_id?: string | null }).stripe_customer_id || null,
       created_at: payment.created_at,
     }));
 
@@ -350,8 +351,8 @@ async function fetchBillingData(userId: string): Promise<BillingData> {
     const processing = payments.filter((payment) => payment.status === 'processing');
 
     const profileStripeCustomerId =
-      typeof (profileRes.data as UnsafeAny)?.stripe_customer_id === 'string'
-        ? ((profileRes.data as UnsafeAny).stripe_customer_id as string)
+      typeof (profileRes.data as { stripe_customer_id?: string | null } | null)?.stripe_customer_id === 'string'
+        ? (profileRes.data as { stripe_customer_id?: string | null }).stripe_customer_id ?? null
         : null;
     const paymentStripeCustomerId =
       payments.find((payment) => typeof payment.stripe_customer_id === 'string')?.stripe_customer_id || null;
