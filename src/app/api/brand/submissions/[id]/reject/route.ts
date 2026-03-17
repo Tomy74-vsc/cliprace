@@ -19,18 +19,6 @@ interface SubmissionWithContest extends SubmissionRow {
 }
 
 export async function POST(req: Request, { params }: { params: { id: string } }) {
-  const cookieHeader = req.headers.get('cookie');
-  const csrfHeader = req.headers.get('x-csrf');
-
-  try {
-    assertCsrf(cookieHeader, csrfHeader);
-  } catch (error) {
-    return NextResponse.json(
-      { error: (error as Error).message },
-      { status: 400 },
-    );
-  }
-
   const supabase = await getSupabaseSSR();
   const {
     data: { user },
@@ -38,6 +26,18 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const cookieHeader = req.headers.get('cookie');
+  const csrfHeader = req.headers.get('x-csrf');
+
+  try {
+    assertCsrf(cookieHeader, csrfHeader, user.id);
+  } catch (error) {
+    return NextResponse.json(
+      { error: (error as Error).message },
+      { status: 400 },
+    );
   }
 
   await enforceBrandRateLimit(req, user.id, BRAND_LIMIT_CRITICAL);

@@ -33,23 +33,23 @@ function slugifyTitle(title: string) {
 }
 
 export async function POST(req: Request) {
-  const cookieHeader = req.headers.get('cookie');
-  const csrfHeader = req.headers.get('x-csrf');
-  try {
-    assertCsrf(cookieHeader, csrfHeader);
-  } catch (e) {
-    return NextResponse.json(
-      { error: (e as Error).message },
-      { status: 400 },
-    );
-  }
-
   const supabase = await getSupabaseSSR();
   const {
     data: { user },
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  const cookieHeader = req.headers.get('cookie');
+  const csrfHeader = req.headers.get('x-csrf');
+  try {
+    assertCsrf(cookieHeader, csrfHeader, user.id);
+  } catch (e) {
+    return NextResponse.json(
+      { error: (e as Error).message },
+      { status: 400 },
+    );
   }
 
   await enforceBrandRateLimit(req, user.id, BRAND_LIMIT_CRITICAL);
