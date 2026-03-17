@@ -2,6 +2,7 @@
 
 import { useMemo } from 'react';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 export interface TransactionItem {
@@ -120,9 +121,15 @@ export function TransactionList({
                   className="flex items-center gap-3 px-4 py-3"
                 >
                   <span className="flex items-center gap-3 min-w-0 flex-1">
-                    <Avatar className="h-10 w-10 shrink-0 rounded-full border border-white/10 bg-white/5">
+                    <Avatar className="h-10 w-10 shrink-0 rounded-full border border-white/10 bg-white/5 overflow-hidden">
                       {t.brandAvatarUrl ? (
-                        <img src={t.brandAvatarUrl} alt="" className="h-full w-full object-cover" />
+                        <Image
+                          src={t.brandAvatarUrl}
+                          alt=""
+                          width={40}
+                          height={40}
+                          className="h-full w-full object-cover"
+                        />
                       ) : (
                         <AvatarFallback className="rounded-full bg-emerald-500/20 text-xs font-medium text-emerald-400">
                           {t.contestTitle.slice(0, 2).toUpperCase()}

@@ -39,7 +39,6 @@ export function CashoutSlider({
   const [successVisible, setSuccessVisible] = useState(false);
   const constraintRef = useRef<HTMLDivElement>(null);
   const x = useMotionValue(0);
-  const width = useRef(0);
 
   const scale = useTransform(x, [0, 150], [1, 1.02]);
   const opacity = useTransform(x, [0, 80], [0.6, 1]);

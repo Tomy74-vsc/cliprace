@@ -19,8 +19,6 @@ function formatCompactNumber(value: number) {
 }
 
 export function SubmissionCard({ submission, contestId }: SubmissionCardProps) {
-  const isPending = submission.status === 'pending';
-
   return (
     <Card className="overflow-hidden border-[var(--border-1)] bg-[var(--surface-1)]/80 hover:border-[var(--border-2)] transition-colors">
       {/* Thumbnail */}

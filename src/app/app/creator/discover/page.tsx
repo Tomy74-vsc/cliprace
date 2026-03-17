@@ -46,7 +46,7 @@ export default async function DiscoverContestsPage({ searchParams }: DiscoverPag
     ? (rawSort as (typeof SORT_VALUES)[number])
     : "prize_desc";
 
-  const { contests, total, profileIncomplete } = await fetchContests({
+  const { contests, total, profileIncomplete: _profileIncomplete } = await fetchContests({
     search,
     platforms: selectedPlatforms,
     status: statusParam,

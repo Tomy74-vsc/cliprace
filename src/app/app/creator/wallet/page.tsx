@@ -5,7 +5,6 @@ Bento: Carte hero + Graphique + Liste transactions.
 import { getSupabaseSSR } from "@/lib/supabase/ssr";
 import { getSession } from "@/lib/auth";
 import { EmptyState } from "@/components/creator/empty-state";
-import { Skeleton } from "@/components/creator/skeletons";
 import { TrackOnView } from "@/components/analytics/track-once";
 import { UltimateCreatorWallet } from "@/components/wallet/ultimate-creator-wallet";
 import type { WalletData } from "@/components/wallet/wallet-balance";

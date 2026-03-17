@@ -1,4 +1,3 @@
-import { SkeletonBlock, SkeletonKpi, SkeletonKpiHero } from '@/components/brand-ui';
 
 const sk = 'animate-pulse rounded bg-[var(--surface-2)]';
 const skCard = 'rounded-[var(--r3)] border border-[var(--border-1)] bg-[var(--surface-1)]/80';

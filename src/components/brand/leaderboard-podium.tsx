@@ -10,7 +10,6 @@
  */
 
 import { motion } from 'framer-motion';
-import { Trophy } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { formatCurrency } from '@/lib/formatters';
 import type { LeaderboardEntry } from '@/lib/queries/contest-leaderboard';

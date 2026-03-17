@@ -31,7 +31,7 @@ async function postJson(path: string, body: unknown, csrfToken: string) {
 
 export function SubmissionActions({
   submissionId,
-  contestId,
+  contestId: _contestId,
   status,
   onStatusChange,
 }: SubmissionActionsProps) {

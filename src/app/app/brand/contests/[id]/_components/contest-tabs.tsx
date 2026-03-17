@@ -22,7 +22,7 @@ interface ContestTabsProps {
 }
 
 export function ContestTabs({
-  contestId,
+  contestId: _contestId,
   activeTab,
   contest,
   metrics,

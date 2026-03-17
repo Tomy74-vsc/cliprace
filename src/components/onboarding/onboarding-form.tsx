@@ -85,8 +85,6 @@ export function OnboardingForm({ role, initialData, connectedPlatforms = [] }: O
     return true;
   };
 
-  // Intentionally run once on mount to read and clean initial OAuth params
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const error = searchParams.get('error');
     const platform = searchParams.get('platform');
@@ -143,7 +141,7 @@ export function OnboardingForm({ role, initialData, connectedPlatforms = [] }: O
     router.replace(newSearch ? `${pathname}?${newSearch}` : pathname, {
       scroll: false,
     });
-  }, []);
+  }, [pathname, router, searchParams, toast]);
 
   const handleNext = async () => {
     const isValid = await validateStep(currentStep);

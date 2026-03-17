@@ -44,7 +44,6 @@ function CustomTooltip({ active, payload, label }: TooltipProps<number, string>)
 /** Build 30-day cumulative series from daily data (fill gaps with previous value). */
 export function buildEarningsSeries(data: EarningsChartDataPoint[], days = 30): EarningsChartDataPoint[] {
   const result: EarningsChartDataPoint[] = [];
-  const end = new Date();
   const start = new Date();
   start.setDate(start.getDate() - days);
   const byDay = new Map<string, number>();

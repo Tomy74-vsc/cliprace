@@ -13,7 +13,7 @@ interface LeaderboardAutoRefreshProps {
 export function LeaderboardAutoRefresh({ onRefresh }: LeaderboardAutoRefreshProps) {
   const router = useRouter()
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-  const [lastUpdated, setLastUpdated] = useState<string>(() =>
+  const [_lastUpdated, setLastUpdated] = useState<string>(() =>
     new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
   )
 

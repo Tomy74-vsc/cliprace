@@ -55,7 +55,7 @@ export function ContestsTable({
   total,
   page,
   pageSize,
-  filters,
+  filters: _filters,
 }: ContestsTableProps) {
   const router = useRouter();
   const searchParams = useSearchParams();

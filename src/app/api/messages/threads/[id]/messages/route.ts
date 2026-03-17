@@ -8,7 +8,7 @@ import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { getSupabaseAdmin } from '@/lib/supabase/server';
 import { rateLimit } from '@/lib/rateLimit';
 import { assertCsrf } from '@/lib/csrf';
-import { getClientIp, buildRateLimitKey } from '@/lib/safe-ip';
+import { buildRateLimitKey } from '@/lib/safe-ip';
 
 const AttachmentSchema = z.object({
   url: z.string().url(),

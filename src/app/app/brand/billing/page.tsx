@@ -1,4 +1,3 @@
-import type { ReactNode } from 'react';
 import Link from 'next/link';
 import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
@@ -16,7 +15,6 @@ import {
   FileText,
   RefreshCw,
   ShieldCheck,
-  XCircle,
 } from 'lucide-react';
 
 export const revalidate = 60;

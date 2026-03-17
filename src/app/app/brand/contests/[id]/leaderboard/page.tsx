@@ -3,7 +3,6 @@ import { notFound } from 'next/navigation';
 import { getSession } from '@/lib/auth';
 import { getSupabaseSSR } from '@/lib/supabase/ssr';
 import { fetchContestLeaderboard } from '@/lib/queries/contest-leaderboard';
-import { BrandEmptyState } from '@/components/brand/empty-state-enhanced';
 import { formatCurrency } from '@/lib/formatters';
 import { TrackOnView } from '@/components/analytics/track-once';
 import { Info, Download, ArrowLeft, Trophy } from 'lucide-react';
