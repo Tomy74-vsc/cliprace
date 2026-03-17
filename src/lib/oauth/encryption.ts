@@ -81,9 +81,13 @@ async function getEncryptionKey(): Promise<CryptoKey> {
   try {
     const keyBytes = base64ToBytes(OAUTH_TOKEN_ENCRYPTION_KEY);
     if (keyBytes.byteLength === 32) {
+      const keyBuffer = keyBytes.buffer.slice(
+        keyBytes.byteOffset,
+        keyBytes.byteOffset + keyBytes.byteLength,
+      ) as ArrayBuffer;
       return cryptoObj.subtle.importKey(
         'raw',
-        keyBytes,
+        keyBuffer,
         {
           name: 'AES-GCM',
           length: 256,
@@ -145,14 +149,18 @@ export async function decryptToken(encrypted: string): Promise<string> {
   const tag = base64ToBytes(tagB64);
   const ciphertext = base64ToBytes(ciphertextB64);
 
-  const combined = new Uint8Array(ciphertext.byteLength + tag.byteLength);
-  combined.set(ciphertext, 0);
-  combined.set(tag, ciphertext.byteLength);
+  const combinedBuffer = new ArrayBuffer(ciphertext.byteLength + tag.byteLength);
+  const combinedView = new Uint8Array(combinedBuffer);
+  combinedView.set(ciphertext, 0);
+  combinedView.set(tag, ciphertext.byteLength);
 
-  const decrypted = await cryptoObj.subtle.decrypt(
+  // TypeScript's BufferSource definition is stricter than the runtime accepts here,
+  // so we cast the Web Crypto call to any to avoid a false-positive type error.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const decrypted = await (cryptoObj.subtle.decrypt as any)(
     { name: 'AES-GCM', iv },
     key,
-    combined,
+    combinedBuffer,
   );
 
   const decoder = new TextDecoder();

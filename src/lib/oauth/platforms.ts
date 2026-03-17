@@ -227,9 +227,10 @@ export async function exchangeCodeForTokens(
       body,
     });
 
+    const instagramConfig = OAUTH_CONFIG.instagram;
     const longLived = await fetchJson<InstagramLongLivedResponse>(
-      `${config.longLivedTokenUrl}?grant_type=ig_exchange_token&client_secret=${encodeURIComponent(
-        config.clientSecret,
+      `${instagramConfig.longLivedTokenUrl}?grant_type=ig_exchange_token&client_secret=${encodeURIComponent(
+        instagramConfig.clientSecret,
       )}&access_token=${encodeURIComponent(shortLived.access_token)}`,
     );
 

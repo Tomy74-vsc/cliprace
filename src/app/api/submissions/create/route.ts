@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
     // CSRF check (double-submit): require x-csrf header matching cookie
     try {
-      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf') || undefined);
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf') ?? null);
     } catch {
       return NextResponse.json({ ok: false, message: 'Token CSRF invalide' }, { status: 403 });
     }

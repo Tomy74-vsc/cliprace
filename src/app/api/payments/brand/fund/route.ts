@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
 
     // CSRF check
     try {
-      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf') || undefined);
+      assertCsrf(req.headers.get('cookie'), req.headers.get('x-csrf') ?? null);
     } catch {
       return NextResponse.json({ ok: false, message: 'Invalid CSRF token' }, { status: 403 });
     }

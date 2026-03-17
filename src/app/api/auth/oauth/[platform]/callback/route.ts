@@ -52,22 +52,22 @@ export async function GET(
 
   const platformParamRaw = params.platform?.toLowerCase();
 
-  const error = searchParams.get('error');
+  const providerError = searchParams.get('error');
   const errorDescription = searchParams.get('error_description');
 
-  if (error) {
+  if (providerError) {
     const platformForLog = isValidPlatform(platformParamRaw ?? '')
       ? (platformParamRaw as OAuthPlatform)
       : 'unknown';
 
     console.error(
-      `[OAuth][${platformForLog}] Provider error: ${error} — ${errorDescription ?? ''}`,
+      `[OAuth][${platformForLog}] Provider error: ${providerError} — ${errorDescription ?? ''}`,
     );
 
     const redirectUrl = new URL(
       `/app/creator/onboarding?error=oauth_provider_error&platform=${encodeURIComponent(
         platformForLog,
-      )}&reason=${encodeURIComponent(error)}`,
+      )}&reason=${encodeURIComponent(providerError)}`,
       origin,
     );
 
@@ -110,8 +110,8 @@ export async function GET(
     return res;
   }
 
-  const { user, error } = await getSession();
-  if (error || !user) {
+  const { user, error: sessionError } = await getSession();
+  if (sessionError || !user) {
     const res = NextResponse.redirect(
       buildOnboardingUrl(origin, platform, errorParams),
     );

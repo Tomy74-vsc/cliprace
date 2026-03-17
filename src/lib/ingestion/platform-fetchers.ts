@@ -147,11 +147,14 @@ export async function fetchTikTokMetrics(
           videos?: Array<{
             statistics?: Record<string, number>;
           }>;
+          video_list?: Array<{
+            statistics?: Record<string, number>;
+          }>;
         };
       }
     | null;
 
-  const video = json?.data?.videos?.[0] ?? json?.data?.video_list?.[0];
+  const video = json?.data?.video_list?.[0] ?? json?.data?.videos?.[0];
   const stats = video?.statistics;
 
   if (!stats) {
