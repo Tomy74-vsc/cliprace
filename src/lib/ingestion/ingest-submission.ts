@@ -33,8 +33,9 @@ function normalizePlatform(value: string): OAuthPlatform | null {
   }
   return null;
 }
-
-export async function ingestSubmission(submission: Submission): Promise<IngestResult> {
+export async function ingestSubmissionWithAudit(
+  submission: Submission,
+): Promise<IngestResult> {
   const platform = normalizePlatform(submission.platform);
   if (!platform) {
     return {
@@ -100,6 +101,9 @@ export async function ingestSubmission(submission: Submission): Promise<IngestRe
   const admin = getSupabaseAdmin();
   const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
 
+  const method = 'platform_oauth';
+  const confidence = 0.95;
+
   try {
     const { error: upsertError } = await admin
       .from('metrics_daily')
@@ -112,6 +116,17 @@ export async function ingestSubmission(submission: Submission): Promise<IngestRe
           comments: metrics.comments,
           shares: metrics.shares,
           weighted_views: weightedViews,
+          method,
+          confidence,
+          formula_version: 1,
+          weights_snapshot: {
+            w_platform: 1.0,
+            w_like: 0.5,
+            w_comment: 0.3,
+            w_share: 0.4,
+          },
+          collected_at: new Date().toISOString(),
+          collected_by: 'trigger.dev',
         },
         { onConflict: 'submission_id,metric_date' },
       );
@@ -132,6 +147,10 @@ export async function ingestSubmission(submission: Submission): Promise<IngestRe
       error: error instanceof Error ? error.message : 'Erreur base de données inconnue',
     };
   }
+}
+
+export async function ingestSubmission(submission: Submission): Promise<IngestResult> {
+  return ingestSubmissionWithAudit(submission);
 }
 
 export type { Submission, IngestResult };

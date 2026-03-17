@@ -20,6 +20,8 @@
     "test:ui": "vitest --ui"
   },
   "dependencies": {
+    "@trigger.dev/nextjs": "3.3.12",
+    "@trigger.dev/sdk": "3.3.12",
     "@hookform/resolvers": "^3.3.4",
     "@number-flow/react": "^0.5.11",
     "@radix-ui/react-avatar": "^1.1.2",

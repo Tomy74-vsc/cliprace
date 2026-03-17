@@ -169,8 +169,12 @@ export async function dispatchIngestion(
       }
     }
 
-    // 3a) Upsert metrics_daily for today
+    // 3a) Upsert metrics_daily for today (with audit fields)
     const today = new Date().toISOString().slice(0, 10);
+    const hasOfficialApi = platform === 'youtube' || platform === 'tiktok';
+    const method = hasOfficialApi ? 'platform_oauth' : 'scrape';
+    const confidence = hasOfficialApi ? 0.95 : 0.5;
+
     const { error: upsertError } = await admin
       .from('metrics_daily')
       .upsert(
@@ -181,6 +185,17 @@ export async function dispatchIngestion(
           likes: metrics.likes,
           comments: metrics.comments,
           shares: metrics.shares,
+          method,
+          confidence,
+          formula_version: 1,
+          weights_snapshot: {
+            w_platform: 1.0,
+            w_like: 0.5,
+            w_comment: 0.3,
+            w_share: 0.4,
+          },
+          collected_at: new Date().toISOString(),
+          collected_by: 'trigger.dev',
         },
         { onConflict: 'submission_id,metric_date' },
       );
